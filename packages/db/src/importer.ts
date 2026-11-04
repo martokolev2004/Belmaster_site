@@ -1,4 +1,5 @@
 import type { Grade, LanguageTopic, PrismaClient, QuestionType, Section } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { defaultInMultiplayer, punctuationFromTexts } from '@belmaster/shared';
 
 /**
@@ -43,6 +44,8 @@ export interface ImportQuestion {
 
 export interface ImportReport {
   examTitle: string | null;
+  /** true — файлът не е променян от последния импорт и нищо не е пипнато */
+  skipped?: boolean;
   created: number;
   replaced: number;
   worksCreated: string[];
@@ -70,9 +73,18 @@ export function validateImport(data: unknown): ImportFile {
   return f;
 }
 
-export async function importQuestions(prisma: PrismaClient, input: unknown): Promise<ImportReport> {
+export async function importQuestions(prisma: PrismaClient, input: unknown, opts: { force?: boolean } = {}): Promise<ImportReport> {
   const file = validateImport(input);
   const report: ImportReport = { examTitle: null, created: 0, replaced: 0, worksCreated: [], warnings: [] };
+  const hash = createHash('sha256').update(JSON.stringify(file)).digest('hex');
+
+  // същата матура, същият файл → не пипаме нищо (пазят се докладите, статистиката и редакциите от админа)
+  if (file.exam && !opts.force) {
+    const existing = await prisma.exam.findUnique({
+      where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
+    });
+    if (existing?.sourceHash === hash) return { ...report, examTitle: existing.title, skipped: true };
+  }
 
   return prisma.$transaction(
     async (tx) => {
@@ -83,8 +95,8 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
           `${file.grade === 'G12' ? 'ДЗИ' : 'НВО'} по БЕЛ — ${file.exam.session} ${file.exam.year}`;
         const exam = await tx.exam.upsert({
           where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
-          update: { title },
-          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title },
+          update: { title, sourceHash: hash },
+          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title, sourceHash: hash },
         });
         examId = exam.id;
         report.examTitle = title;

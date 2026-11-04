@@ -143,7 +143,7 @@ export async function importAction(_: unknown, form: FormData): Promise<{ report
   if (file && typeof file === 'object' && 'text' in file && file.size > 0) raw = await file.text();
   if (!raw) return { error: 'Постави JSON или избери файл.' };
   try {
-    const report = await importQuestions(prisma, JSON.parse(raw));
+    const report = await importQuestions(prisma, JSON.parse(raw), { force: form.get('force') === 'on' });
     revalidatePath('/admin');
     return { report };
   } catch (e) {

@@ -28,6 +28,10 @@ async function main() {
   const qFiles = [...jsonFiles(path.join(root, 'questions')), ...(withDemo ? jsonFiles(path.join(root, 'demo')) : [])];
   for (const f of qFiles) {
     const r = await importQuestions(prisma, JSON.parse(readFileSync(f, 'utf8')));
+    if (r.skipped) {
+      console.log(`Въпроси: ${path.relative(root, f)} → без промяна, пропуснат`);
+      continue;
+    }
     console.log(`Въпроси: ${path.relative(root, f)} → ${r.created} (заменени ${r.replaced})`);
     for (const w of r.warnings) console.log('  ⚠', w);
     for (const w of r.worksCreated) console.log('  + произведение', w);

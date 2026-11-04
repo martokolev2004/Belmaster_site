@@ -101,6 +101,7 @@ model Exam {
   year      Int
   session   String // напр. "май", "август"
   title     String // напр. "ДЗИ по БЕЛ — май 2023"
+  sourceHash String? // отпечатък на импортирания JSON — при същия файл импортът се пропуска
   createdAt DateTime @default(now())
 
   questions Question[]
