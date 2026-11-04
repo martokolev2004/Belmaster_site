@@ -12,6 +12,7 @@ import { MapBoard } from './MapBoard';
 import { useCountdown } from './useCountdown';
 import { attackOptions, landOwner, pickOptions, territoryCount } from './logic';
 import { AnswerInput, hasAnswer, type InputQuestion } from '@/components/quiz/inputs';
+import { ContextBox } from '@/components/quiz/ContextBox';
 
 const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 
@@ -532,7 +533,7 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
         {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
       </div>
       <p className="mt-2 whitespace-pre-line text-lg font-extrabold leading-snug text-ink-strong phone-landscape:mt-1 phone-landscape:text-[15px]">{q.prompt}</p>
-      {q.context && <p className="mt-2 whitespace-pre-line rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm italic">{q.context}</p>}
+      {q.context && <ContextBox text={q.context} compact />}
 
       <div className="mt-3 phone-landscape:mt-2">
         <AnswerInput

@@ -11,6 +11,7 @@ import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app
 
 import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
 import { PassageText } from './PassageText';
+import { ContextBox } from './ContextBox';
 export { LETTERS };
 
 interface Props {
@@ -136,7 +137,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
             {mode === 'exam' && q.sourceNo && <Badge>Задача {q.sourceNo}</Badge>}
           </div>
           <h2 className="whitespace-pre-line text-xl font-extrabold leading-snug md:text-2xl">{q.prompt}</h2>
-          {q.context && <div className="mt-4 whitespace-pre-line rounded-2xl border-2 border-dashed border-line px-4 py-3 italic">{q.context}</div>}
+          {q.context && <ContextBox text={q.context} />}
 
           <div className="mt-6">
             <QuestionInput q={q} answer={answer} result={mode === 'practice' ? result : undefined} onAnswer={setAnswer} />
