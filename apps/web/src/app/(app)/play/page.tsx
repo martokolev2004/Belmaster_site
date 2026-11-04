@@ -15,7 +15,7 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
     inviteName = f && f.grade === user.grade ? f.displayName : null;
   }
   const questions = await prisma.question.count({
-    where: { grade: user.grade!, status: 'ACTIVE', section: { in: ['LANGUAGE', 'LITERATURE'] }, type: { in: ['SINGLE_CHOICE', 'SHORT_ANSWER'] } },
+    where: { grade: user.grade!, status: 'ACTIVE', inMultiplayer: true, section: { in: ['LANGUAGE', 'LITERATURE'] } },
   });
   return (
     <div>

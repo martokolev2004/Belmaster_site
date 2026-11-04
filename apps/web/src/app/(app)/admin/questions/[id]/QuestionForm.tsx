@@ -27,6 +27,7 @@ interface Q {
   matching: { left: string[]; right: string[]; pairs: number[] } | null;
   explanation: string | null;
   status: 'ACTIVE' | 'DRAFT' | 'HIDDEN';
+  inMultiplayer: boolean;
   workId: string | null;
   passageId: string | null;
   sourceNo: number | null;
@@ -130,6 +131,13 @@ export function QuestionForm({
               </Select>
             </Field>
           )}
+          <Field label="В мултиплейъра" hint="„Автоматично“: според типа (пунктуацията и четенето — не).">
+            <Select name="inMultiplayer" defaultValue={question ? (question.inMultiplayer ? 'yes' : 'no') : 'auto'}>
+              <option value="auto">Автоматично</option>
+              <option value="yes">Да</option>
+              <option value="no">Не</option>
+            </Select>
+          </Field>
           <Field label="Тип">
             <Select name="type" value={type} onChange={(e) => setType(e.target.value as Q['type'])}>
               <option value="SINGLE_CHOICE">Избор на отговор</option>

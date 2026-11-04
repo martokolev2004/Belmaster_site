@@ -1,5 +1,5 @@
 import type { Grade, LanguageTopic, PrismaClient, QuestionType, Section } from '@prisma/client';
-import { punctuationFromTexts } from '@belmaster/shared';
+import { defaultInMultiplayer, punctuationFromTexts } from '@belmaster/shared';
 
 /**
  * Формат на файл за импорт (виж data/questions/README.md).
@@ -31,6 +31,8 @@ export interface ImportQuestion {
   punctuation?: { text: string; answer: string };
   /** SHORT_ANSWER: колко отговора се искат */
   answerCount?: number;
+  /** участва ли в мултиплейъра (по подразбиране — според типа и раздела) */
+  multiplayer?: boolean;
   explanation?: string | null;
   work?: { title: string; author: string; period?: string } | null;
   passage?: string | null;
@@ -177,6 +179,7 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
             matching: q.matching ?? undefined,
             data,
             answerCount: q.answerCount ?? 1,
+            inMultiplayer: q.multiplayer ?? defaultInMultiplayer(type, q.section, q.answerCount ?? 1),
             explanation: q.explanation ?? null,
             status,
             workId,

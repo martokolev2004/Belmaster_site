@@ -1,5 +1,20 @@
 import { isShortAnswerCorrect, normalizeAnswer } from './answers';
 
+/** Типове, които по подразбиране влизат в мултиплейъра (пунктуацията и четенето — не). */
+export const MULTIPLAYER_TYPES: QType[] = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING', 'FILL_BLANKS'];
+
+export function defaultInMultiplayer(type: QType, section: 'LANGUAGE' | 'LITERATURE' | 'READING', answerCount = 1): boolean {
+  return section !== 'READING' && MULTIPLAYER_TYPES.includes(type) && answerCount <= 1;
+}
+
+export const TYPE_LABELS: Record<QType, string> = {
+  SINGLE_CHOICE: 'Избор на отговор',
+  SHORT_ANSWER: 'Кратък отговор',
+  MATCHING: 'Свързване',
+  FILL_BLANKS: 'Празни места',
+  PUNCTUATION: 'Пунктуация',
+};
+
 /** Всички типове въпроси. */
 export type QType = 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING' | 'FILL_BLANKS' | 'PUNCTUATION';
 

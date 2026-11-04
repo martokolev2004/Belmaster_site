@@ -165,6 +165,7 @@ model Question {
   answerCount     Int            @default(1) // SHORT_ANSWER: колко отговора се искат (напр. „запишете ДВЕ“)
   explanation     String?
   status          QuestionStatus @default(ACTIVE)
+  inMultiplayer   Boolean        @default(true) // участва ли в битките
 
   // Етикети
   workId     String? // литература: към кое произведение (null = общ въпрос)
@@ -186,6 +187,7 @@ model Question {
   reports QuestionReport[]
 
   @@index([grade, section, status])
+  @@index([grade, inMultiplayer, status])
   @@index([workId])
   @@index([passageId])
 }

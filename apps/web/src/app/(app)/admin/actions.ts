@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { importQuestions, type ImportReport } from '@belmaster/db';
-import { isGrade, punctuationFromTexts } from '@belmaster/shared';
+import { defaultInMultiplayer, isGrade, punctuationFromTexts } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
@@ -72,6 +72,7 @@ export async function saveQuestionAction(form: FormData) {
     answerCount: type === 'SHORT_ANSWER' ? Math.min(5, Math.max(1, Number(form.get('answerCount')) || 1)) : 1,
     explanation: str(form.get('explanation')),
     status: pick(STATUSES, form.get('status'), 'ACTIVE'),
+    inMultiplayer: form.get('inMultiplayer') === 'auto' || !form.get('inMultiplayer') ? defaultInMultiplayer(type, section, Number(form.get('answerCount')) || 1) : form.get('inMultiplayer') === 'yes',
     workId: section === 'LITERATURE' ? str(form.get('workId')) : null,
     passageId: section === 'READING' ? str(form.get('passageId')) : null,
     sourceNo: form.get('sourceNo') ? Number(form.get('sourceNo')) || null : null,

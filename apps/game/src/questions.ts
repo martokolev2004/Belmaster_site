@@ -63,7 +63,7 @@ export class QuestionPool {
 
   static async load(grade: Grade): Promise<QuestionPool> {
     const rows = await prisma.question.findMany({
-      where: { grade, status: 'ACTIVE', section: { in: ['LANGUAGE', 'LITERATURE'] } },
+      where: { grade, status: 'ACTIVE', inMultiplayer: true, section: { in: ['LANGUAGE', 'LITERATURE'] } },
       include: { work: true },
     });
     const pool = new QuestionPool();

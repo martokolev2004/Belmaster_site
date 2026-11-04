@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GRADES, SECTION_LABELS, TOPIC_LABELS, gradeLabel, isGrade } from '@belmaster/shared';
+import { GRADES, SECTION_LABELS, TOPIC_LABELS, TYPE_LABELS, gradeLabel, isGrade } from '@belmaster/shared';
 import type { Prisma } from '@belmaster/db';
 import { prisma } from '@/lib/db';
 import { Badge, ButtonLink, Input, Select } from '@/components/ui';
@@ -16,6 +16,9 @@ export default async function AdminQuestions({ searchParams }: { searchParams: P
   if (sp.work) where.workId = sp.work;
   if (sp.exam) where.examId = sp.exam;
   if (sp.q) where.prompt = { contains: sp.q, mode: 'insensitive' };
+  if (sp.type && sp.type in TYPE_LABELS) where.type = sp.type as keyof typeof TYPE_LABELS;
+  if (sp.mp === 'yes') where.inMultiplayer = true;
+  if (sp.mp === 'no') where.inMultiplayer = false;
   const page = Math.max(1, Number(sp.page) || 1);
   const [total, rows] = await Promise.all([
     prisma.question.count({ where }),
@@ -35,7 +38,7 @@ export default async function AdminQuestions({ searchParams }: { searchParams: P
 
   return (
     <div>
-      <form className="mb-4 grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto]">
+      <form className="mb-4 grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto_auto_auto]">
         <Input name="q" defaultValue={sp.q} placeholder="Търси в условието…" />
         <Select name="grade" defaultValue={sp.grade ?? ''}>
           <option value="">Всички класове</option>
@@ -61,6 +64,19 @@ export default async function AdminQuestions({ searchParams }: { searchParams: P
             </option>
           ))}
         </Select>
+        <Select name="type" defaultValue={sp.type ?? ''}>
+          <option value="">Всеки тип</option>
+          {Object.entries(TYPE_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v}
+            </option>
+          ))}
+        </Select>
+        <Select name="mp" defaultValue={sp.mp ?? ''}>
+          <option value="">Битки: всички</option>
+          <option value="yes">В битките</option>
+          <option value="no">Само тестове</option>
+        </Select>
         <button className="rounded-2xl bg-secondary px-5 font-extrabold text-white">Филтрирай</button>
       </form>
       <div className="mb-3 flex items-center justify-between">
@@ -77,7 +93,8 @@ export default async function AdminQuestions({ searchParams }: { searchParams: P
               <div className="mt-1 flex flex-wrap gap-1.5">
                 <Badge>{gradeLabel(q.grade)}</Badge>
                 <Badge tone="blue">{q.topic ? TOPIC_LABELS[q.topic] : SECTION_LABELS[q.section]}</Badge>
-                {q.type !== 'SINGLE_CHOICE' && <Badge tone="purple">{({ SHORT_ANSWER: 'кратък отговор', MATCHING: 'свързване', FILL_BLANKS: 'празни места', PUNCTUATION: 'пунктуация' } as Record<string, string>)[q.type]}</Badge>}
+                {q.type !== 'SINGLE_CHOICE' && <Badge tone="purple">{TYPE_LABELS[q.type]}</Badge>}
+                {!q.inMultiplayer && <Badge>само тестове</Badge>}
                 {q.work && <Badge tone="yellow">{q.work.title}</Badge>}
                 {q.exam && <Badge>{q.exam.title}{q.sourceNo ? ` · №${q.sourceNo}` : ''}</Badge>}
                 {q.status !== 'ACTIVE' && <Badge tone="red">{STATUS_LABEL[q.status]}</Badge>}
