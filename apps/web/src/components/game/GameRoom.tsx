@@ -612,7 +612,21 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
 
       {reveal && (
         <div className="mt-4 animate-rise rounded-xl bg-surface-2 p-3">
+          {myResult && (
+            <p className={cn('mb-2 rounded-lg px-3 py-2 text-sm font-black text-white', myResult.correct ? 'bg-primary' : 'bg-error')}>
+              {myResult.correct
+                ? `✔ Отговори вярно за ${((myResult.timeMs ?? 0) / 1000).toFixed(2)} с`
+                : myResult.timeMs == null
+                  ? '✘ Не отговори навреме'
+                  : `✘ Грешен отговор${myResult.index != null ? ` (${LETTERS[myResult.index]})` : myResult.text ? ` („${myResult.text}“)` : ''}`}
+            </p>
+          )}
           <p className="font-black text-ink-strong">{reveal.message}</p>
+          {reveal.correctIndex != null && q.options[reveal.correctIndex] && (
+            <p className="mt-1 text-sm font-bold text-primary-dark">
+              Верен отговор: {LETTERS[reveal.correctIndex]}) {q.options[reveal.correctIndex]}
+            </p>
+          )}
           {reveal.correctText && <p className="mt-1 text-sm font-bold text-primary-dark">Верен отговор: {reveal.correctText}</p>}
           {reveal.explanation && <p className="mt-1 text-sm text-muted">{reveal.explanation}</p>}
           <ul className="mt-2 space-y-1 text-sm">
