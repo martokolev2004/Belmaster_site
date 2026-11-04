@@ -171,6 +171,7 @@ model Question {
   acceptedAnswers String[] // за SHORT_ANSWER — всички допустими отговори
   matching        Json? // за MATCHING: { left: string[], right: string[], pairs: number[] }
   data            Json? // FILL_BLANKS: { blanks: {text, blanks[]} } · PUNCTUATION: { punctuation: {tokens, marks[]} }
+  points          Int            @default(1) // точки в матурата (по ключа)
   answerCount     Int            @default(1) // SHORT_ANSWER: колко отговора се искат (напр. „запишете ДВЕ“)
   explanation     String?
   status          QuestionStatus @default(ACTIVE)

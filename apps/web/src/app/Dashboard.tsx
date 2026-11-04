@@ -7,12 +7,7 @@ import { Card, ProgressBar, Badge } from '@/components/ui';
 
 export async function Dashboard({ user }: { user: User }) {
   const grade = user.grade!;
-  const [lang, lit, reading, exams, works, recent] = await Promise.all([
-    prisma.question.count({ where: { grade, section: 'LANGUAGE', status: 'ACTIVE' } }),
-    prisma.question.count({ where: { grade, section: 'LITERATURE', status: 'ACTIVE' } }),
-    prisma.passage.count({ where: { grade, questions: { some: { status: 'ACTIVE' } } } }),
-    prisma.exam.count({ where: { grade } }),
-    prisma.work.count({ where: { grade, published: true } }),
+  const [recent] = await Promise.all([
     prisma.matchPlayer.findMany({
       where: { userId: user.id },
       orderBy: { match: { endedAt: 'desc' } },
@@ -63,15 +58,15 @@ export async function Dashboard({ user }: { user: User }) {
       <section>
         <h2 className="mb-3 text-xl font-black">Мини тестове</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Tile href="/tests/language" icon={<Languages className="size-7" />} tone="primary" title="Език" text="Граматика, лексика, правопис, пунктуация" count={lang} unit="въпроса" />
-          <Tile href="/tests/literature" icon={<BookOpen className="size-7" />} tone="accent" title="Литература" text="Случайни въпроси по литература" count={lit} unit="въпроса" />
-          <Tile href="/tests/reading" icon={<FileText className="size-7" />} tone="secondary" title="Четене с разбиране" text="Текст и въпроси към него" count={reading} unit="текста" />
-          <Tile href="/exams" icon={<ScrollText className="size-7" />} tone="purple" title="Цели матури" text="Минали матури без есето" count={exams} unit="матури" />
+          <Tile href="/tests/language" icon={<Languages className="size-7" />} tone="primary" title="Език" text="Граматика, лексика, правопис, пунктуация" />
+          <Tile href="/tests/literature" icon={<BookOpen className="size-7" />} tone="accent" title="Литература" text="Случайни въпроси по литература" />
+          <Tile href="/tests/reading" icon={<FileText className="size-7" />} tone="secondary" title="Четене с разбиране" text="Текст и въпроси към него" />
+          <Tile href="/exams" icon={<ScrollText className="size-7" />} tone="purple" title="Цели матури" text="Минали матури без есето" />
         </div>
       </section>
 
       <section className="grid gap-3 md:grid-cols-2">
-        <Tile href="/library" icon={<Library className="size-7" />} tone="secondary" title="Библиотека" text="Произведенията от програмата" count={works} unit="произведения" />
+        <Tile href="/library" icon={<Library className="size-7" />} tone="secondary" title="Библиотека" text="Произведенията от програмата" />
         <Card>
           <h3 className="mb-3 font-extrabold">Последни битки</h3>
           {recent.length === 0 ? (
@@ -103,16 +98,13 @@ const TONES = {
   purple: 'bg-purple/20 text-purple-dark',
 };
 
-function Tile({ href, icon, tone, title, text, count, unit }: { href: string; icon: React.ReactNode; tone: keyof typeof TONES; title: string; text: string; count: number; unit: string }) {
+function Tile({ href, icon, tone, title, text }: { href: string; icon: React.ReactNode; tone: keyof typeof TONES; title: string; text: string }) {
   return (
     <Link href={href} className="card3d group flex items-center gap-4 rounded-2xl bg-surface p-4 transition hover:bg-surface-2">
       <span className={`rounded-2xl p-3 ${TONES[tone]}`}>{icon}</span>
       <span className="min-w-0 flex-1">
         <span className="block text-lg font-extrabold text-ink-strong">{title}</span>
         <span className="block text-sm text-muted">{text}</span>
-        <span className="mt-1 block text-xs font-extrabold text-muted">
-          {count} {unit}
-        </span>
       </span>
       <ChevronRight className="size-5 text-muted transition group-hover:translate-x-0.5" />
     </Link>

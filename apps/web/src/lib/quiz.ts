@@ -32,6 +32,7 @@ export function toClient(q: Question & { work?: Work | null }): ClientQuestion {
     workTitle: q.work ? `${q.work.title} — ${q.work.author}` : null,
     label: q.topic ? TOPIC_LABELS[q.topic] : SECTION_LABELS[q.section],
     sourceNo: q.sourceNo,
+    points: q.points,
   };
 }
 

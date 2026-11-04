@@ -12,7 +12,6 @@ export default async function ExamsPage() {
   const exams = await prisma.exam.findMany({
     where: { grade: user.grade! },
     orderBy: [{ year: 'desc' }, { session: 'asc' }],
-    include: { _count: { select: { questions: { where: { status: 'ACTIVE' } } } } },
   });
   const best = await prisma.quizAttempt.groupBy({
     by: ['examId'],
@@ -38,7 +37,7 @@ export default async function ExamsPage() {
                 <span className="flex-1">
                   <span className="block font-extrabold text-ink-strong">{e.title}</span>
                   <span className="block text-sm text-muted">
-                    {e._count.questions} въпроса{b != null ? ` · най-добро: ${b}` : ''}
+                    {b != null ? `Най-добро: ${b} точки` : 'Пробна матура с таймер'}
                   </span>
                 </span>
                 <ChevronRight className="size-5 text-muted" />

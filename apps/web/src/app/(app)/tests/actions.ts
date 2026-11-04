@@ -1,6 +1,6 @@
 'use server';
 
-import { XP_PER_CORRECT } from '@belmaster/shared';
+import { XP_PER_CORRECT, estimateGrade } from '@belmaster/shared';
 import { recordAnswers } from '@belmaster/db';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
@@ -20,6 +20,7 @@ export async function finishTestAction(
   kind: TestKind,
   examId: string | null,
   answers: { id: string; answer: Answer }[],
+  meta: { timeUsedSec?: number | null; timedOut?: boolean } = {},
 ): Promise<FinishResult | { error: string }> {
   const user = await getCurrentUser();
   if (!user?.grade) return { error: 'Не си влязъл.' };
@@ -35,10 +36,26 @@ export async function finishTestAction(
   const score = Math.round(results.reduce((s, r) => s + r.score, 0) * 100) / 100;
   const xpEarned = Math.round(score * XP_PER_CORRECT);
   const before = user.level;
+  // матура: точки по ключа (частичните се смятат пропорционално)
+  let exam: FinishResult['exam'];
+  if (kind === 'EXAM') {
+    const maxPoints = results.reduce((s, r) => s + (byId.get(r.id)?.points ?? 1), 0);
+    const points = Math.round(results.reduce((s, r) => s + r.score * (byId.get(r.id)?.points ?? 1), 0) * 10) / 10;
+    exam = { points, maxPoints, grade: estimateGrade(points, maxPoints), timeUsedSec: meta.timeUsedSec ?? null, timedOut: !!meta.timedOut };
+  }
 
   await prisma.$transaction([
     prisma.quizAttempt.create({
-      data: { userId: user.id, grade: user.grade, kind, examId, score, total: results.length, xpEarned, answers: answers as object[] },
+      data: {
+        userId: user.id,
+        grade: user.grade,
+        kind,
+        examId,
+        score: exam ? exam.points : score,
+        total: exam ? exam.maxPoints : results.length,
+        xpEarned,
+        answers: answers as object[],
+      },
     }),
     ...results.map((r) =>
       prisma.question.update({
@@ -64,6 +81,7 @@ export async function finishTestAction(
     unlocked,
     results,
     mistakesCount,
+    exam,
   };
 }
 

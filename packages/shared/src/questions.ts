@@ -279,3 +279,30 @@ export function renderPunctuated(p: PunctuationData, marks: PunctMark[] = p.mark
     })
     .join(' ');
 }
+
+/** Точки по задачи в ДЗИ по БЕЛ (12. клас) — еднакви за всички сесии (общо 100). */
+export const DZI12_POINTS: Record<number, number> = {
+  8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 13: 5, 19: 2, 20: 2, 21: 6, 22: 2, 23: 3,
+  35: 2, 36: 2, 37: 2, 38: 2, 39: 3, 40: 6, 41: 30,
+};
+
+/** Колко точки носи задачата в матурата (по подразбиране 1). */
+export function defaultPoints(grade: string, no: number | null | undefined): number {
+  if (no == null) return 1;
+  if (grade === 'G12') return DZI12_POINTS[no] ?? 1;
+  return 1;
+}
+
+/** Ориентировъчна оценка по шестобалната система от процента точки (линейно, 2 + 4 × дял). */
+export function estimateGrade(points: number, max: number): number {
+  if (max <= 0) return 2;
+  return Math.round((2 + 4 * Math.min(1, Math.max(0, points / max))) * 100) / 100;
+}
+
+export function gradeWord(g: number): string {
+  if (g >= 5.5) return 'Отличен';
+  if (g >= 4.5) return 'Много добър';
+  if (g >= 3.5) return 'Добър';
+  if (g >= 3) return 'Среден';
+  return 'Слаб';
+}

@@ -10,6 +10,7 @@ export interface ClientQuestion extends InputQuestion {
   workTitle: string | null;
   label: string;
   sourceNo: number | null;
+  points: number;
 }
 
 export interface ClientPassage {
@@ -45,4 +46,6 @@ export interface FinishResult {
   unlocked: string[];
   results: QuestionResult[];
   mistakesCount: number;
+  /** само за матура: точки по ключа */
+  exam?: { points: number; maxPoints: number; grade: number; timeUsedSec: number | null; timedOut: boolean };
 }

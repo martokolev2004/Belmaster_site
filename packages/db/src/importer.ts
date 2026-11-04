@@ -1,6 +1,6 @@
 import type { Grade, LanguageTopic, PrismaClient, QuestionType, Section } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { defaultInMultiplayer, punctuationFromTexts } from '@belmaster/shared';
+import { defaultInMultiplayer, defaultPoints, punctuationFromTexts } from '@belmaster/shared';
 
 /**
  * Формат на файл за импорт (виж data/questions/README.md).
@@ -18,6 +18,7 @@ export interface ImportFile {
 
 export interface ImportQuestion {
   no?: number;
+  points?: number; // точки по ключа; без него — стандартните за матурата
   section: Section;
   topic?: LanguageTopic | null;
   type?: QuestionType;
@@ -86,7 +87,17 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
     const existing = await prisma.exam.findUnique({
       where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
     });
-    if (existing?.sourceHash === hash) return { ...report, examTitle: existing.title, skipped: true };
+    if (existing?.sourceHash === hash) {
+      // точките се синхронизират и без пълен импорт (не трием докладите и статистиката)
+      for (const q of file.questions) {
+        if (q.no == null) continue;
+        await prisma.question.updateMany({
+          where: { examId: existing.id, sourceNo: q.no },
+          data: { points: q.points ?? defaultPoints(file.grade, q.no) },
+        });
+      }
+      return { ...report, examTitle: existing.title, skipped: true };
+    }
   }
 
   return prisma.$transaction(
@@ -199,6 +210,7 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
             acceptedAnswers: q.acceptedAnswers ?? [],
             matching: q.matching ?? undefined,
             data,
+            points: q.points ?? defaultPoints(file.grade, q.no),
             answerCount: q.answerCount ?? 1,
             inMultiplayer:
               q.multiplayer ??
