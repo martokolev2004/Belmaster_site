@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel, levelProgress } from '@belmaster/shared';
-import { BookOpen, ChevronRight, FileText, Languages, Library, ScrollText, Swords } from 'lucide-react';
+import { Pencil, BookOpen, ChevronRight, FileText, Languages, Library, ScrollText, Swords } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { Card, ProgressBar, Badge } from '@/components/ui';
+import { UserAvatar } from '@/components/avatar/UserAvatar';
+import { newItemKeys } from '@/lib/unlocks';
 
 export async function Dashboard({ user }: { user: User }) {
   const grade = user.grade!;
@@ -17,12 +19,27 @@ export async function Dashboard({ user }: { user: User }) {
   ]);
   const lp = levelProgress(user.xp, user.level);
   const firstName = user.displayName.split(' ')[0];
+  const hasNew = newItemKeys(user).length > 0;
 
   return (
     <div className="space-y-8">
       <section className="animate-rise">
-        <h1 className="text-3xl font-black">Здравей, {firstName}! 👋</h1>
-        <p className="mt-1 text-muted">Готвиш се за {gradeLabel(grade)}.</p>
+        <div className="flex items-center gap-4">
+          <Link href="/profile/avatar" className="group relative shrink-0" aria-label="Промени аватара" title="Промени аватара">
+            <UserAvatar avatar={user.avatar} name={user.id} size={88} className="transition group-hover:scale-105" />
+            <span className="absolute -bottom-1 -right-1 flex size-8 items-center justify-center rounded-full border-2 border-bg bg-secondary text-white shadow">
+              <Pencil className="size-4" />
+            </span>
+            {hasNew && <span className="absolute -right-1 -top-1 size-4 rounded-full border-2 border-bg bg-error" />}
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-black">Здравей, {firstName}! 👋</h1>
+            <p className="mt-1 text-muted">Готвиш се за {gradeLabel(grade)}.</p>
+            <Link href="/profile/avatar" className="mt-1.5 inline-flex items-center gap-1 text-sm font-extrabold text-secondary hover:underline">
+              {hasNew ? '🎁 Имаш нови неща за аватара' : '✏️ Промени аватара'}
+            </Link>
+          </div>
+        </div>
         <Card className="mt-5 flex items-center gap-4">
           <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-accent text-2xl font-black text-[#4b3b00]">
             {lp.level}
