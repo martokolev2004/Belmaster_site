@@ -24,6 +24,7 @@ model User {
   googleId      String?   @unique
   displayName   String
   avatarColor   String    @default("#58cc02")
+  avatar        Json? // AvatarConfig (виж packages/shared/src/avatar.ts)
   friendCode    String    @unique
   isGuest       Boolean   @default(false)
   grade         Grade?

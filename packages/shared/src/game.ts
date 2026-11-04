@@ -1,5 +1,6 @@
 import type { GradeCode } from './grades';
 import type { AnyAnswer, PunctMark, QType } from './questions';
+import type { AvatarConfig, FrameTier } from './avatar';
 
 // ───────────── Правила ─────────────
 export const RULES = {
@@ -60,6 +61,8 @@ export interface PublicPlayer {
   uid: string;
   name: string;
   color: string;
+  avatar: AvatarConfig | null;
+  frame: FrameTier;
   isGuest: boolean;
   isBot: boolean;
   ready: boolean;
@@ -217,4 +220,6 @@ export interface GameTokenClaims {
   name: string;
   grade: GradeCode;
   isGuest: boolean;
+  avatar?: AvatarConfig | null;
+  frame?: FrameTier;
 }

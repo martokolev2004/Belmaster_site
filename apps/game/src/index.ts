@@ -6,6 +6,7 @@ import {
   CHAT_MESSAGES,
   RULES,
   isGrade,
+  sanitizeAvatar,
   type ClientToServer,
   type GameMode,
   type GameTokenClaims,
@@ -39,7 +40,7 @@ const io = new Server<ClientToServer, ServerToClient, Record<string, never>, { u
 const rooms = new Map<string, Room>();
 const userRoom = new Map<string, string>();
 const userSockets = new Map<string, Set<string>>();
-const quickQueue = new Map<string, { uid: string; name: string; isGuest: boolean; since: number }[]>();
+const quickQueue = new Map<string, { uid: string; name: string; isGuest: boolean; since: number; avatar: GameTokenClaims['avatar']; frame: GameTokenClaims['frame'] }[]>();
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function newCode(): string {
@@ -98,7 +99,7 @@ function enterRoom(room: Room, user: GameTokenClaims): string | null {
     }
     old?.dropPlayer(user.uid, 'leave');
   }
-  const err = room.addPlayer({ uid: user.uid, name: user.name, isGuest: user.isGuest });
+  const err = room.addPlayer({ uid: user.uid, name: user.name, isGuest: user.isGuest, avatar: user.avatar ?? null, frame: user.frame ?? 'none' });
   if (err) return err;
   userRoom.set(user.uid, room.code);
   for (const sid of userSockets.get(user.uid) ?? []) {
@@ -127,7 +128,14 @@ io.use(async (socket, next) => {
     const { payload } = await jwtVerify(token, SECRET);
     const claims = payload as unknown as GameTokenClaims;
     if (!claims.uid || !isGrade(claims.grade)) throw new Error('bad token');
-    socket.data.user = { uid: claims.uid, name: String(claims.name).slice(0, 30), grade: claims.grade, isGuest: !!claims.isGuest };
+    socket.data.user = {
+      uid: claims.uid,
+      name: String(claims.name).slice(0, 30),
+      grade: claims.grade,
+      isGuest: !!claims.isGuest,
+      avatar: claims.avatar ? sanitizeAvatar(claims.avatar, null, claims.uid) : null,
+      frame: ['none', 'bronze', 'silver', 'gold', 'legend'].includes(String(claims.frame)) ? claims.frame : 'none',
+    };
     next();
   } catch {
     next(new Error('unauthorized'));
@@ -198,7 +206,7 @@ io.on('connection', (socket: S) => {
       quickQueue.set(key, list.filter((e) => e.uid !== opponent.uid));
       const room = createRoom(user.grade, m, opponent.uid);
       room.isQuick = true;
-      const opClaims: GameTokenClaims = { uid: opponent.uid, name: opponent.name, grade: user.grade, isGuest: opponent.isGuest };
+      const opClaims: GameTokenClaims = { uid: opponent.uid, name: opponent.name, grade: user.grade, isGuest: opponent.isGuest, avatar: opponent.avatar, frame: opponent.frame };
       const e1 = enterRoom(room, opClaims);
       const e2 = enterRoom(room, user);
       if (e1 || e2) {
@@ -216,7 +224,7 @@ io.on('connection', (socket: S) => {
       return;
     }
     const since = Date.now();
-    list.push({ uid: user.uid, name: user.name, isGuest: user.isGuest, since });
+    list.push({ uid: user.uid, name: user.name, isGuest: user.isGuest, since, avatar: user.avatar, frame: user.frame });
     quickQueue.set(key, list);
     socket.emit('quick:status', { searching: true, since, offerBot: false });
     setTimeout(() => {

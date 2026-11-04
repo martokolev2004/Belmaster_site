@@ -14,12 +14,14 @@ import {
   type Standing,
 } from '@belmaster/shared';
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
-import type { AnyAnswer } from '@belmaster/shared';
+import { BOT_AVATAR, type AnyAnswer, type AvatarConfig, type FrameTier } from '@belmaster/shared';
 
 export interface PlayerInternal {
   uid: string;
   name: string;
   color: string;
+  avatar: AvatarConfig | null;
+  frame: FrameTier;
   isGuest: boolean;
   isBot: boolean;
   ready: boolean;
@@ -118,7 +120,10 @@ export class Room {
 
   // ───────────────────────── Лоби ─────────────────────────
 
-  addPlayer(p: { uid: string; name: string; isGuest: boolean; isBot?: boolean }, socketId?: string): string | null {
+  addPlayer(
+    p: { uid: string; name: string; isGuest: boolean; isBot?: boolean; avatar?: AvatarConfig | null; frame?: FrameTier },
+    socketId?: string,
+  ): string | null {
     const existing = this.players.get(p.uid);
     if (existing) {
       if (socketId) this.attachSocket(p.uid, socketId);
@@ -132,6 +137,8 @@ export class Room {
       uid: p.uid,
       name: p.name,
       color,
+      avatar: p.isBot ? BOT_AVATAR : p.avatar ?? null,
+      frame: p.frame ?? 'none',
       isGuest: p.isGuest,
       isBot: !!p.isBot,
       ready: !!p.isBot,
@@ -871,6 +878,8 @@ export class Room {
         uid: p.uid,
         name: p.name,
         color: p.color,
+        avatar: p.avatar,
+        frame: p.frame,
         isGuest: p.isGuest,
         isBot: p.isBot,
         ready: p.ready,

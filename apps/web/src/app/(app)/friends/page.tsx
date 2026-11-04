@@ -18,7 +18,7 @@ export default async function FriendsPage() {
   const friends = all
     .filter((f) => f.status === 'ACCEPTED')
     .map((f) => (f.requesterId === user.id ? f.addressee : f.requester))
-    .map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, grade: gradeLabel(u.grade), sameGrade: u.grade === user.grade }));
+    .map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, avatar: u.avatar, grade: gradeLabel(u.grade), sameGrade: u.grade === user.grade }));
   const incoming = all.filter((f) => f.status === 'PENDING' && f.addresseeId === user.id);
   const outgoing = all.filter((f) => f.status === 'PENDING' && f.requesterId === user.id);
 
@@ -39,7 +39,7 @@ export default async function FriendsPage() {
           <ul className="space-y-2">
             {incoming.map((f) => (
               <li key={f.id} className="card3d flex items-center gap-3 rounded-2xl bg-surface p-3">
-                <Avatar name={f.requester.displayName} color={f.requester.avatarColor} />
+                <Avatar name={f.requester.displayName} avatar={f.requester.avatar} seed={f.requester.id} />
                 <span className="flex-1 font-extrabold">{f.requester.displayName}</span>
                 <form action={respondFriendAction} className="flex gap-2">
                   <input type="hidden" name="id" value={f.id} />
@@ -73,7 +73,7 @@ export default async function FriendsPage() {
           <ul className="space-y-2">
             {outgoing.map((f) => (
               <li key={f.id} className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3">
-                <Avatar name={f.addressee.displayName} color={f.addressee.avatarColor} size={32} />
+                <Avatar name={f.addressee.displayName} avatar={f.addressee.avatar} seed={f.addressee.id} size={32} />
                 <span className="flex-1 font-bold">{f.addressee.displayName}</span>
                 <form action={respondFriendAction}>
                   <input type="hidden" name="id" value={f.id} />

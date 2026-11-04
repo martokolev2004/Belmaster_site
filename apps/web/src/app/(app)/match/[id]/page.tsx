@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Check, X } from 'lucide-react';
-import { MODE_LABELS } from '@belmaster/shared';
+import { BOT_AVATAR, MODE_LABELS } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { Avatar, Badge, Card } from '@/components/ui';
@@ -22,7 +22,7 @@ const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireUser();
-  const match = await prisma.match.findUnique({ where: { id }, include: { players: { orderBy: { place: 'asc' } } } });
+  const match = await prisma.match.findUnique({ where: { id }, include: { players: { orderBy: { place: 'asc' }, include: { user: { select: { avatar: true } } } } } });
   if (!match) notFound();
   const review = (match.review ?? []) as unknown as ReviewItem[];
 
@@ -41,7 +41,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {match.players.map((p) => (
             <li key={p.id} className="flex items-center gap-3">
               <span className="w-6 text-center font-black text-muted">{p.place}</span>
-              <Avatar name={p.name} color={p.color} size={34} />
+              <Avatar name={p.name} color={p.color} avatar={p.isBot ? BOT_AVATAR : p.user?.avatar} seed={p.userId ?? p.name} size={34} />
               <span className="flex-1 font-extrabold text-ink-strong">
                 {p.name} {p.isBot && <Badge>бот</Badge>}
               </span>

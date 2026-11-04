@@ -29,7 +29,7 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="flex flex-wrap items-center gap-5">
-        <Avatar name={user.displayName} color={user.avatarColor} size={88} />
+        <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={96} />
         <div className="flex-1">
           <h1 className="text-3xl font-black">{user.displayName}</h1>
           <p className="text-muted">
@@ -38,6 +38,9 @@ export default async function ProfilePage() {
               смени клас
             </Link>
           </p>
+          <Link href="/profile/avatar" className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20">
+            ✏️ Промени аватара
+          </Link>
           <p className="mt-1 text-sm text-muted">
             Код за приятели: <span className="font-mono font-black tracking-widest text-ink-strong">{user.friendCode}</span>
           </p>

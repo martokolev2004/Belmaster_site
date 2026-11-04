@@ -20,6 +20,7 @@ export interface InvitableFriend {
   id: string;
   name: string;
   color: string;
+  avatar?: unknown;
 }
 
 export function GameRoom({ code, me, friends }: { code: string; me: string; friends: InvitableFriend[] }) {
@@ -146,7 +147,7 @@ function Lobby({ state, me, friends }: { state: GameState; me: string; friends: 
           <ul className="space-y-2">
             {state.players.map((p) => (
               <li key={p.uid} className="flex items-center gap-3">
-                <Avatar name={p.name} color={p.color} size={36} />
+                <Avatar name={p.name} color={p.color} avatar={p.avatar} seed={p.uid} size={36} />
                 <span className="min-w-0 flex-1 truncate font-bold">
                   {p.name} {p.uid === state.hostUid && <Crown className="inline size-4 text-[#e5a400]" />} {p.isGuest && <Badge>гост</Badge>}
                 </span>
@@ -173,7 +174,7 @@ function Lobby({ state, me, friends }: { state: GameState; me: string; friends: 
             <ul className="space-y-2">
               {friends.map((f) => (
                 <li key={f.id} className="flex items-center gap-3">
-                  <Avatar name={f.name} color={f.color} size={30} />
+                  <Avatar name={f.name} avatar={f.avatar} seed={f.id} size={30} />
                   <span className="flex-1 truncate font-bold">{f.name}</span>
                   {inRoom.has(f.id) ? (
                     <Badge tone="green">в стаята</Badge>
@@ -395,7 +396,7 @@ function PlayersBar({ state, map, me }: { state: GameState; map: (typeof MAPS)[s
               (p.eliminated || p.left) && 'opacity-40',
             )}
           >
-            <Avatar name={p.name} color={p.color} size={34} className="phone-landscape:hidden" />
+            <Avatar name={p.name} color={p.color} avatar={p.avatar} seed={p.uid} frame={p.frame} size={34} className="phone-landscape:hidden" />
             <span className="hidden size-3 shrink-0 rounded-full phone-landscape:block" style={{ background: p.color }} />
             <div className="min-w-0 phone-landscape:flex phone-landscape:items-center phone-landscape:gap-2">
               <p className="flex items-center gap-1 truncate text-sm font-extrabold text-ink-strong">
@@ -701,7 +702,7 @@ function Finished({ state, me }: { state: GameState; me: string }) {
         {standings.map((s) => (
           <li key={s.uid} className={cn('flex items-center gap-3 px-4 py-3', s.uid === me && 'bg-secondary/10')}>
             <span className="w-6 text-center text-lg font-black text-muted">{s.place}</span>
-            <Avatar name={s.name} color={s.color} size={38} />
+            <Avatar name={s.name} color={s.color} avatar={state.players.find((x) => x.uid === s.uid)?.avatar} seed={s.uid} size={38} />
             <span className="flex-1 font-extrabold text-ink-strong">
               {s.name} {s.isBot && <Badge>бот</Badge>}
             </span>

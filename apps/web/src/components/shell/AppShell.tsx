@@ -21,7 +21,7 @@ export function AppShell({ user, children }: { user: User; children: React.React
           </Link>
           <NavLinks admin={admin} />
           <Link href="/profile" className="mt-auto flex items-center gap-3 rounded-2xl px-3 py-2 hover:bg-surface-2">
-            <Avatar name={user.displayName} color={user.avatarColor} size={36} />
+            <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={36} />
             <span className="min-w-0">
               <span className="block truncate font-extrabold text-ink-strong">{user.displayName}</span>
               <span className="block text-xs text-muted">
@@ -48,7 +48,7 @@ export function AppShell({ user, children }: { user: User; children: React.React
                 <Gem className="size-5" /> {user.xp}
               </span>
               <Link href="/profile" className="md:hidden" aria-label="Профил">
-                <Avatar name={user.displayName} color={user.avatarColor} size={34} />
+                <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={34} />
               </Link>
             </div>
           </div>

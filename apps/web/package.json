@@ -10,6 +10,8 @@
   "dependencies": {
     "@belmaster/db": "*",
     "@belmaster/shared": "*",
+    "@dicebear/adventurer": "^9.2.2",
+    "@dicebear/core": "^9.2.2",
     "@fontsource-variable/nunito": "^5.2.7",
     "bcryptjs": "3.0.2",
     "clsx": "2.1.1",
