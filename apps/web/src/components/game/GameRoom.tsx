@@ -1,0 +1,687 @@
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CHAT_MESSAGES, MAPS, MODE_LABELS, RULES, type GameMode, type GameState, type PublicPlayer } from '@belmaster/shared';
+import { Bot, Castle, Check, Clock, Copy, Crown, LogOut, MessageCircle, Swords, Timer, Users, WifiOff, X } from 'lucide-react';
+import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { useGame } from './GameSocketProvider';
+import { MapBoard } from './MapBoard';
+import { useCountdown } from './useCountdown';
+import { attackOptions, landOwner, pickOptions, territoryCount } from './logic';
+
+const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
+
+export interface InvitableFriend {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export function GameRoom({ code, me, friends }: { code: string; me: string; friends: InvitableFriend[] }) {
+  const { socket, connected, state, lastError, clearError } = useGame();
+  const router = useRouter();
+  const joined = useRef(false);
+
+  useEffect(() => {
+    if (!socket || !connected) return;
+    if (state?.code === code) {
+      joined.current = true;
+      return;
+    }
+    if (joined.current) {
+      // прехвърлени в друга стая (реванш)
+      if (state) router.replace(`/play/${state.code}`);
+      return;
+    }
+    joined.current = true;
+    socket.emit('lobby:join', { code });
+  }, [socket, connected, state, code, router]);
+
+  if (!connected || !state || state.code !== code) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+        {lastError ? (
+          <>
+            <p className="text-xl font-black">{lastError}</p>
+            <ButtonLink href="/play" onClick={clearError}>
+              Към битките
+            </ButtonLink>
+          </>
+        ) : (
+          <>
+            <span className="size-12 animate-spin rounded-full border-4 border-line border-t-secondary" />
+            <p className="font-bold text-muted">Свързване със стаята {code}…</p>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {lastError && (
+        <div className="fixed left-1/2 top-20 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl bg-error px-4 py-3 font-bold text-white shadow-lg">
+          {lastError}
+          <button onClick={clearError} aria-label="Затвори">
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+      {state.phase === 'lobby' ? <Lobby state={state} me={me} friends={friends} /> : state.phase === 'finished' ? <Finished state={state} me={me} /> : <Battle state={state} me={me} />}
+    </>
+  );
+}
+
+// ───────────────────────── Лоби ─────────────────────────
+
+function Lobby({ state, me, friends }: { state: GameState; me: string; friends: InvitableFriend[] }) {
+  const { socket } = useGame();
+  const [copied, setCopied] = useState(false);
+  const [invited, setInvited] = useState<Set<string>>(new Set());
+  const router = useRouter();
+  const isHost = state.hostUid === me;
+  const mine = state.players.find((p) => p.uid === me);
+  const allReady = state.players.length >= 2 && state.players.every((p) => p.ready);
+  const map = MAPS[state.mapId ?? 'island'];
+  const link = typeof window !== 'undefined' ? `${window.location.origin}/play/${state.code}` : '';
+  const inRoom = new Set(state.players.map((p) => p.uid));
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <section>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-extrabold uppercase text-muted">Код на стаята</p>
+            <p className="font-mono text-4xl font-black tracking-[0.25em] text-secondary">{state.code}</p>
+          </div>
+          <Button
+            variant="outline"
+            icon={copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            onClick={() => {
+              navigator.clipboard?.writeText(link);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+          >
+            {copied ? 'Копирано' : 'Копирай линк'}
+          </Button>
+        </div>
+
+        <div className="card3d overflow-hidden rounded-3xl bg-surface p-2">
+          <MapBoard map={map} state={state} selectable={[]} />
+        </div>
+        <p className="mt-2 text-center text-sm text-muted">
+          {map.name} · {map.regions.length} области · {state.players.length <= 2 ? 'малка карта за 1 на 1' : 'голяма карта за 3–4 играчи'}
+        </p>
+      </section>
+
+      <aside className="space-y-4">
+        <div className="card3d rounded-2xl bg-surface p-4">
+          <p className="mb-3 font-extrabold">Режим</p>
+          <div className="grid gap-2">
+            {(Object.keys(MODE_LABELS) as GameMode[]).map((m) => (
+              <button
+                key={m}
+                disabled={!isHost}
+                onClick={() => socket?.emit('lobby:mode', { mode: m })}
+                className={cn('rounded-xl border-2 p-3 text-left', state.mode === m ? 'border-secondary bg-secondary/10' : 'border-line', !isHost && 'cursor-default')}
+              >
+                <span className="block font-extrabold text-ink-strong">{MODE_LABELS[m].name}</span>
+                <span className="block text-xs text-muted">{MODE_LABELS[m].description}</span>
+              </button>
+            ))}
+          </div>
+          {!isHost && <p className="mt-2 text-xs text-muted">Само домакинът избира режима.</p>}
+        </div>
+
+        <div className="card3d rounded-2xl bg-surface p-4">
+          <p className="mb-3 font-extrabold">
+            Играчи ({state.players.length}/{RULES.MAX_PLAYERS})
+          </p>
+          <ul className="space-y-2">
+            {state.players.map((p) => (
+              <li key={p.uid} className="flex items-center gap-3">
+                <Avatar name={p.name} color={p.color} size={36} />
+                <span className="min-w-0 flex-1 truncate font-bold">
+                  {p.name} {p.uid === state.hostUid && <Crown className="inline size-4 text-[#e5a400]" />} {p.isGuest && <Badge>гост</Badge>}
+                </span>
+                {!p.connected ? <WifiOff className="size-4 text-muted" /> : p.ready ? <Badge tone="green">ГОТОВ</Badge> : <Badge>ЧАКА</Badge>}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 grid gap-2">
+            <Button variant={mine?.ready ? 'outline' : 'accent'} block onClick={() => socket?.emit('lobby:ready', { ready: !mine?.ready })}>
+              {mine?.ready ? 'Не съм готов' : 'Готов съм!'}
+            </Button>
+            {isHost && (
+              <Button block disabled={!allReady} onClick={() => socket?.emit('lobby:start')} icon={<Swords className="size-5" />}>
+                Започни битката
+              </Button>
+            )}
+            {isHost && !allReady && <p className="text-center text-xs text-muted">Нужни са поне 2 играчи и всички да са готови.</p>}
+          </div>
+        </div>
+
+        {friends.length > 0 && (
+          <div className="card3d rounded-2xl bg-surface p-4">
+            <p className="mb-3 font-extrabold">Покани приятел</p>
+            <ul className="space-y-2">
+              {friends.map((f) => (
+                <li key={f.id} className="flex items-center gap-3">
+                  <Avatar name={f.name} color={f.color} size={30} />
+                  <span className="flex-1 truncate font-bold">{f.name}</span>
+                  {inRoom.has(f.id) ? (
+                    <Badge tone="green">в стаята</Badge>
+                  ) : invited.has(f.id) ? (
+                    <Badge tone="blue">поканен</Badge>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        socket?.emit('invite:send', { toUid: f.id, code: state.code });
+                        setInvited((s) => new Set(s).add(f.id));
+                      }}
+                      className="rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20"
+                    >
+                      Покани
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <ChatBar state={state} />
+
+        <button
+          onClick={() => {
+            socket?.emit('lobby:leave');
+            router.push('/play');
+          }}
+          className="inline-flex w-full items-center justify-center gap-2 py-2 font-extrabold uppercase text-muted hover:text-error"
+        >
+          <LogOut className="size-4" /> Напусни
+        </button>
+      </aside>
+    </div>
+  );
+}
+
+// ───────────────────────── Битка ─────────────────────────
+
+function Battle({ state, me }: { state: GameState; me: string }) {
+  const { socket } = useGame();
+  const router = useRouter();
+  const map = MAPS[state.mapId!];
+  const meP = state.players.find((p) => p.uid === me);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  const selectable = useMemo(() => {
+    if (state.phase === 'expansion_pick' && state.pick?.uid === me) return pickOptions(state, map, me);
+    if (state.phase === 'battle_choose' && state.turnUid === me) return attackOptions(state, map, me);
+    return [];
+  }, [state, map, me]);
+
+  const onSelect = (id: string) => {
+    if (state.phase === 'expansion_pick') socket?.emit('game:pick', { regionId: id });
+    else if (state.phase === 'battle_choose') socket?.emit('game:attack', { regionId: id });
+  };
+
+  const stage = state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
+
+  return (
+    <div className="-mt-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Badge tone="purple">{MODE_LABELS[state.mode].name}</Badge>
+          <span className="font-extrabold text-ink-strong">{stage}</span>
+        </div>
+        <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
+          <LogOut className="size-4" /> Напусни
+        </button>
+      </div>
+
+      <PlayersBar state={state} map={map} me={me} />
+
+      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_400px]">
+        <div className="card3d relative overflow-hidden rounded-3xl bg-surface p-1.5">
+          <MapBoard map={map} state={state} selectable={selectable} onSelect={onSelect} highlight={state.battle?.regionId ?? null} />
+        </div>
+        <div className="space-y-3">
+          <ActionPanel state={state} me={me} meP={meP} />
+          <ChatBar state={state} />
+          <details className="card3d rounded-2xl bg-surface p-3 text-sm">
+            <summary className="cursor-pointer font-extrabold">Дневник на битката</summary>
+            <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-muted">
+              {[...state.log].reverse().map((l, i) => (
+                <li key={i}>{l}</li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      </div>
+
+      {confirmLeave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmLeave(false)}>
+          <div className="card3d w-full max-w-sm animate-pop rounded-3xl bg-surface p-6 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-xl font-black">Да напуснеш битката?</p>
+            <p className="mt-1 text-muted">Областите ти стават неутрални и губиш битката.</p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <Button variant="ghost" onClick={() => setConfirmLeave(false)}>
+                Остани
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  socket?.emit('lobby:leave');
+                  router.push('/play');
+                }}
+              >
+                Напусни
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayersBar({ state, map, me }: { state: GameState; map: (typeof MAPS)[string]; me: string }) {
+  const lands = map.lands.map((l) => ({ ...l, owner: landOwner(state, map, l.id) }));
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {state.players.map((p) => {
+        const count = territoryCount(state, p.uid);
+        const hp = p.capital ? state.regions[p.capital]?.hp ?? 0 : 0;
+        const isTurn = state.turnUid === p.uid || state.pick?.uid === p.uid;
+        const ownedLands = lands.filter((l) => l.owner === p.uid).length;
+        return (
+          <div
+            key={p.uid}
+            className={cn(
+              'card3d flex min-w-40 shrink-0 items-center gap-2.5 rounded-2xl bg-surface px-3 py-2',
+              isTurn && 'border-secondary! bg-secondary/10',
+              (p.eliminated || p.left) && 'opacity-40',
+            )}
+          >
+            <Avatar name={p.name} color={p.color} size={34} />
+            <div className="min-w-0">
+              <p className="flex items-center gap-1 truncate text-sm font-extrabold text-ink-strong">
+                {p.isBot && <Bot className="size-3.5" />}
+                {p.name}
+                {p.uid === me && <span className="text-muted">(ти)</span>}
+              </p>
+              <p className="flex items-center gap-2 text-xs font-bold text-muted">
+                <span>{count} обл.</span>
+                {p.capital && hp > 0 && (
+                  <span className="flex items-center gap-0.5 text-error">
+                    <Castle className="size-3" />
+                    {'♥'.repeat(hp)}
+                  </span>
+                )}
+                {ownedLands > 0 && <span className="text-[#b88600]">★{ownedLands}</span>}
+              </p>
+              {!p.connected && !p.left && !p.isBot && <Reconnect until={p.reconnectUntil} />}
+              {p.left && <p className="text-xs font-bold text-error">напусна</p>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Reconnect({ until }: { until: number | null }) {
+  const left = useCountdown(until);
+  return (
+    <p className="flex items-center gap-1 text-xs font-bold text-orange">
+      <WifiOff className="size-3" /> връщане {Math.ceil(left / 1000)} с
+    </p>
+  );
+}
+
+function TimerBar({ deadline, total }: { deadline: number | null; total: number }) {
+  const left = useCountdown(deadline);
+  const pct = Math.min(100, (left / total) * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <Clock className={cn('size-4', left < 5000 ? 'text-error' : 'text-secondary')} />
+      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+        <div className={cn('h-full rounded-full transition-[width] duration-200', left < 5000 ? 'bg-error' : 'bg-secondary')} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-8 text-right text-sm font-black tabular-nums">{Math.ceil(left / 1000)}</span>
+    </div>
+  );
+}
+
+function name(state: GameState, uid: string | null | undefined) {
+  return state.players.find((p) => p.uid === uid)?.name ?? '—';
+}
+
+function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+  const map = MAPS[state.mapId!];
+  const regionName = (id: string) => {
+    const reg = state.regions[id];
+    return state.mode === 'WORKS' && reg?.workTitle ? `„${reg.workTitle}“` : map.regions.find((r) => r.id === id)?.name ?? id;
+  };
+
+  if (meP && (meP.eliminated || meP.left) && !state.question) {
+    return (
+      <Panel>
+        <p className="text-lg font-black">Ти си елиминиран 😔</p>
+        <p className="text-muted">Можеш да гледаш до края на битката.</p>
+      </Panel>
+    );
+  }
+
+  if (state.phase === 'expansion_question' || state.phase === 'battle_question' || state.phase === 'expansion_reveal' || state.phase === 'battle_reveal') {
+    return <QuestionPanel state={state} me={me} meP={meP} regionName={regionName} />;
+  }
+
+  if (state.phase === 'expansion_pick' && state.pick) {
+    const mine = state.pick.uid === me;
+    return (
+      <Panel>
+        <TimerBar deadline={state.deadline} total={RULES.EXPANSION_PICK_MS} />
+        <p className="mt-3 text-lg font-black">{mine ? 'Избери свободна област на картата!' : `${name(state, state.pick.uid)} избира област…`}</p>
+        {mine && <p className="text-sm text-muted">Може само съседна на твоите, ако има такава. Ако не избереш — получаваш случайна.</p>}
+        {state.pick.queue.length > 1 && <p className="mt-2 text-sm text-muted">След това: {state.pick.queue.slice(1).map((u) => name(state, u)).join(', ')}</p>}
+      </Panel>
+    );
+  }
+
+  if (state.phase === 'battle_choose') {
+    const mine = state.turnUid === me;
+    return (
+      <Panel>
+        <TimerBar deadline={state.deadline} total={RULES.ATTACK_CHOOSE_MS} />
+        <p className="mt-3 text-lg font-black">{mine ? 'Твой ход! Избери съседна област за атака.' : `${name(state, state.turnUid)} избира атака…`}</p>
+        {mine && state.attacksLeft > 1 && <Badge tone="yellow" className="mt-2">★ Бонус за земя: {state.attacksLeft} атаки този ход</Badge>}
+        {mine && <p className="mt-1 text-sm text-muted">Столица пада след 3 победи — и взимаш всичките области на противника.</p>}
+      </Panel>
+    );
+  }
+
+  return null;
+}
+
+function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: string; meP?: PublicPlayer; regionName: (id: string) => string }) {
+  const { socket, fifty } = useGame();
+  const q = state.question!;
+  const reveal = state.reveal;
+  const participant = q.participants.includes(me);
+  const answered = state.answeredUids.includes(me);
+  const [choice, setChoice] = useState<number | null>(null);
+  const [text, setText] = useState('');
+  const removed = fifty?.questionId === q.id ? new Set(fifty.removed) : new Set<number>();
+
+  useEffect(() => {
+    setChoice(null);
+    setText('');
+  }, [q.id]);
+
+  const send = (payload: { index?: number; text?: string }) => {
+    if (!participant || answered || reveal) return;
+    socket?.emit('game:answer', { questionId: q.id, ...payload });
+  };
+
+  const myResult = reveal?.results.find((r) => r.uid === me);
+  const header =
+    state.battle && state.phase.startsWith('battle')
+      ? `${name(state, state.battle.attackerUid)} ⚔ ${state.battle.defenderUid ? name(state, state.battle.defenderUid) : 'неутрална'} · ${regionName(state.battle.regionId)}`
+      : 'Всички отговарят — най-бързите верни избират земя';
+
+  return (
+    <Panel className={cn(reveal && (reveal.winnerUid === me ? 'border-primary!' : myResult && !myResult.correct ? 'border-error!' : ''))}>
+      <p className="mb-2 text-xs font-extrabold uppercase text-muted">{header}</p>
+      {!reveal && <TimerBar deadline={q.deadline} total={RULES.QUESTION_MS} />}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Badge tone="blue">{q.topicLabel}</Badge>
+        {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
+      </div>
+      <p className="mt-2 whitespace-pre-line text-lg font-extrabold leading-snug text-ink-strong">{q.prompt}</p>
+      {q.context && <p className="mt-2 whitespace-pre-line rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm italic">{q.context}</p>}
+
+      {q.type === 'SINGLE_CHOICE' ? (
+        <div className="mt-3 grid gap-2">
+          {q.options.map((opt, i) => {
+            const isRemoved = removed.has(i) && !reveal;
+            const correct = reveal && reveal.correctIndex === i;
+            const wrongMine = reveal && choice === i && reveal.correctIndex !== i;
+            return (
+              <button
+                key={i}
+                disabled={!participant || answered || !!reveal || isRemoved}
+                onClick={() => {
+                  setChoice(i);
+                  send({ index: i });
+                }}
+                className={cn(
+                  'card3d flex items-center gap-2 rounded-xl bg-surface p-2.5 text-left text-sm font-bold',
+                  participant && !answered && !reveal && 'hover:bg-surface-2',
+                  choice === i && !reveal && 'border-secondary! bg-secondary/10',
+                  correct && 'border-primary! bg-primary/15',
+                  wrongMine && 'border-error! bg-error/10',
+                  isRemoved && 'opacity-25 line-through',
+                )}
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 border-line text-xs font-black">{LETTERS[i]}</span>
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <form
+          className="mt-3 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (text.trim()) send({ text });
+          }}
+        >
+          <Input value={text} onChange={(e) => setText(e.target.value)} disabled={!participant || answered || !!reveal} placeholder={participant ? 'Твоят отговор…' : 'Гледаш…'} autoFocus={participant} />
+          {participant && (
+            <Button type="submit" disabled={answered || !!reveal || !text.trim()}>
+              ОК
+            </Button>
+          )}
+        </form>
+      )}
+
+      {/* жокери */}
+      {participant && !answered && !reveal && meP && (
+        <div className="mt-3 flex gap-2">
+          <button
+            disabled={!meP.jokers.fifty || q.type !== 'SINGLE_CHOICE' || q.options.length < 3}
+            onClick={() => socket?.emit('game:joker', { kind: 'fifty' })}
+            className="rounded-xl border-2 border-purple/50 bg-purple/10 px-3 py-1.5 text-sm font-extrabold text-purple-dark disabled:opacity-30"
+          >
+            50/50
+          </button>
+          <button
+            disabled={!meP.jokers.time}
+            onClick={() => socket?.emit('game:joker', { kind: 'time' })}
+            className="inline-flex items-center gap-1 rounded-xl border-2 border-secondary/50 bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary disabled:opacity-30"
+          >
+            <Timer className="size-4" /> +5 с
+          </button>
+        </div>
+      )}
+
+      {!reveal && (
+        <p className="mt-3 text-sm font-bold text-muted">
+          {!participant ? 'Гледаш тази битка.' : answered ? 'Отговорът е изпратен. Изчакване…' : ''}
+          {q.participants.length > 1 && (
+            <span className="ml-1">
+              Отговорили: {state.answeredUids.filter((u) => q.participants.includes(u)).length}/{q.participants.length}
+            </span>
+          )}
+        </p>
+      )}
+
+      {reveal && (
+        <div className="mt-4 animate-rise rounded-xl bg-surface-2 p-3">
+          <p className="font-black text-ink-strong">{reveal.message}</p>
+          {reveal.correctText && <p className="mt-1 text-sm font-bold text-primary-dark">Верен отговор: {reveal.correctText}</p>}
+          {reveal.explanation && <p className="mt-1 text-sm text-muted">{reveal.explanation}</p>}
+          <ul className="mt-2 space-y-1 text-sm">
+            {reveal.results.map((r) => (
+              <li key={r.uid} className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 font-bold">
+                  {r.correct ? <Check className="size-4 text-primary" /> : <X className="size-4 text-error" />}
+                  {name(state, r.uid)}
+                </span>
+                <span className="tabular-nums text-muted">{r.timeMs != null ? `${(r.timeMs / 1000).toFixed(2)} с` : 'без отговор'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <div className={cn('card3d animate-rise rounded-2xl bg-surface p-4', className)}>{children}</div>;
+}
+
+function ChatBar({ state }: { state: GameState }) {
+  const { socket, chat } = useGame();
+  const [open, setOpen] = useState(false);
+  const recent = chat.filter((c) => Date.now() - c.at < 60_000).slice(-4);
+  void state;
+  return (
+    <div className="card3d rounded-2xl bg-surface p-3">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-2 text-sm font-extrabold text-ink">
+          <MessageCircle className="size-4" /> Чат
+        </button>
+      </div>
+      {recent.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {recent.map((c, i) => (
+            <li key={`${c.at}-${i}`} className="animate-rise text-sm">
+              <span className="font-extrabold" style={{ color: c.color }}>
+                {c.name}:
+              </span>{' '}
+              {CHAT_MESSAGES.find((m) => m.key === c.key)?.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {CHAT_MESSAGES.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => {
+                socket?.emit('chat:send', { key: m.key });
+                setOpen(false);
+              }}
+              className="rounded-full bg-surface-2 px-2.5 py-1 text-sm font-bold hover:bg-line"
+            >
+              {m.text}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ───────────────────────── Край ─────────────────────────
+
+function Finished({ state, me }: { state: GameState; me: string }) {
+  const { socket } = useGame();
+  const router = useRouter();
+  const standings = state.standings ?? [];
+  const winner = standings[0];
+  const mine = standings.find((s) => s.uid === me);
+  const map = MAPS[state.mapId!];
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <div className="animate-pop text-center">
+        <div className="mx-auto mb-4 flex size-24 items-center justify-center rounded-full bg-accent text-[#4b3b00] shadow-[0_6px_0_var(--color-accent-dark)]">
+          <Crown className="size-12" />
+        </div>
+        <h1 className="text-3xl font-black">{winner?.uid === me ? 'Победа! 🎉' : `${winner?.name ?? '—'} печели!`}</h1>
+        <p className="mt-1 text-muted">{mine ? `Ти си ${mine.place}. място с ${mine.territories} области.` : ''}</p>
+      </div>
+
+      <ol className="card3d mt-6 divide-y-2 divide-line rounded-2xl bg-surface">
+        {standings.map((s) => (
+          <li key={s.uid} className={cn('flex items-center gap-3 px-4 py-3', s.uid === me && 'bg-secondary/10')}>
+            <span className="w-6 text-center text-lg font-black text-muted">{s.place}</span>
+            <Avatar name={s.name} color={s.color} size={38} />
+            <span className="flex-1 font-extrabold text-ink-strong">
+              {s.name} {s.isBot && <Badge>бот</Badge>}
+            </span>
+            <span className="text-sm text-muted">
+              {s.territories} обл. · {s.correct}/{s.answered}
+            </span>
+            {s.ratingDelta != null && (
+              <span className={cn('w-12 text-right font-black', s.ratingDelta >= 0 ? 'text-primary' : 'text-error')}>
+                {s.ratingDelta >= 0 ? '+' : ''}
+                {s.ratingDelta}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+
+      <div className="card3d mt-4 overflow-hidden rounded-3xl bg-surface p-1.5">
+        <MapBoard map={map} state={state} selectable={[]} />
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <Button
+          onClick={() => {
+            if (state.rematchCode) router.push(`/play/${state.rematchCode}`);
+            else socket?.emit('rematch:request');
+          }}
+          icon={<Swords className="size-5" />}
+        >
+          {state.rematchCode ? 'Влез в реванша' : 'Реванш'}
+        </Button>
+        {state.matchId ? (
+          <ButtonLink href={`/match/${state.matchId}`} variant="secondary">
+            Разбор
+          </ButtonLink>
+        ) : (
+          <Button variant="secondary" disabled>
+            Записване…
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          icon={<Users className="size-5" />}
+          onClick={() => {
+            socket?.emit('lobby:leave');
+            router.push('/play');
+          }}
+        >
+          Към битките
+        </Button>
+      </div>
+      <ChatBarFinished state={state} />
+      <p className="mt-4 text-center text-sm text-muted">
+        <Link href="/leaderboard" className="font-bold text-secondary">
+          Виж класацията
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function ChatBarFinished({ state }: { state: GameState }) {
+  return (
+    <div className="mt-4">
+      <ChatBar state={state} />
+    </div>
+  );
+}

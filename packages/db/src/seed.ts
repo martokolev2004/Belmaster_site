@@ -2,10 +2,11 @@
 // С флаг --demo зарежда и демо въпросите (data/demo).
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { prisma } from './index';
 import { importQuestions, importWorks } from './importer';
 
-const root = path.resolve(__dirname, '..', '..', '..', 'data');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'data');
 
 function jsonFiles(dir: string): string[] {
   if (!existsSync(dir)) return [];
