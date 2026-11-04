@@ -13,6 +13,13 @@ export function ContextBox({ text, compact }: { text: string; compact?: boolean 
       <p className={cn('whitespace-pre-line font-semibold leading-relaxed text-ink-strong', compact ? 'text-[15px] phone-landscape:text-sm' : 'text-[17px]')}>
         {parts.map((p, i) => {
           const marked = p.match(/^(\S+)\s\(([А-Е])\)$/u);
+          // „щастливо, (А)“ — позиция след препинателен знак, не подчертана дума
+          if (marked && /[,;:.!?–-]$/u.test(marked[1]))
+            return (
+              <span key={i}>
+                {marked[1]} <span className="rounded bg-secondary/20 px-1 text-xs font-black text-secondary">({marked[2]})</span>
+              </span>
+            );
           if (marked)
             return (
               <span key={i}>
