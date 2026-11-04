@@ -5,7 +5,7 @@ import type { AnyAnswer, PunctMark, QType } from './questions';
 export const RULES = {
   MIN_PLAYERS: 2,
   MAX_PLAYERS: 4,
-  QUESTION_MS: 20_000,
+  QUESTION_MS: 40_000,
   JOKER_TIME_BONUS_MS: 5_000,
   EXPANSION_PICK_MS: 10_000,
   ATTACK_CHOOSE_MS: 15_000,

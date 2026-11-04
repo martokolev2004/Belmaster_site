@@ -130,11 +130,11 @@ export function scoreAnswer(q: GradableQuestion, a: AnyAnswer | null | undefined
 /** Време за въпрос в мултиплейъра: според типа + дължината на текста. */
 export function questionTimeMs(q: { type: QType; prompt: string; context: string | null; data?: QuestionData; matching?: MatchingData | null }): number {
   const base: Record<QType, number> = {
-    SINGLE_CHOICE: 20_000,
-    SHORT_ANSWER: 25_000,
-    MATCHING: 30_000,
-    FILL_BLANKS: 30_000,
-    PUNCTUATION: 50_000,
+    SINGLE_CHOICE: 40_000,
+    SHORT_ANSWER: 45_000,
+    MATCHING: 50_000,
+    FILL_BLANKS: 50_000,
+    PUNCTUATION: 70_000,
   };
   const textLen =
     q.prompt.length +
