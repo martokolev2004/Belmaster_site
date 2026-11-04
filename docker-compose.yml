@@ -33,10 +33,12 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+      GAME_INTERNAL_URL: http://game:4000
     depends_on:
       db:
         condition: service_healthy
-      GAME_INTERNAL_URL: http://game:4000
+      game:
+        condition: service_started
     ports:
       - '3000:3000'
     command: npm run start --workspace @belmaster/web
