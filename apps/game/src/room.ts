@@ -516,7 +516,7 @@ export class Room {
     if (now > (aq.deadlines.get(uid) ?? 0) + 300) return;
     const clean: AnyAnswer = {
       index: typeof a.index === 'number' ? a.index : null,
-      text: typeof a.text === 'string' ? a.text.slice(0, 200) : null,
+      text: typeof a.text === 'string' ? a.text.slice(0, 2000) : null,
       texts: Array.isArray(a.texts) ? a.texts.slice(0, 5).map((t) => (typeof t === 'string' ? t.slice(0, 200) : null)) : null,
       pairs: Array.isArray(a.pairs) ? a.pairs.slice(0, 12).map((x) => (typeof x === 'number' ? x : null)) : null,
       blanks: Array.isArray(a.blanks) ? a.blanks.slice(0, 12).map((x) => (typeof x === 'number' ? x : null)) : null,

@@ -176,7 +176,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
 
       {/* Долна лента (практика) */}
       {mode === 'practice' && (
-        <div className={cn('fixed inset-x-0 bottom-0 z-40 border-t-2 md:left-64', result ? (result.correct ? 'border-primary/30 bg-[#d7ffb8] dark:bg-[#1f3a12]' : 'border-error/30 bg-[#ffdfe0] dark:bg-[#3a1717]') : 'border-line bg-bg')}>
+        <div className={cn('fixed inset-x-0 bottom-0 z-40 border-t-2 md:left-64', result ? (result.correct ? 'border-primary/30 bg-[#d7ffb8] dark:bg-[#1f3a12]' : result.score > 0 ? 'border-orange/40 bg-[#ffecd1] dark:bg-[#3a2a12]' : 'border-error/30 bg-[#ffdfe0] dark:bg-[#3a1717]') : 'border-line bg-bg')}>
           <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             {result ? (
               <div className="flex items-start gap-3">
@@ -327,7 +327,7 @@ function yourAnswerText(q: ClientQuestion, a?: Answer) {
   if (q.type === 'MATCHING' && a.pairs) return a.pairs.map((p, i) => `${i + 1} → ${p == null ? '—' : LETTERS[p]}`).join(', ');
   if (q.type === 'FILL_BLANKS' && a.blanks && q.blanks)
     return a.blanks.map((c, i) => `(${q.blanks!.blanks[i].label}) ${c == null ? '—' : q.blanks!.blanks[i].options[c]}`).join(', ');
-  if (q.type === 'PUNCTUATION') return `${a.marks?.length ?? 0} поставени знака`;
+  if (q.type === 'PUNCTUATION') return a.text ?? '';
   return '';
 }
 

@@ -117,7 +117,8 @@ export function scoreAnswer(q: GradableQuestion, a: AnyAnswer | null | undefined
       if (!p || !p.marks.length) return full(0);
       const key = (m: PunctMark) => `${m.i}|${m.pos}|${m.mark}`;
       const want = new Set(p.marks.map(key));
-      const given = new Set((a.marks ?? []).map(key));
+      const givenMarks = a.marks ?? (a.text ? marksFromStudentText(p.tokens, a.text) : []);
+      const given = new Set(givenMarks.map(key));
       let hits = 0;
       let extra = 0;
       for (const g of given) (want.has(g) ? hits++ : extra++);
@@ -146,38 +147,107 @@ export function questionTimeMs(q: { type: QType; prompt: string; context: string
   return base[q.type] + bonus;
 }
 
+const LETTER = /[\p{L}\p{N}]/u;
+
+function edges(t: string): { before: string; after: string } {
+  const chars = [...t];
+  const first = chars.findIndex((c) => LETTER.test(c));
+  if (first < 0) return { before: t, after: '' };
+  let last = chars.length - 1;
+  while (last >= 0 && !LETTER.test(chars[last])) last--;
+  return { before: chars.slice(0, first).join(''), after: chars.slice(last + 1).join('') };
+}
+
+function core(t: string): string {
+  return t.replace(/[^\p{L}\p{N}]/gu, '').toLocaleLowerCase('bg-BG');
+}
+
+/** Знаците, които „c“ има в повече от „o“ (една и съща дума). */
+function addedMarks(o: string, c: string, i: number): PunctMark[] {
+  const eo = edges(o);
+  const ec = edges(c);
+  // кавички от клавиатурата ("…", «…», “…”) = български „…“
+  ec.before = ec.before.replace(/["«“]/g, '„');
+  ec.after = ec.after.replace(/["»”]/g, '“');
+  // тире от клавиатурата (-, —) = –
+  ec.after = ec.after.replace(/[-—]/g, '–');
+  const diff = (have: string, want: string) => {
+    const rest = [...have];
+    const out: string[] = [];
+    for (const ch of want) {
+      if (/\s/.test(ch)) continue;
+      const k = rest.indexOf(ch);
+      if (k >= 0) rest.splice(k, 1);
+      else out.push(ch);
+    }
+    return out;
+  };
+  return [
+    ...diff(eo.before, ec.before).map((mark) => ({ i, pos: 'before' as const, mark })),
+    ...diff(eo.after, ec.after).map((mark) => ({ i, pos: 'after' as const, mark })),
+  ];
+}
+
+/** Разделя текст на думи; самостоятелни знаци („ – и т.н.) се залепят за съседната дума. */
+function tokenize(text: string): string[] {
+  const raw = text.trim().split(/\s+/).filter(Boolean);
+  const out: string[] = [];
+  let carry = '';
+  let quoteOpen = false; // за прави кавички " — коя е отваряща и коя затваряща
+  for (const t of raw) {
+    if (!LETTER.test(t)) {
+      const opening = /^[„(«]/.test(t) || (t.startsWith('"') && !quoteOpen);
+      if (t.includes('"')) quoteOpen = !quoteOpen;
+      if (opening || !out.length) carry += t;
+      else out[out.length - 1] += t;
+      continue;
+    }
+    for (const ch of t) if (ch === '"') quoteOpen = !quoteOpen;
+    out.push(carry + t);
+    carry = '';
+  }
+  if (carry && out.length) out[out.length - 1] += carry;
+  return out;
+}
+
 /** Превръща „оригинал“ + „поправен текст“ в списък с липсващи знаци (за импорта). */
 export function punctuationFromTexts(original: string, corrected: string): PunctuationData {
   const tokens = original.trim().split(/\s+/);
-  const fixed = corrected.trim().split(/\s+/);
+  const fixed = tokenize(corrected);
   if (tokens.length !== fixed.length) {
     throw new Error(`Пунктуация: броят думи се различава (${tokens.length} срещу ${fixed.length}).`);
   }
   const marks: PunctMark[] = [];
   tokens.forEach((o, i) => {
-    const c = fixed[i];
-    if (o === c) return;
-    // букви и цифри на оригиналната дума
-    const firstLetter = c.search(/[\p{L}\p{N}]/u);
-    const lastLetter = c.length - 1 - [...c].reverse().join('').search(/[\p{L}\p{N}]/u);
-    const before = c.slice(0, Math.max(0, firstLetter));
-    const after = c.slice(lastLetter + 1);
-    const oBefore = o.slice(0, Math.max(0, o.search(/[\p{L}\p{N}]/u)));
-    const oAfter = o.slice(o.length - [...o].reverse().join('').search(/[\p{L}\p{N}]/u));
-    const added = (have: string, want: string) => {
-      const rest = [...have];
-      const out: string[] = [];
-      for (const ch of want) {
-        const k = rest.indexOf(ch);
-        if (k >= 0) rest.splice(k, 1);
-        else out.push(ch);
-      }
-      return out;
-    };
-    for (const m of added(oBefore, before)) marks.push({ i, pos: 'before', mark: m });
-    for (const m of added(oAfter, after)) marks.push({ i, pos: 'after', mark: m });
+    if (core(o) !== core(fixed[i])) throw new Error(`Пунктуация: думата „${o}“ не съвпада с „${fixed[i]}“.`);
+    marks.push(...addedMarks(o, fixed[i], i));
   });
   return { tokens, marks };
+}
+
+/** Знаците, които ученикът е добавил в своя текст (подравняване по думите, понася печатни грешки). */
+export function marksFromStudentText(tokens: string[], text: string): PunctMark[] {
+  const st = tokenize(text);
+  const a = tokens.map(core);
+  const b = st.map(core);
+  // най-дълга обща подредица по думите
+  const n = a.length;
+  const m = b.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const marks: PunctMark[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      marks.push(...addedMarks(tokens[i], st[j], i));
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) i++;
+    else j++;
+  }
+  return marks;
 }
 
 /** Текст с поставени знаци — за показване на верния отговор. */

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PUNCT_AFTER, PUNCT_BEFORE, type AnyAnswer, type PunctMark } from '@belmaster/shared';
+import { marksFromStudentText, type AnyAnswer, type PunctMark } from '@belmaster/shared';
 import { cn } from '@/lib/cn';
 
 export const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
@@ -51,7 +51,7 @@ export function hasAnswer(q: InputQuestion, a: AnyAnswer | undefined): boolean {
     case 'FILL_BLANKS':
       return !!a.blanks?.some((b) => b != null);
     case 'PUNCTUATION':
-      return !!a.marks?.length;
+      return !!a.text && a.text.trim() !== (q.tokens ?? []).join(' ');
   }
 }
 
@@ -265,87 +265,71 @@ function BlanksInput({ q, value, onChange, disabled, reveal, compact }: Props) {
   );
 }
 
-/** Пунктуация: цъкаш дума и добавяш знак преди/след нея. */
+/** Пунктуация: ученикът сам пише знаците в текста — без подсказки. */
 function PunctuationInput({ q, value, onChange, disabled, reveal, compact }: Props) {
   const tokens = q.tokens ?? [];
-  const marks = value?.marks ?? [];
-  const [open, setOpen] = useState<number | null>(null);
-  const has = (m: PunctMark, list: PunctMark[]) => list.some((x) => x.i === m.i && x.pos === m.pos && x.mark === m.mark);
-  const toggle = (m: PunctMark) => {
-    const next = has(m, marks) ? marks.filter((x) => !(x.i === m.i && x.pos === m.pos && x.mark === m.mark)) : [...marks, m];
-    onChange({ marks: next });
-  };
+  const original = tokens.join(' ');
+  const text = value?.text ?? original;
   const correct = reveal?.correctMarks ?? null;
 
-  const markSpan = (m: PunctMark, key: string) => {
-    const state = correct ? (has(m, correct) ? 'ok' : 'bad') : 'mine';
-    return (
-      <span key={key} className={cn('font-black', state === 'ok' && 'text-primary', state === 'bad' && 'text-error line-through', state === 'mine' && 'text-secondary')}>
+  if (correct) {
+    // след проверка: текстът на ученика, оцветен спрямо верния отговор
+    const mine = value?.marks ?? marksFromStudentText(tokens, text);
+    const has = (m: PunctMark, list: PunctMark[]) => list.some((x) => x.i === m.i && x.pos === m.pos && x.mark === m.mark);
+    const span = (m: PunctMark, k: string, kind: 'ok' | 'bad' | 'missed') => (
+      <span key={k} className={cn('font-black', kind === 'ok' && 'text-primary', kind === 'bad' && 'text-error line-through', kind === 'missed' && 'text-primary underline')}>
         {m.mark}
       </span>
     );
-  };
+    return (
+      <div>
+        <div className={cn('rounded-2xl border-2 border-dashed border-line leading-[2]', compact ? 'p-2.5 text-sm' : 'p-4 text-[17px]')}>
+          {tokens.map((t, i) => {
+            const my = mine.filter((m) => m.i === i);
+            const missed = correct.filter((m) => m.i === i && !has(m, mine));
+            const coreT = t.replace(/[,.;:!?)]+$/, '');
+            const tail = t.slice(coreT.length);
+            const isQ = (m: PunctMark) => m.mark === '“' || m.mark === ')';
+            const kind = (m: PunctMark) => (has(m, correct) ? 'ok' : 'bad');
+            return (
+              <span key={i}>
+                {my.filter((m) => m.pos === 'before').map((m, k) => span(m, `b${k}`, kind(m)))}
+                {missed.filter((m) => m.pos === 'before').map((m, k) => span(m, `mb${k}`, 'missed'))}
+                {coreT}
+                {my.filter((m) => m.pos === 'after' && isQ(m)).map((m, k) => span(m, `q${k}`, kind(m)))}
+                {missed.filter((m) => m.pos === 'after' && isQ(m)).map((m, k) => span(m, `mq${k}`, 'missed'))}
+                {tail}
+                {my.filter((m) => m.pos === 'after' && !isQ(m)).map((m, k) => span(m, `a${k}`, kind(m)))}
+                {missed.filter((m) => m.pos === 'after' && !isQ(m)).map((m, k) => span(m, `ma${k}`, 'missed'))}{' '}
+              </span>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-xs font-bold text-muted">Зелено — верни знаци · подчертано зелено — пропуснати · зачеркнато червено — излишни.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {!disabled && <p className="mb-2 text-xs font-bold text-muted">Цъкни дума, за да добавиш знак преди или след нея. Цъкни пак знака, за да го махнеш.</p>}
-      <div className={cn('rounded-2xl border-2 border-dashed border-line leading-[2.2]', compact ? 'p-2.5 text-sm' : 'p-4 text-[17px]')}>
-        {tokens.map((t, i) => {
-          const mine = marks.filter((m) => m.i === i);
-          const missed = correct ? correct.filter((m) => m.i === i && !has(m, marks)) : [];
-          const core = t.replace(/[,.;:!?)]+$/, '');
-          const tail = t.slice(core.length);
-          const before = mine.filter((m) => m.pos === 'before');
-          const after = mine.filter((m) => m.pos === 'after');
-          return (
-            <span key={i} className="relative inline">
-              <button
-                type="button"
-                disabled={disabled}
-                onClick={() => setOpen(open === i ? null : i)}
-                className={cn('rounded px-0.5 transition', !disabled && 'hover:bg-secondary/10', open === i && 'bg-secondary/15 ring-2 ring-secondary')}
-              >
-                {before.map((m, k) => markSpan(m, `b${k}`))}
-                {missed.filter((m) => m.pos === 'before').map((m, k) => (
-                  <span key={`mb${k}`} className="font-black text-primary underline">{m.mark}</span>
-                ))}
-                {core}
-                {after.filter((m) => m.mark === '“' || m.mark === ')').map((m, k) => markSpan(m, `q${k}`))}
-                {missed.filter((m) => m.pos === 'after' && (m.mark === '“' || m.mark === ')')).map((m, k) => (
-                  <span key={`mq${k}`} className="font-black text-primary underline">{m.mark}</span>
-                ))}
-                {tail}
-                {after.filter((m) => m.mark !== '“' && m.mark !== ')').map((m, k) => markSpan(m, `a${k}`))}
-                {missed.filter((m) => m.pos === 'after' && m.mark !== '“' && m.mark !== ')').map((m, k) => (
-                  <span key={`ma${k}`} className="font-black text-primary underline">{m.mark}</span>
-                ))}
-              </button>{' '}
-              {open === i && !disabled && (
-                <span className="absolute left-0 top-full z-20 mt-1 flex w-max flex-wrap gap-1 rounded-xl border-2 border-line bg-surface p-1.5 shadow-lg">
-                  {PUNCT_BEFORE.map((mk) => (
-                    <PunctBtn key={`b${mk}`} label={`${mk}…`} on={has({ i, pos: 'before', mark: mk }, marks)} onClick={() => toggle({ i, pos: 'before', mark: mk })} />
-                  ))}
-                  {PUNCT_AFTER.map((mk) => (
-                    <PunctBtn key={`a${mk}`} label={`…${mk}`} on={has({ i, pos: 'after', mark: mk }, marks)} onClick={() => toggle({ i, pos: 'after', mark: mk })} />
-                  ))}
-                  <button type="button" onClick={() => setOpen(null)} className="px-2 text-xs font-bold text-muted">
-                    ✕
-                  </button>
-                </span>
-              )}
-            </span>
-          );
-        })}
-      </div>
-      {correct && <p className="mt-2 text-xs font-bold text-muted">Зелено — верни знаци; подчертано зелено — пропуснати; зачеркнато червено — излишни.</p>}
+      {!disabled && <p className="mb-2 text-xs font-bold text-muted">Допиши липсващите препинателни знаци направо в текста. Не променяй думите.</p>}
+      <textarea
+        value={text}
+        disabled={disabled}
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
+        onChange={(e) => onChange({ text: e.target.value })}
+        className={cn(
+          'w-full resize-y rounded-2xl border-2 border-line bg-surface-2 text-ink focus:border-secondary focus:outline-none',
+          compact ? 'min-h-40 p-2.5 text-sm leading-relaxed' : 'min-h-48 p-4 text-[17px] leading-relaxed',
+        )}
+      />
+      {!disabled && text !== original && (
+        <button type="button" onClick={() => onChange({ text: original })} className="mt-1 text-xs font-bold text-muted hover:text-ink">
+          ↺ Върни първоначалния текст
+        </button>
+      )}
     </div>
-  );
-}
-
-function PunctBtn({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className={cn('min-w-9 rounded-lg border-2 px-2 py-1 text-base font-black', on ? 'border-secondary bg-secondary text-white' : 'border-line bg-surface-2 text-ink')}>
-      {label}
-    </button>
   );
 }
