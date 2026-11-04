@@ -154,7 +154,7 @@ export function AvatarEditor({
             <p className="mt-2 text-center text-xs font-bold text-muted">
               Отключени специални части: {unlockedCount.open} от {unlockedCount.all}
             </p>
-            <p className="mt-2 text-center text-[11px] text-muted">1 💎 на всеки 1000 XP. Част с 🔒 ниво се отключва сама, част с 💎 се купува.</p>
+            <p className="mt-2 text-center text-[11px] text-muted">1 💎 на всеки 1000 XP. Части с 🔒 ниво или XP се отключват сами, части с 💎 се купуват (диамантите се харчат).</p>
           </div>
           <p className="mt-3 px-2 text-[11px] text-muted">Аватари: {AVATAR_CREDIT}.</p>
         </aside>

@@ -15,7 +15,7 @@ export interface Celebration {
 export async function pendingCelebration(user: User): Promise<Celebration | null> {
   if (user.isGuest || isAdmin(user)) return null;
   const level = nextLevel(user.level, user.xp);
-  const unlocked = unlockedKeys(unlockProgress(user));
+  const unlocked = unlockedKeys(unlockProgress(user, { includeWorn: false }));
   // първи път (стари профили): само запомняме, без анимация
   if (user.announcedLevel === 0) {
     await prisma.user.update({ where: { id: user.id }, data: { announcedLevel: level, announcedItems: unlocked } });
@@ -34,7 +34,7 @@ export async function pendingCelebration(user: User): Promise<Celebration | null
 
 export async function ackCelebration(user: User) {
   const level = nextLevel(user.level, user.xp);
-  const unlocked = unlockedKeys(unlockProgress(user));
+  const unlocked = unlockedKeys(unlockProgress(user, { includeWorn: false }));
   await prisma.user.update({
     where: { id: user.id },
     data: { announcedLevel: Math.max(level, user.announcedLevel), announcedItems: [...new Set([...user.announcedItems, ...unlocked])] },
@@ -45,5 +45,5 @@ export async function ackCelebration(user: User) {
 export function newItemKeys(user: User): string[] {
   if (user.isGuest || isAdmin(user)) return [];
   const seen = new Set(user.seenItems);
-  return unlockedKeys(unlockProgress(user)).filter((k) => !seen.has(k));
+  return unlockedKeys(unlockProgress(user, { includeWorn: false })).filter((k) => !seen.has(k));
 }

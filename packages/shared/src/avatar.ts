@@ -41,35 +41,50 @@ export const EXTRA_LABELS: Record<string, string> = {
   crown: 'Корона',
 };
 
-/** Какво е нужно за отключване: ниво (автоматично) или диаманти (купува се). */
-export type UnlockRule = { kind: 'level'; n: number } | { kind: 'shop'; price: number };
+/** Какво е нужно за отключване: ниво или XP (автоматично) или диаманти (купува се). */
+export type UnlockRule = { kind: 'level'; n: number } | { kind: 'xp'; n: number } | { kind: 'shop'; price: number };
 
 export interface UnlockProgress {
   level: number;
+  xp: number;
   diamonds: number; // налични (спечелени − похарчени)
   owned: string[]; // купени части, ключ "част:стойност"
 }
 
 export const itemKey = (part: AvatarPart, value: string) => `${part}:${value}`;
 
-/** Заключените части; всичко останало е свободно. */
-export const AVATAR_LOCKS: Partial<Record<AvatarPart, Record<string, UnlockRule>>> = {
-  bg: {
-    '1f2a44': { kind: 'level', n: 2 },
-    '203a2b': { kind: 'level', n: 2 },
-    '3a1f2e': { kind: 'level', n: 2 },
-    '2a2a2a': { kind: 'level', n: 5 },
-    '4a2a14': { kind: 'level', n: 5 },
-  },
-  hairColor: {
-    '3eac2c': { kind: 'level', n: 3 },
-    '85c2c6': { kind: 'level', n: 3 },
-    dba3be: { kind: 'level', n: 4 },
-    '592454': { kind: 'level', n: 4 },
-  },
-  glasses: {
-    variant01: { kind: 'level', n: 4 },
-    variant05: { kind: 'shop', price: 10 },
+/** Наградите по ред — от лесни към трудни; заключените части се разпределят по тях. */
+const RULE_LADDER: UnlockRule[] = [
+  { kind: 'xp', n: 300 },
+  { kind: 'shop', price: 1 },
+  { kind: 'level', n: 2 },
+  { kind: 'xp', n: 1500 },
+  { kind: 'shop', price: 2 },
+  { kind: 'level', n: 3 },
+  { kind: 'xp', n: 4000 },
+  { kind: 'shop', price: 3 },
+  { kind: 'level', n: 4 },
+  { kind: 'shop', price: 5 },
+  { kind: 'level', n: 5 },
+  { kind: 'xp', n: 9000 },
+  { kind: 'shop', price: 8 },
+  { kind: 'level', n: 6 },
+  { kind: 'level', n: 7 },
+  { kind: 'shop', price: 12 },
+  { kind: 'level', n: 8 },
+  { kind: 'xp', n: 25000 },
+  { kind: 'level', n: 9 },
+  { kind: 'shop', price: 15 },
+  { kind: 'level', n: 10 },
+];
+
+/** Ръчно зададени (специалните части). */
+const LOCK_OVERRIDES: Partial<Record<AvatarPart, Record<string, UnlockRule>>> = {
+  extra: {
+    quill: { kind: 'level', n: 3 },
+    laurel: { kind: 'level', n: 6 },
+    helmet: { kind: 'shop', price: 50 },
+    crown: { kind: 'shop', price: 100 },
   },
   hair: {
     long03: { kind: 'shop', price: 10 },
@@ -81,21 +96,39 @@ export const AVATAR_LOCKS: Partial<Record<AvatarPart, Record<string, UnlockRule>
     variant05: { kind: 'shop', price: 10 },
     variant06: { kind: 'shop', price: 15 },
   },
-  extra: {
-    quill: { kind: 'level', n: 3 },
-    laurel: { kind: 'level', n: 6 },
-    helmet: { kind: 'shop', price: 50 },
-    crown: { kind: 'shop', price: 100 },
-  },
 };
 
+/** Без заключване: цветът на кожата и „без“. */
+const NEVER_LOCKED: AvatarPart[] = ['skinColor'];
+
+function buildLocks(): Partial<Record<AvatarPart, Record<string, UnlockRule>>> {
+  const out: Partial<Record<AvatarPart, Record<string, UnlockRule>>> = {};
+  for (const part of Object.keys(AVATAR_OPTIONS) as AvatarPart[]) {
+    if (NEVER_LOCKED.includes(part)) continue;
+    const values = AVATAR_OPTIONS[part].filter((v) => v !== 'none');
+    const n = values.length;
+    // всяка втора + последните ~10% са заключени (≈55%)
+    const locked = values.filter((_, i) => i % 2 === 1 || i >= Math.ceil(n * 0.9));
+    const rules: Record<string, UnlockRule> = {};
+    locked.forEach((v, i) => {
+      rules[v] = RULE_LADDER[Math.min(RULE_LADDER.length - 1, Math.floor((i * RULE_LADDER.length) / locked.length))];
+    });
+    out[part] = { ...rules, ...(LOCK_OVERRIDES[part] ?? {}) };
+  }
+  return out;
+}
+
+/** Заключените части; всичко останало е свободно. */
+export const AVATAR_LOCKS = buildLocks();
+
 export function ruleText(r: UnlockRule): string {
-  return r.kind === 'level' ? `ниво ${r.n}` : `${r.price} 💎`;
+  return r.kind === 'level' ? `ниво ${r.n}` : r.kind === 'xp' ? `${r.n} XP` : `${r.price} 💎`;
 }
 
 export function isUnlocked(r: UnlockRule | undefined, p: UnlockProgress, key?: string): boolean {
   if (!r) return true;
   if (r.kind === 'level') return p.level >= r.n;
+  if (r.kind === 'xp') return p.xp >= r.n;
   return key ? p.owned.includes(key) : false;
 }
 
