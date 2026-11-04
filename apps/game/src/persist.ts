@@ -1,5 +1,5 @@
 import { prisma, recordAnswers, type Grade } from '@belmaster/db';
-import { ACHIEVEMENTS, XP_MATCH_PLAY, XP_MATCH_WIN, currentSeason, levelForXp, sofiaDay } from '@belmaster/shared';
+import { ACHIEVEMENTS, XP_MATCH_PLAY, XP_MATCH_WIN, currentSeason, nextLevel, sofiaDay } from '@belmaster/shared';
 import { eloDeltas } from './elo.js';
 import type { Room } from './room.js';
 
@@ -16,7 +16,7 @@ async function awardXp(userId: string, xp: number, codes: string[]) {
   let streak = user.streak;
   if (user.lastActiveDay !== today) streak = user.lastActiveDay === previousDay(today) ? user.streak + 1 : 1;
   const newXp = user.xp + xp;
-  const level = levelForXp(newXp);
+  const level = nextLevel(user.level, newXp);
   await prisma.user.update({
     where: { id: userId },
     data: { xp: newXp, level, streak, bestStreak: Math.max(user.bestStreak, streak), lastActiveDay: today },

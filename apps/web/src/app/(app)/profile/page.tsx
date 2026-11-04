@@ -4,6 +4,8 @@ import { ACHIEVEMENTS, currentSeason, gradeLabel, levelProgress } from '@belmast
 import { Award, BookOpen, Castle, Crown, Flame, LogOut, Star, Swords, Users } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { diamondsOf } from '@/lib/avatar';
+import { newItemKeys } from '@/lib/unlocks';
 import { Avatar, ButtonLink, Card, ProgressBar } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { logoutAction } from '@/app/(auth)/actions';
@@ -22,7 +24,9 @@ export default async function ProfilePage() {
     prisma.matchPlayer.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { endedAt: 'desc' } }, take: 10 }),
   ]);
   const unlocked = new Set(achievements.map((a) => a.code));
-  const lp = levelProgress(user.xp);
+  const lp = levelProgress(user.xp, user.level);
+  const fresh = newItemKeys(user);
+  const diamonds = diamondsOf(user);
   const theme = (await cookies()).get('bm_theme')?.value;
   const accuracy = attempts._sum.total ? Math.round(((attempts._sum.score ?? 0) / attempts._sum.total) * 100) : 0;
 
@@ -38,9 +42,16 @@ export default async function ProfilePage() {
               смени клас
             </Link>
           </p>
-          <Link href="/profile/avatar" className="mt-2 inline-flex items-center gap-1.5 rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20">
-            ✏️ Промени аватара
-          </Link>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Link href="/profile/avatar" className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20">
+              ✏️ Промени аватара
+            </Link>
+            {fresh.length > 0 && (
+              <Link href="/profile/avatar?new=1" className="relative inline-flex items-center gap-1.5 rounded-xl bg-error/10 px-3 py-1.5 text-sm font-extrabold text-error hover:bg-error/20">
+                <span className="size-2.5 rounded-full bg-error" /> Имаш {fresh.length} {fresh.length === 1 ? 'ново нещо' : 'нови неща'} — виж
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-sm text-muted">
             Код за приятели: <span className="font-mono font-black tracking-widest text-ink-strong">{user.friendCode}</span>
           </p>
@@ -59,7 +70,7 @@ export default async function ProfilePage() {
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Серия" value={`${user.streak} 🔥`} sub={`рекорд ${user.bestStreak}`} />
-        <Stat label="Общо XP" value={String(user.xp)} sub={`ниво ${lp.level}`} />
+        <Stat label="Общо XP" value={String(user.xp)} sub={`ниво ${lp.level} · ${diamonds} 💎`} />
         <Stat label="Тестове" value={String(attempts._count)} sub={`${accuracy}% точност`} />
         <Stat label="Рейтинг" value={rating ? String(rating.rating) : '—'} sub={rating ? `${rating.wins}/${rating.games} победи` : 'този месец'} />
       </section>
@@ -72,6 +83,9 @@ export default async function ProfilePage() {
           </span>
         </div>
         <ProgressBar value={(lp.inLevel / lp.needed) * 100} color="bg-accent" />
+        <p className="mt-2 text-xs text-muted">
+          Следващо ниво при {lp.nextAt} XP общо. На всеки 1000 XP получаваш 1 💎 — с диамантите купуваш специални части за аватара. XP не се харчи и нивото не пада.
+        </p>
       </Card>
 
       <section>

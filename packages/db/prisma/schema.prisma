@@ -33,6 +33,11 @@ model User {
   streak        Int       @default(0)
   bestStreak    Int       @default(0)
   lastActiveDay String? // YYYY-MM-DD (Europe/Sofia), за серията
+  diamondsSpent  Int      @default(0) // диаманти = floor(xp/1000) − похарчени
+  ownedItems     String[] // купени части на аватара ("част:стойност")
+  announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
+  announcedItems String[] // отключени части, за които вече е показана анимацията
+  seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

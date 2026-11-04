@@ -34,7 +34,7 @@ function tone(freq: number, start: number, dur: number, type: OscillatorType = '
   o.stop(ctx.currentTime + start + dur + 0.05);
 }
 
-export type Sfx = 'correct' | 'wrong' | 'capture' | 'lost' | 'hit' | 'win' | 'lose' | 'tick' | 'turn';
+export type Sfx = 'correct' | 'wrong' | 'capture' | 'lost' | 'hit' | 'win' | 'lose' | 'tick' | 'turn' | 'unlock' | 'levelup';
 
 export function play(s: Sfx) {
   if (typeof window === 'undefined' || !soundEnabled()) return;
@@ -53,6 +53,8 @@ export function play(s: Sfx) {
     case 'win': [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.25, 'triangle')); break;
     case 'lose': [392, 349, 294].forEach((f, i) => tone(f, i * 0.16, 0.3, 'triangle')); break;
     case 'tick': tone(1200, 0, 0.04, 'square', 0.03); break;
+    case 'unlock': tone(1568, 0, 0.06, 'square', 0.04); tone(2093, 0.07, 0.1, 'triangle', 0.08); tone(1319, 0.2, 0.35, 'sine', 0.1); break;
+    case 'levelup': [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.09, 0.3, 'triangle', 0.1)); break;
     case 'turn': tone(880, 0, 0.08, 'sine'); tone(1175, 0.08, 0.12, 'sine'); break;
   }
 }

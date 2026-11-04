@@ -7,6 +7,7 @@ import { Check, ChevronLeft, ChevronRight, Flag, Flame, Gem, Trophy, X } from 'l
 import { Badge, Button, ButtonLink, Input, ProgressBar, Select, Textarea } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { Answer, ClientPassage, ClientQuestion, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
+import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app/(app)/tests/actions';
 
 import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
@@ -59,6 +60,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
       if ('error' in res) return;
       setFinished(res);
       window.scrollTo({ top: 0 });
+      notifyProgress(1800);
     });
 
   const check = () =>

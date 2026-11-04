@@ -20,7 +20,7 @@ export async function Dashboard({ user }: { user: User }) {
       include: { match: true },
     }),
   ]);
-  const lp = levelProgress(user.xp);
+  const lp = levelProgress(user.xp, user.level);
   const firstName = user.displayName.split(' ')[0];
 
   return (

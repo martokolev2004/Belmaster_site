@@ -41,80 +41,80 @@ export const EXTRA_LABELS: Record<string, string> = {
   crown: 'Корона',
 };
 
-/** Какво е нужно за отключване. */
-export type UnlockRule =
-  | { kind: 'level'; n: number }
-  | { kind: 'wins'; n: number }
-  | { kind: 'streak'; n: number }
-  | { kind: 'achievement'; code: string };
+/** Какво е нужно за отключване: ниво (автоматично) или диаманти (купува се). */
+export type UnlockRule = { kind: 'level'; n: number } | { kind: 'shop'; price: number };
 
 export interface UnlockProgress {
   level: number;
-  wins: number;
-  bestStreak: number;
-  achievements: string[];
+  diamonds: number; // налични (спечелени − похарчени)
+  owned: string[]; // купени части, ключ "част:стойност"
 }
+
+export const itemKey = (part: AvatarPart, value: string) => `${part}:${value}`;
 
 /** Заключените части; всичко останало е свободно. */
 export const AVATAR_LOCKS: Partial<Record<AvatarPart, Record<string, UnlockRule>>> = {
-  hairColor: {
-    '3eac2c': { kind: 'level', n: 3 },
-    '85c2c6': { kind: 'level', n: 3 },
-    dba3be: { kind: 'level', n: 3 },
-    '592454': { kind: 'level', n: 3 },
-  },
-  hair: {
-    long03: { kind: 'achievement', code: 'perfect_test' },
-    long08: { kind: 'achievement', code: 'perfect_test' },
-    long18: { kind: 'achievement', code: 'perfect_test' },
-  },
-  glasses: { variant01: { kind: 'wins', n: 5 } },
   bg: {
     '1f2a44': { kind: 'level', n: 2 },
     '203a2b': { kind: 'level', n: 2 },
     '3a1f2e': { kind: 'level', n: 2 },
-    '2a2a2a': { kind: 'streak', n: 7 },
-    '4a2a14': { kind: 'streak', n: 7 },
+    '2a2a2a': { kind: 'level', n: 5 },
+    '4a2a14': { kind: 'level', n: 5 },
+  },
+  hairColor: {
+    '3eac2c': { kind: 'level', n: 3 },
+    '85c2c6': { kind: 'level', n: 3 },
+    dba3be: { kind: 'level', n: 4 },
+    '592454': { kind: 'level', n: 4 },
+  },
+  glasses: {
+    variant01: { kind: 'level', n: 4 },
+    variant05: { kind: 'shop', price: 10 },
+  },
+  hair: {
+    long03: { kind: 'shop', price: 10 },
+    long08: { kind: 'shop', price: 12 },
+    long18: { kind: 'shop', price: 12 },
+    short16: { kind: 'shop', price: 15 },
+  },
+  earrings: {
+    variant05: { kind: 'shop', price: 10 },
+    variant06: { kind: 'shop', price: 15 },
   },
   extra: {
     quill: { kind: 'level', n: 3 },
-    laurel: { kind: 'level', n: 5 },
-    helmet: { kind: 'achievement', code: 'capital_taker' },
-    crown: { kind: 'wins', n: 10 },
+    laurel: { kind: 'level', n: 6 },
+    helmet: { kind: 'shop', price: 50 },
+    crown: { kind: 'shop', price: 100 },
   },
 };
 
-const ACH_NAMES: Record<string, string> = {
-  perfect_test: 'тест без грешка',
-  capital_taker: 'превземи столица',
-  first_win: 'първа победа',
-};
-
 export function ruleText(r: UnlockRule): string {
-  switch (r.kind) {
-    case 'level':
-      return `ниво ${r.n}`;
-    case 'wins':
-      return `${r.n} победи в битки`;
-    case 'streak':
-      return `серия ${r.n} дни`;
-    case 'achievement':
-      return ACH_NAMES[r.code] ?? r.code;
-  }
+  return r.kind === 'level' ? `ниво ${r.n}` : `${r.price} 💎`;
 }
 
-export function isUnlocked(r: UnlockRule | undefined, p: UnlockProgress): boolean {
+export function isUnlocked(r: UnlockRule | undefined, p: UnlockProgress, key?: string): boolean {
   if (!r) return true;
-  switch (r.kind) {
-    case 'level':
-      return p.level >= r.n;
-    case 'wins':
-      return p.wins >= r.n;
-    case 'streak':
-      return p.bestStreak >= r.n;
-    case 'achievement':
-      return p.achievements.includes(r.code);
-  }
+  if (r.kind === 'level') return p.level >= r.n;
+  return key ? p.owned.includes(key) : false;
+}
+
+/** Всички заключени части като списък (за магазина и „новите“ неща). */
+export function lockedItems(): { part: AvatarPart; value: string; key: string; rule: UnlockRule }[] {
+  const out: { part: AvatarPart; value: string; key: string; rule: UnlockRule }[] = [];
+  for (const part of Object.keys(AVATAR_LOCKS) as AvatarPart[])
+    for (const [value, rule] of Object.entries(AVATAR_LOCKS[part] ?? {})) out.push({ part, value, key: itemKey(part, value), rule });
+  return out;
+}
+
+/** Отключените (по ниво или купени) специални части. */
+export function unlockedKeys(p: UnlockProgress): string[] {
+  return lockedItems().filter((i) => isUnlocked(i.rule, p, i.key)).map((i) => i.key);
+}
+
+/** Частите, които се отключват точно на дадено ниво. */
+export function itemsForLevel(level: number) {
+  return lockedItems().filter((i) => i.rule.kind === 'level' && i.rule.n === level);
 }
 
 export function lockOf(part: AvatarPart, value: string): UnlockRule | undefined {
@@ -157,7 +157,7 @@ export function sanitizeAvatar(input: unknown, p: UnlockProgress | null, seed = 
   for (const part of Object.keys(AVATAR_OPTIONS) as AvatarPart[]) {
     const v = src[part];
     if (typeof v !== 'string' || !(AVATAR_OPTIONS[part] as readonly string[]).includes(v)) continue;
-    if (p && !isUnlocked(lockOf(part, v), p)) continue;
+    if (p && !isUnlocked(lockOf(part, v), p, itemKey(part, v))) continue;
     out[part] = v;
   }
   return out;

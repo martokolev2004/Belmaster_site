@@ -1,16 +1,21 @@
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel } from '@belmaster/shared';
-import { Flame, Gem } from 'lucide-react';
+import { Flame, Gem, Star } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Avatar } from '@/components/ui';
 import { isAdmin } from '@/lib/auth';
+import { diamondsOf } from '@/lib/avatar';
+import { newItemKeys } from '@/lib/unlocks';
+import { UnlockCelebration } from '@/components/unlocks/UnlockCelebration';
 import { NavLinks, BottomNav } from './NavLinks';
 import { GameSocketProvider } from '@/components/game/GameSocketProvider';
 import { InviteToasts } from '@/components/game/InviteToasts';
 
 export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const admin = isAdmin(user);
+  const hasNew = newItemKeys(user).length > 0;
+  const diamonds = admin ? 9999 : diamondsOf(user);
   return (
     <GameSocketProvider>
       <div className="min-h-dvh md:pl-64">
@@ -21,7 +26,10 @@ export function AppShell({ user, children }: { user: User; children: React.React
           </Link>
           <NavLinks admin={admin} />
           <Link href="/profile" className="mt-auto flex items-center gap-3 rounded-2xl px-3 py-2 hover:bg-surface-2">
-            <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={36} />
+            <span className="relative">
+              <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={36} />
+              {hasNew && <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full border-2 border-bg bg-error" />}
+            </span>
             <span className="min-w-0">
               <span className="block truncate font-extrabold text-ink-strong">{user.displayName}</span>
               <span className="block text-xs text-muted">
@@ -44,11 +52,15 @@ export function AppShell({ user, children }: { user: User; children: React.React
               <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-orange" title="Серия от дни">
                 <Flame className="size-5" fill="currentColor" /> {user.streak}
               </span>
-              <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-secondary" title="Опит (XP)">
-                <Gem className="size-5" /> {user.xp}
+              <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-accent-dark" title="Опит (XP)">
+                <Star className="size-5" fill="currentColor" /> {user.xp}
               </span>
-              <Link href="/profile" className="md:hidden" aria-label="Профил">
+              <Link href="/profile/avatar" className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-secondary hover:bg-surface-2" title="Диаманти — за магазина на аватара">
+                <Gem className="size-5" /> {diamonds}
+              </Link>
+              <Link href="/profile" className="relative md:hidden" aria-label="Профил">
                 <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={34} />
+                {hasNew && <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full border-2 border-bg bg-error" />}
               </Link>
             </div>
           </div>
@@ -57,6 +69,7 @@ export function AppShell({ user, children }: { user: User; children: React.React
         <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
         <BottomNav />
         <InviteToasts />
+        <UnlockCelebration avatar={user.avatar} seed={user.id} />
       </div>
     </GameSocketProvider>
   );

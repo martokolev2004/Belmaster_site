@@ -172,3 +172,34 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Отключване: катинарът се отваря и пада ── */
+@keyframes lock-shake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+@keyframes shackle-open {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-7px) rotate(-18deg); }
+}
+@keyframes lock-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(70px) rotate(35deg); opacity: 0; }
+}
+@keyframes item-reveal {
+  0% { filter: grayscale(1) blur(2px); opacity: .35; transform: scale(.9); }
+  70% { filter: none; opacity: 1; transform: scale(1.08); }
+  100% { filter: none; opacity: 1; transform: scale(1); }
+}
+@keyframes glow-burst {
+  0% { opacity: 0; transform: scale(.4); }
+  40% { opacity: .9; }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.unlock-lock { animation: lock-shake .6s ease-in-out var(--d, 0s) both, lock-fall .6s ease-in calc(var(--d, 0s) + 1.05s) forwards; transform-origin: 50% 30%; }
+.unlock-shackle { animation: shackle-open .3s ease-out calc(var(--d, 0s) + .7s) forwards; transform-origin: 70% 100%; transform-box: fill-box; }
+.unlock-item { animation: item-reveal .7s ease-out calc(var(--d, 0s) + 1.05s) both; }
+.unlock-glow { animation: glow-burst .9s ease-out calc(var(--d, 0s) + 1s) both; }

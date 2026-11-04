@@ -1,5 +1,5 @@
 import 'server-only';
-import { ACHIEVEMENTS, levelForXp, sofiaDay } from '@belmaster/shared';
+import { ACHIEVEMENTS, nextLevel, sofiaDay } from '@belmaster/shared';
 import { prisma } from './db';
 
 function previousDay(day: string): string {
@@ -21,7 +21,7 @@ export async function awardProgress(userId: string, xp: number, extra: { perfect
     where: { id: userId },
     data: {
       xp: newXp,
-      level: levelForXp(newXp),
+      level: nextLevel(user.level, newXp),
       streak,
       bestStreak: Math.max(user.bestStreak, streak),
       lastActiveDay: today,

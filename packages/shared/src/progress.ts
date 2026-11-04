@@ -1,14 +1,42 @@
 export const XP_PER_CORRECT = 20;
-export const XP_PER_LEVEL = 1000;
 export const XP_MATCH_WIN = 100;
 export const XP_MATCH_PLAY = 30;
+/** 1 диамант за всеки 1000 спечелени XP (XP не се харчи). */
+export const XP_PER_DIAMOND = 1000;
 
-export function levelForXp(xp: number): number {
-  return Math.floor(xp / XP_PER_LEVEL) + 1;
+/** Общо XP, нужно за да стигнеш ниво 2, 3, 4… (ниво 1 е от 0). */
+export const LEVEL_THRESHOLDS = [1000, 2500, 6000, 12000, 20000, 32000, 48000, 70000, 100000, 140000];
+const LEVEL_STEP_AFTER = 50000;
+
+/** XP, при което започва дадено ниво. */
+export function xpForLevel(level: number): number {
+  if (level <= 1) return 0;
+  const i = level - 2;
+  if (i < LEVEL_THRESHOLDS.length) return LEVEL_THRESHOLDS[i];
+  return LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] + (i - LEVEL_THRESHOLDS.length + 1) * LEVEL_STEP_AFTER;
 }
 
-export function levelProgress(xp: number): { level: number; inLevel: number; needed: number } {
-  return { level: levelForXp(xp), inLevel: xp % XP_PER_LEVEL, needed: XP_PER_LEVEL };
+export function levelForXp(xp: number): number {
+  let level = 1;
+  while (xp >= xpForLevel(level + 1)) level++;
+  return level;
+}
+
+/** Нивото никога не пада: пазим по-голямото от запазеното и изчисленото. */
+export function nextLevel(storedLevel: number, xp: number): number {
+  return Math.max(storedLevel, levelForXp(xp));
+}
+
+export function levelProgress(xp: number, storedLevel?: number): { level: number; inLevel: number; needed: number; nextAt: number } {
+  const level = Math.max(storedLevel ?? 1, levelForXp(xp));
+  const start = xpForLevel(level);
+  const nextAt = xpForLevel(level + 1);
+  return { level, inLevel: Math.max(0, xp - start), needed: nextAt - start, nextAt };
+}
+
+/** Спечелени диаманти общо (преди харчене). */
+export function diamondsEarned(xp: number): number {
+  return Math.floor(xp / XP_PER_DIAMOND);
 }
 
 export interface AchievementDef {

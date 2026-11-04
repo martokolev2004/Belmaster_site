@@ -11,6 +11,7 @@ import { useGame } from './GameSocketProvider';
 import { MapBoard } from './MapBoard';
 import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
+import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { attackOptions, landOwner, pickOptions, territoryCount } from './logic';
 import { AnswerInput, hasAnswer, type InputQuestion } from '@/components/quiz/inputs';
 import { ContextBox } from '@/components/quiz/ContextBox';
@@ -697,6 +698,8 @@ function Finished({ state, me }: { state: GameState; me: string }) {
   const winner = standings[0];
   const mine = standings.find((s) => s.uid === me);
   const map = MAPS[state.mapId!];
+  // XP се записва на игровия сървър — проверяваме за ново ниво малко след края
+  useEffect(() => notifyProgress(4500), []);
 
   return (
     <div className="mx-auto max-w-3xl">
