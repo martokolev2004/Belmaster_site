@@ -14,7 +14,9 @@ RUN npm ci
 FROM deps AS build
 COPY . .
 RUN npx prisma generate --schema packages/db/prisma/schema.prisma
-ENV NEXT_TELEMETRY_DISABLED=1
+# адресът на игровия сървър вътре в docker-compose (вгражда се в пренасочването /socket.io)
+ARG GAME_INTERNAL_URL=http://game:4000
+ENV GAME_INTERNAL_URL=$GAME_INTERNAL_URL NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace @belmaster/web
 
 FROM base AS runtime

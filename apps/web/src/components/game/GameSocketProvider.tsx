@@ -50,7 +50,7 @@ export function GameSocketProvider({ children }: { children: React.ReactNode }) 
       const res = await fetch('/api/game-token', { cache: 'no-store' });
       if (!res.ok || cancelled) return;
       const { token, url } = (await res.json()) as { token: string; url: string };
-      s = io(url, { auth: { token }, transports: ['websocket', 'polling'], reconnectionDelayMax: 3000 });
+      s = io(url || window.location.origin, { auth: { token }, transports: ['polling', 'websocket'], reconnectionDelayMax: 3000 });
       s.on('connect', () => setConnected(true));
       s.on('disconnect', () => setConnected(false));
       s.on('state', (st) => {

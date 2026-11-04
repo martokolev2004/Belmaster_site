@@ -36,6 +36,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      GAME_INTERNAL_URL: http://game:4000
     ports:
       - '3000:3000'
     command: npm run start --workspace @belmaster/web
