@@ -42,6 +42,8 @@ export interface ImportQuestion {
   status?: 'ACTIVE' | 'DRAFT' | 'HIDDEN';
 }
 
+export const IMPORT_VERSION = 2;
+
 export interface ImportReport {
   examTitle: string | null;
   /** true — файлът не е променян от последния импорт и нищо не е пипнато */
@@ -76,7 +78,8 @@ export function validateImport(data: unknown): ImportFile {
 export async function importQuestions(prisma: PrismaClient, input: unknown, opts: { force?: boolean } = {}): Promise<ImportReport> {
   const file = validateImport(input);
   const report: ImportReport = { examTitle: null, created: 0, replaced: 0, worksCreated: [], warnings: [] };
-  const hash = createHash('sha256').update(JSON.stringify(file)).digest('hex');
+  // IMPORT_VERSION се вдига, когато се сменят правилата (напр. кое влиза в битките) — тогава всичко се импортира наново
+  const hash = createHash('sha256').update(`${IMPORT_VERSION}:${JSON.stringify(file)}`).digest('hex');
 
   // същата матура, същият файл → не пипаме нищо (пазят се докладите, статистиката и редакциите от админа)
   if (file.exam && !opts.force) {
@@ -197,7 +200,9 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
             matching: q.matching ?? undefined,
             data,
             answerCount: q.answerCount ?? 1,
-            inMultiplayer: q.multiplayer ?? defaultInMultiplayer(type, q.section, q.answerCount ?? 1),
+            inMultiplayer:
+              q.multiplayer ??
+              defaultInMultiplayer(type, q.section, q.answerCount ?? 1, { prompt: q.prompt, context: q.context, options }),
             explanation: q.explanation ?? null,
             status,
             workId,

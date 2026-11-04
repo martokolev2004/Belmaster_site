@@ -3,8 +3,23 @@ import { isShortAnswerCorrect, matchesAccepted } from './answers';
 /** Типове, които по подразбиране влизат в мултиплейъра (пунктуацията и четенето — не). */
 export const MULTIPLAYER_TYPES: QType[] = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING', 'FILL_BLANKS'];
 
-export function defaultInMultiplayer(type: QType, section: 'LANGUAGE' | 'LITERATURE' | 'READING', answerCount = 1): boolean {
-  return section !== 'READING' && MULTIPLAYER_TYPES.includes(type) && answerCount <= 1;
+/** Граници за дължина в мултиплейъра — по-дълги въпроси остават само за тестовете. */
+export const MULTIPLAYER_MAX_CONTEXT = 300;
+export const MULTIPLAYER_MAX_TOTAL = 550;
+
+export function questionTextLength(q: { prompt: string; context?: string | null; options?: string[] }) {
+  return q.prompt.length + (q.context?.length ?? 0) + (q.options ?? []).join('').length;
+}
+
+export function defaultInMultiplayer(
+  type: QType,
+  section: 'LANGUAGE' | 'LITERATURE' | 'READING',
+  answerCount = 1,
+  text?: { prompt: string; context?: string | null; options?: string[] },
+): boolean {
+  if (section === 'READING' || !MULTIPLAYER_TYPES.includes(type) || answerCount > 1) return false;
+  if (text && ((text.context?.length ?? 0) > MULTIPLAYER_MAX_CONTEXT || questionTextLength(text) > MULTIPLAYER_MAX_TOTAL)) return false;
+  return true;
 }
 
 export const TYPE_LABELS: Record<QType, string> = {
