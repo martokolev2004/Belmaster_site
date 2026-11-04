@@ -13,7 +13,12 @@ interface Q {
   grade: GradeCode;
   section: keyof typeof SECTION_LABELS;
   topic: keyof typeof TOPIC_LABELS | null;
-  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING';
+  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING' | 'FILL_BLANKS' | 'PUNCTUATION';
+  answerCount: number;
+  blanksText: string | null;
+  blanksLines: string | null;
+  punctOriginal: string | null;
+  punctAnswer: string | null;
   prompt: string;
   context: string | null;
   options: string[];
@@ -130,6 +135,8 @@ export function QuestionForm({
               <option value="SINGLE_CHOICE">Избор на отговор</option>
               <option value="SHORT_ANSWER">Кратък отговор</option>
               <option value="MATCHING">Свързване</option>
+              <option value="FILL_BLANKS">Празни места</option>
+              <option value="PUNCTUATION">Пунктуация (липсващи знаци)</option>
             </Select>
           </Field>
         </Card>
@@ -159,9 +166,34 @@ export function QuestionForm({
             </>
           )}
           {type === 'SHORT_ANSWER' && (
-            <Field label="Допустими верни отговори (по един на ред)" hint="Сравнява се без значение от главни/малки букви, кавички и излишни интервали.">
-              <Textarea name="acceptedAnswers" defaultValue={question?.acceptedAnswers.join('\n')} />
-            </Field>
+            <>
+              <Field label="Допустими верни отговори (по един на ред)" hint="Сравнява се без значение от главни/малки букви, кавички и излишни интервали.">
+                <Textarea name="acceptedAnswers" defaultValue={question?.acceptedAnswers.join('\n')} />
+              </Field>
+              <Field label="Колко отговора се искат" hint="Напр. 2 за „Запишете ДВЕ…“ — всеки се търси в списъка по-горе.">
+                <Input name="answerCount" type="number" min={1} max={5} defaultValue={question?.answerCount ?? 1} />
+              </Field>
+            </>
+          )}
+          {type === 'FILL_BLANKS' && (
+            <>
+              <Field label="Текст с празни места" hint="Отбележи всяко място с {{А}}, {{Б}}, {{В}}…">
+                <Textarea name="blanksText" defaultValue={question?.blanksText ?? ''} className="min-h-32" />
+              </Field>
+              <Field label="Варианти за всяко място" hint="По един ред на място: А: стимул | стимулант* | симулант  (* = верният)">
+                <Textarea name="blanksLines" defaultValue={question?.blanksLines ?? ''} className="font-mono text-sm" />
+              </Field>
+            </>
+          )}
+          {type === 'PUNCTUATION' && (
+            <>
+              <Field label="Текст БЕЗ липсващите знаци (както е в задачата)">
+                <Textarea name="punctOriginal" defaultValue={question?.punctOriginal ?? ''} className="min-h-32" />
+              </Field>
+              <Field label="Верният текст (със знаците)" hint="Думите трябва да са същите — различават се само знаците.">
+                <Textarea name="punctAnswer" defaultValue={question?.punctAnswer ?? ''} className="min-h-32" />
+              </Field>
+            </>
           )}
           {type === 'MATCHING' && (
             <div className="grid gap-4 md:grid-cols-2">

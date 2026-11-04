@@ -3,13 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { importQuestions, type ImportReport } from '@belmaster/db';
-import { isGrade } from '@belmaster/shared';
+import { isGrade, punctuationFromTexts } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 
 const SECTIONS = ['LANGUAGE', 'LITERATURE', 'READING'] as const;
 const TOPICS = ['GRAMMAR', 'LEXIS', 'SPELLING', 'PUNCTUATION'] as const;
-const TYPES = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING'] as const;
+const TYPES = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING', 'FILL_BLANKS', 'PUNCTUATION'] as const;
 const STATUSES = ['ACTIVE', 'DRAFT', 'HIDDEN'] as const;
 
 function pick<T extends readonly string[]>(list: T, v: unknown, fallback: T[number]): T[number] {
@@ -45,6 +45,18 @@ export async function saveQuestionAction(form: FormData) {
       .map((p) => ['А', 'Б', 'В', 'Г', 'Д', 'Е'].indexOf(p.toUpperCase()));
     matching = { left, right, pairs };
   }
+  let qdata: object | undefined;
+  if (type === 'FILL_BLANKS') {
+    const blanks = lines(form.get('blanksLines')).map((line) => {
+      const [label, rest = ''] = line.split(/:(.*)/s);
+      const opts = rest.split('|').map((o) => o.trim()).filter(Boolean);
+      return { label: label.trim(), options: opts.map((o) => o.replace(/\*$/, '').trim()), correct: Math.max(0, opts.findIndex((o) => o.endsWith('*'))) };
+    });
+    qdata = { blanks: { text: String(form.get('blanksText') ?? '').trim(), blanks } };
+  }
+  if (type === 'PUNCTUATION') {
+    qdata = { punctuation: punctuationFromTexts(String(form.get('punctOriginal') ?? ''), String(form.get('punctAnswer') ?? '')) };
+  }
   const data = {
     grade,
     section,
@@ -56,6 +68,8 @@ export async function saveQuestionAction(form: FormData) {
     correctIndex: type === 'SINGLE_CHOICE' && Number.isInteger(ci) && ci >= 0 && ci < options.length ? ci : null,
     acceptedAnswers: type === 'SHORT_ANSWER' ? lines(form.get('acceptedAnswers')) : [],
     matching,
+    data: qdata,
+    answerCount: type === 'SHORT_ANSWER' ? Math.min(5, Math.max(1, Number(form.get('answerCount')) || 1)) : 1,
     explanation: str(form.get('explanation')),
     status: pick(STATUSES, form.get('status'), 'ACTIVE'),
     workId: section === 'LITERATURE' ? str(form.get('workId')) : null,

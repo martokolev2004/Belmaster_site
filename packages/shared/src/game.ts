@@ -1,4 +1,5 @@
 import type { GradeCode } from './grades';
+import type { AnyAnswer, PunctMark, QType } from './questions';
 
 // ───────────── Правила ─────────────
 export const RULES = {
@@ -83,10 +84,16 @@ export interface PublicRegion {
 
 export interface PublicQuestion {
   id: string;
-  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER';
+  type: QType;
   prompt: string;
   context: string | null;
   options: string[];
+  answerCount: number;
+  matching: { left: string[]; right: string[] } | null;
+  blanks: { text: string; blanks: { label: string; options: string[] }[] } | null;
+  tokens: string[] | null;
+  /** общото време за въпроса (ms) — зависи от типа */
+  timeMs: number;
   workTitle: string | null;
   topicLabel: string;
   participants: string[];
@@ -96,6 +103,8 @@ export interface PublicQuestion {
 
 export interface RevealResult {
   uid: string;
+  /** 0..1 — частта от верните елементи */
+  score: number;
   correct: boolean;
   timeMs: number | null;
   index: number | null;
@@ -105,6 +114,9 @@ export interface RevealResult {
 export interface PublicReveal {
   correctIndex: number | null;
   correctText: string | null;
+  correctPairs: number[] | null;
+  correctBlanks: number[] | null;
+  correctMarks: PunctMark[] | null;
   explanation: string | null;
   results: RevealResult[];
   message: string;
@@ -162,7 +174,7 @@ export interface ClientToServer {
   'quick:join': (p: { mode: GameMode }) => void;
   'quick:leave': () => void;
   'bot:start': (p: { mode: GameMode }) => void;
-  'game:answer': (p: { questionId: string; index?: number; text?: string }) => void;
+  'game:answer': (p: { questionId: string } & AnyAnswer) => void;
   'game:pick': (p: { regionId: string }) => void;
   'game:attack': (p: { regionId: string }) => void;
   'game:joker': (p: { kind: 'fifty' | 'time' }) => void;

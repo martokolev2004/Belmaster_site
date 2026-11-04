@@ -9,7 +9,8 @@ import { cn } from '@/lib/cn';
 import type { Answer, ClientPassage, ClientQuestion, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
 import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app/(app)/tests/actions';
 
-export const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
+import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
+export { LETTERS };
 
 interface Props {
   kind: TestKind;
@@ -23,10 +24,7 @@ interface Props {
 }
 
 function hasAnswer(q: ClientQuestion, a: Answer | undefined) {
-  if (!a) return false;
-  if (q.type === 'SINGLE_CHOICE') return a.index != null;
-  if (q.type === 'SHORT_ANSWER') return !!a.text?.trim();
-  return !!a.pairs && a.pairs.length === q.matching?.left.length && a.pairs.every((p) => p != null);
+  return hasAnswerBase(q, a);
 }
 
 export function QuizRunner({ kind, examId = null, mode, title, questions, passages, backHref, againHref }: Props) {
@@ -186,7 +184,9 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
                   {result.correct ? <Check className="size-7" strokeWidth={3} /> : <X className="size-7" strokeWidth={3} />}
                 </span>
                 <div>
-                  <p className={cn('text-xl font-black', result.correct ? 'text-primary-dark' : 'text-error-dark')}>{result.correct ? 'Вярно!' : 'Грешно'}</p>
+                  <p className={cn('text-xl font-black', result.correct ? 'text-primary-dark' : 'text-error-dark')}>
+                    {result.correct ? 'Вярно!' : result.score > 0 ? `Частично вярно (${Math.round(result.score * 100)}%)` : 'Грешно'}
+                  </p>
                   {!result.correct && <p className="font-bold text-error-dark">Верен отговор: {correctAnswerText(q, result)}</p>}
                   {result.explanation && <p className="mt-1 text-sm text-ink">{result.explanation}</p>}
                   <button onClick={() => setReportFor(q.id)} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-muted hover:underline">
@@ -217,94 +217,24 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
 
 export function correctAnswerText(q: ClientQuestion, r: QuestionResult): string {
   if (q.type === 'SINGLE_CHOICE' && r.correctIndex != null) return `${LETTERS[r.correctIndex]}) ${q.options[r.correctIndex]}`;
-  if (q.type === 'SHORT_ANSWER') return r.correctText ?? '';
-  if (q.type === 'MATCHING' && r.correctPairs && q.matching)
-    return r.correctPairs.map((p, i) => `${i + 1} → ${LETTERS[p]}`).join(', ');
+  if (q.type === 'SHORT_ANSWER') return q.answerCount > 1 ? `${q.answerCount} от: ${r.correctText ?? ''}` : r.correctText ?? '';
+  if (q.type === 'MATCHING' && r.correctPairs) return r.correctPairs.map((p, i) => `${i + 1} → ${LETTERS[p]}`).join(', ');
+  if (q.type === 'FILL_BLANKS' && r.correctBlanks && q.blanks)
+    return r.correctBlanks.map((c, i) => `(${q.blanks!.blanks[i].label}) ${q.blanks!.blanks[i].options[c]}`).join(', ');
+  if (q.type === 'PUNCTUATION') return r.correctFull ?? '';
   return '';
 }
 
 function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuestion; answer?: Answer; result?: QuestionResult; onAnswer: (a: Answer) => void }) {
-  if (q.type === 'SINGLE_CHOICE') {
-    return (
-      <div className="grid gap-3">
-        {q.options.map((opt, i) => {
-          const selected = answer?.index === i;
-          const isCorrect = result && result.correctIndex === i;
-          const isWrong = result && selected && !result.correct;
-          return (
-            <button
-              key={i}
-              onClick={() => onAnswer({ index: i })}
-              disabled={!!result}
-              className={cn(
-                'card3d flex items-center gap-3 rounded-2xl bg-surface p-4 text-left font-bold transition',
-                !result && 'hover:bg-surface-2',
-                selected && !result && 'border-secondary! bg-secondary/10 text-secondary-dark',
-                isCorrect && 'border-primary! bg-primary/10 text-primary-dark',
-                isWrong && 'animate-shake border-error! bg-error/10 text-error-dark',
-              )}
-            >
-              <span className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border-2 text-sm font-black', selected ? 'border-current' : 'border-line text-muted')}>
-                {LETTERS[i]}
-              </span>
-              <span className="whitespace-pre-line">{opt}</span>
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
-  if (q.type === 'SHORT_ANSWER') {
-    return (
-      <Input
-        autoFocus
-        value={answer?.text ?? ''}
-        disabled={!!result}
-        onChange={(e) => onAnswer({ text: e.target.value })}
-        placeholder="Напиши отговора си…"
-        className={cn('text-lg font-bold', result && (result.correct ? 'border-primary! bg-primary/10' : 'border-error! bg-error/10'))}
-      />
-    );
-  }
-  const m = q.matching!;
-  const pairs = answer?.pairs ?? m.left.map(() => null);
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <ol className="space-y-2">
-        {m.left.map((l, i) => (
-          <li key={i} className="card3d flex items-center gap-3 rounded-2xl bg-surface p-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 font-black">{i + 1}</span>
-            <span className="flex-1 font-bold">{l}</span>
-            <Select
-              aria-label={`Отговор за ${i + 1}`}
-              value={pairs[i] ?? ''}
-              disabled={!!result}
-              className={cn('w-20 px-2 py-2', result?.correctPairs && (result.correctPairs[i] === pairs[i] ? 'border-primary!' : 'border-error!'))}
-              onChange={(e) => {
-                const nextPairs = [...pairs];
-                nextPairs[i] = e.target.value === '' ? null : Number(e.target.value);
-                onAnswer({ pairs: nextPairs });
-              }}
-            >
-              <option value="">—</option>
-              {m.right.map((_, j) => (
-                <option key={j} value={j}>
-                  {LETTERS[j]}
-                </option>
-              ))}
-            </Select>
-          </li>
-        ))}
-      </ol>
-      <ul className="space-y-2">
-        {m.right.map((r, j) => (
-          <li key={j} className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface font-black">{LETTERS[j]}</span>
-            <span className="font-bold">{r}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <AnswerInput
+      q={q}
+      value={answer}
+      onChange={onAnswer}
+      disabled={!!result}
+      autoFocus
+      reveal={result ? { correctIndex: result.correctIndex, correctPairs: result.correctPairs, correctBlanks: result.correctBlanks, correctMarks: result.correctMarks } : null}
+    />
   );
 }
 
@@ -335,7 +265,7 @@ function ResultScreen({
         </div>
         <h1 className="text-3xl font-black">{pct >= 80 ? 'Страхотно!' : pct >= 50 ? 'Добра работа!' : 'Продължавай да учиш!'}</h1>
         <p className="mt-1 text-muted">
-          {result.score} от {result.total} верни ({pct}%)
+          {Number.isInteger(result.score) ? result.score : result.score.toFixed(1)} от {result.total} точки ({pct}%)
         </p>
       </div>
       <div className="mt-6 grid grid-cols-3 gap-3">
@@ -364,10 +294,10 @@ function ResultScreen({
           if (!r) return null;
           const a = answers[q.id];
           return (
-            <li key={q.id} className={cn('card3d rounded-2xl bg-surface p-4', r.correct ? 'border-primary/40' : 'border-error/40')}>
+            <li key={q.id} className={cn('card3d rounded-2xl bg-surface p-4', r.correct ? 'border-primary/40' : r.score > 0 ? 'border-orange/50' : 'border-error/40')}>
               <div className="flex items-start gap-3">
-                <span className={cn('mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-white', r.correct ? 'bg-primary' : 'bg-error')}>
-                  {r.correct ? <Check className="size-4" strokeWidth={3} /> : <X className="size-4" strokeWidth={3} />}
+                <span className={cn('mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-white', r.correct ? 'bg-primary' : r.score > 0 ? 'bg-orange' : 'bg-error')}>
+                  {r.correct ? <Check className="size-4" strokeWidth={3} /> : r.score > 0 ? <span className="text-[10px] font-black">{Math.round(r.score * 100)}%</span> : <X className="size-4" strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-ink-strong">
@@ -393,8 +323,11 @@ function ResultScreen({
 function yourAnswerText(q: ClientQuestion, a?: Answer) {
   if (!a) return '';
   if (q.type === 'SINGLE_CHOICE' && a.index != null) return `${LETTERS[a.index]}) ${q.options[a.index]}`;
-  if (q.type === 'SHORT_ANSWER') return a.text ?? '';
+  if (q.type === 'SHORT_ANSWER') return q.answerCount > 1 ? (a.texts ?? []).filter(Boolean).join('; ') : a.text ?? '';
   if (q.type === 'MATCHING' && a.pairs) return a.pairs.map((p, i) => `${i + 1} → ${p == null ? '—' : LETTERS[p]}`).join(', ');
+  if (q.type === 'FILL_BLANKS' && a.blanks && q.blanks)
+    return a.blanks.map((c, i) => `(${q.blanks!.blanks[i].label}) ${c == null ? '—' : q.blanks!.blanks[i].options[c]}`).join(', ');
+  if (q.type === 'PUNCTUATION') return `${a.marks?.length ?? 0} поставени знака`;
   return '';
 }
 

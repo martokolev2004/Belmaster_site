@@ -138,7 +138,9 @@ enum LanguageTopic {
 enum QuestionType {
   SINGLE_CHOICE // избор на един отговор
   SHORT_ANSWER // кратък писмен отговор
-  MATCHING // свързване (само в мини тестовете)
+  MATCHING // свързване
+  FILL_BLANKS // попълване на празни места (избор за всяко)
+  PUNCTUATION // поставяне на липсващи препинателни знаци
 }
 
 enum QuestionStatus {
@@ -159,6 +161,8 @@ model Question {
   correctIndex    Int? // за SINGLE_CHOICE (0-базиран)
   acceptedAnswers String[] // за SHORT_ANSWER — всички допустими отговори
   matching        Json? // за MATCHING: { left: string[], right: string[], pairs: number[] }
+  data            Json? // FILL_BLANKS: { blanks: {text, blanks[]} } · PUNCTUATION: { punctuation: {tokens, marks[]} }
+  answerCount     Int            @default(1) // SHORT_ANSWER: колко отговора се искат (напр. „запишете ДВЕ“)
   explanation     String?
   status          QuestionStatus @default(ACTIVE)
 
@@ -215,7 +219,7 @@ model QuizAttempt {
   grade      Grade
   kind       String // "LANGUAGE" | "LITERATURE" | "READING" | "EXAM"
   examId     String?
-  score      Int
+  score      Float
   total      Int
   xpEarned   Int
   answers    Json

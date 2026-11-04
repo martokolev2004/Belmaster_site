@@ -1,12 +1,11 @@
+import type { AnyAnswer, PunctMark } from '@belmaster/shared';
+import type { InputQuestion } from '@/components/quiz/inputs';
+
 export type TestKind = 'LANGUAGE' | 'LITERATURE' | 'READING' | 'EXAM';
 
-export interface ClientQuestion {
-  id: string;
-  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING';
+export interface ClientQuestion extends InputQuestion {
   prompt: string;
   context: string | null;
-  options: string[];
-  matching: { left: string[]; right: string[] } | null;
   passageId: string | null;
   workTitle: string | null;
   label: string;
@@ -19,18 +18,19 @@ export interface ClientPassage {
   text: string;
 }
 
-export interface Answer {
-  index?: number | null;
-  text?: string | null;
-  pairs?: (number | null)[] | null;
-}
+export type Answer = AnyAnswer;
 
 export interface QuestionResult {
   id: string;
+  /** 0..1 */
+  score: number;
   correct: boolean;
   correctIndex: number | null;
   correctText: string | null;
   correctPairs: number[] | null;
+  correctBlanks: number[] | null;
+  correctMarks: PunctMark[] | null;
+  correctFull: string | null;
   explanation: string | null;
 }
 

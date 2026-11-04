@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CHAT_MESSAGES, MAPS, MODE_LABELS, RULES, type GameMode, type GameState, type PublicPlayer } from '@belmaster/shared';
+import { CHAT_MESSAGES, MAPS, MODE_LABELS, RULES, type AnyAnswer, type GameMode, type GameState, type PublicPlayer } from '@belmaster/shared';
 import { Bot, Castle, Check, Clock, Copy, Crown, LogOut, MessageCircle, Swords, Timer, Users, WifiOff, X } from 'lucide-react';
 import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -11,6 +11,7 @@ import { useGame } from './GameSocketProvider';
 import { MapBoard } from './MapBoard';
 import { useCountdown } from './useCountdown';
 import { attackOptions, landOwner, pickOptions, territoryCount } from './logic';
+import { AnswerInput, hasAnswer, type InputQuestion } from '@/components/quiz/inputs';
 
 const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 
@@ -502,19 +503,19 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
   const reveal = state.reveal;
   const participant = q.participants.includes(me);
   const answered = state.answeredUids.includes(me);
-  const [choice, setChoice] = useState<number | null>(null);
-  const [text, setText] = useState('');
+  const [answer, setAnswer] = useState<AnyAnswer | undefined>(undefined);
   const removed = fifty?.questionId === q.id ? new Set(fifty.removed) : new Set<number>();
 
   useEffect(() => {
-    setChoice(null);
-    setText('');
+    setAnswer(undefined);
   }, [q.id]);
 
-  const send = (payload: { index?: number; text?: string }) => {
+  const send = (payload: AnyAnswer) => {
     if (!participant || answered || reveal) return;
     socket?.emit('game:answer', { questionId: q.id, ...payload });
   };
+  const instant = q.type === 'SINGLE_CHOICE';
+  const iq: InputQuestion = { id: q.id, type: q.type, options: q.options, answerCount: q.answerCount, matching: q.matching, blanks: q.blanks, tokens: q.tokens };
 
   const myResult = reveal?.results.find((r) => r.uid === me);
   const header =
@@ -525,7 +526,7 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
   return (
     <Panel className={cn(reveal && (reveal.winnerUid === me ? 'border-primary!' : myResult && !myResult.correct ? 'border-error!' : ''))}>
       <p className="mb-2 text-xs font-extrabold uppercase text-muted">{header}</p>
-      {!reveal && <TimerBar deadline={q.deadline} total={RULES.QUESTION_MS} />}
+      {!reveal && <TimerBar deadline={q.deadline} total={q.timeMs} />}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Badge tone="blue">{q.topicLabel}</Badge>
         {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
@@ -533,51 +534,27 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
       <p className="mt-2 whitespace-pre-line text-lg font-extrabold leading-snug text-ink-strong phone-landscape:mt-1 phone-landscape:text-[15px]">{q.prompt}</p>
       {q.context && <p className="mt-2 whitespace-pre-line rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm italic">{q.context}</p>}
 
-      {q.type === 'SINGLE_CHOICE' ? (
-        <div className="mt-3 grid gap-2 phone-landscape:mt-2 phone-landscape:gap-1.5">
-          {q.options.map((opt, i) => {
-            const isRemoved = removed.has(i) && !reveal;
-            const correct = reveal && reveal.correctIndex === i;
-            const wrongMine = reveal && choice === i && reveal.correctIndex !== i;
-            return (
-              <button
-                key={i}
-                disabled={!participant || answered || !!reveal || isRemoved}
-                onClick={() => {
-                  setChoice(i);
-                  send({ index: i });
-                }}
-                className={cn(
-                  'card3d flex items-center gap-2 rounded-xl bg-surface p-2.5 text-left text-sm font-bold phone-landscape:p-1.5',
-                  participant && !answered && !reveal && 'hover:bg-surface-2',
-                  choice === i && !reveal && 'border-secondary! bg-secondary/10',
-                  correct && 'border-primary! bg-primary/15',
-                  wrongMine && 'border-error! bg-error/10',
-                  isRemoved && 'opacity-25 line-through',
-                )}
-              >
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 border-line text-xs font-black">{LETTERS[i]}</span>
-                {opt}
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <form
-          className="mt-3 flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (text.trim()) send({ text });
+      <div className="mt-3 phone-landscape:mt-2">
+        <AnswerInput
+          q={iq}
+          value={answer}
+          compact
+          removed={removed}
+          disabled={!participant || answered || !!reveal}
+          autoFocus={participant && q.type === 'SHORT_ANSWER'}
+          reveal={reveal ? { correctIndex: reveal.correctIndex, correctPairs: reveal.correctPairs, correctBlanks: reveal.correctBlanks, correctMarks: reveal.correctMarks } : null}
+          onChange={(a) => {
+            setAnswer(a);
+            if (instant) send(a);
           }}
-        >
-          <Input value={text} onChange={(e) => setText(e.target.value)} disabled={!participant || answered || !!reveal} placeholder={participant ? 'Твоят отговор…' : 'Гледаш…'} autoFocus={participant} />
-          {participant && (
-            <Button type="submit" disabled={answered || !!reveal || !text.trim()}>
-              ОК
-            </Button>
-          )}
-        </form>
-      )}
+          onSubmit={() => answer && hasAnswer(iq, answer) && send(answer)}
+        />
+        {!instant && participant && !answered && !reveal && (
+          <Button className="mt-3" block disabled={!hasAnswer(iq, answer)} onClick={() => answer && send(answer)}>
+            Изпрати
+          </Button>
+        )}
+      </div>
 
       {/* жокери */}
       {participant && !answered && !reveal && meP && (
@@ -613,10 +590,12 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
       {reveal && (
         <div className="mt-4 animate-rise rounded-xl bg-surface-2 p-3">
           {myResult && (
-            <p className={cn('mb-2 rounded-lg px-3 py-2 text-sm font-black text-white', myResult.correct ? 'bg-primary' : 'bg-error')}>
+            <p className={cn('mb-2 rounded-lg px-3 py-2 text-sm font-black text-white', myResult.correct ? 'bg-primary' : myResult.score > 0 ? 'bg-orange' : 'bg-error')}>
               {myResult.correct
                 ? `✔ Отговори вярно за ${((myResult.timeMs ?? 0) / 1000).toFixed(2)} с`
-                : myResult.timeMs == null
+                : myResult.score > 0
+                  ? `◐ Частично вярно: ${Math.round(myResult.score * 100)}% за ${((myResult.timeMs ?? 0) / 1000).toFixed(2)} с`
+                  : myResult.timeMs == null
                   ? '✘ Не отговори навреме'
                   : `✘ Грешен отговор${myResult.index != null ? ` (${LETTERS[myResult.index]})` : myResult.text ? ` („${myResult.text}“)` : ''}`}
             </p>
@@ -633,10 +612,13 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
             {reveal.results.map((r) => (
               <li key={r.uid} className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-bold">
-                  {r.correct ? <Check className="size-4 text-primary" /> : <X className="size-4 text-error" />}
+                  {r.correct ? <Check className="size-4 text-primary" /> : r.score > 0 ? <Check className="size-4 text-orange" /> : <X className="size-4 text-error" />}
                   {name(state, r.uid)}
                 </span>
-                <span className="tabular-nums text-muted">{r.timeMs != null ? `${(r.timeMs / 1000).toFixed(2)} с` : 'без отговор'}</span>
+                <span className="tabular-nums text-muted">
+                  {r.score > 0 && r.score < 1 ? `${Math.round(r.score * 100)}% · ` : ''}
+                  {r.timeMs != null ? `${(r.timeMs / 1000).toFixed(2)} с` : 'без отговор'}
+                </span>
               </li>
             ))}
           </ul>

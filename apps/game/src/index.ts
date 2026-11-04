@@ -134,7 +134,7 @@ io.use(async (socket, next) => {
   }
 });
 
-io.on('connection', async (socket: S) => {
+io.on('connection', (socket: S) => {
   const user = socket.data.user;
   const set = userSockets.get(user.uid) ?? new Set();
   set.add(socket.id);
@@ -152,24 +152,6 @@ io.on('connection', async (socket: S) => {
     socket.join(`room:${existing.code}`);
     existing.attachSocket(user.uid, socket.id);
     socket.emit('state', existing.toState());
-  }
-
-  // чакащи покани от последните 10 минути
-  try {
-    const invites = await prisma.gameInvite.findMany({
-      where: { toId: user.uid, expiresAt: { gt: new Date() } },
-      include: { from: true },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    });
-    for (const inv of invites) {
-      const room = rooms.get(inv.lobbyCode);
-      if (room && room.phase === 'lobby' && !room.players.has(user.uid)) {
-        socket.emit('invite', { id: inv.id, fromUid: inv.fromId, fromName: inv.from.displayName, code: inv.lobbyCode, mode: room.mode });
-      }
-    }
-  } catch (e) {
-    console.error('[invites]', e);
   }
 
   socket.on('lobby:create', ({ mode }) => {
@@ -329,8 +311,29 @@ io.on('connection', async (socket: S) => {
     const room = myRoom();
     room?.detachSocket(user.uid, socket.id);
   });
+  // чакащи покани от последните 10 минути — след като всички команди вече се слушат
+  void (async () => {
+    try {
+      const invites = await prisma.gameInvite.findMany({
+        where: { toId: user.uid, expiresAt: { gt: new Date() } },
+        include: { from: true },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+      for (const inv of invites) {
+        const room = rooms.get(inv.lobbyCode);
+        if (room && room.phase === 'lobby' && !room.players.has(user.uid)) {
+          socket.emit('invite', { id: inv.id, fromUid: inv.fromId, fromName: inv.from.displayName, code: inv.lobbyCode, mode: room.mode });
+        }
+      }
+    } catch (e) {
+      console.error('[invites]', e);
+    }
+  })();
 });
 
 httpServer.listen(PORT, () => {
   console.log(`[game] БЕЛ Мастер игрови сървър на порт ${PORT} (CORS: ${ORIGINS.join(', ')})`);
 });
+
+process.on('unhandledRejection', (e) => console.error('[game] unhandled', e));

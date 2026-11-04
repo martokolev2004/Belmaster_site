@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Grade, Question, Work } from '@belmaster/db';
-import { isShortAnswerCorrect, SECTION_LABELS, TOPIC_LABELS } from '@belmaster/shared';
+import { renderPunctuated, scoreAnswer, SECTION_LABELS, TOPIC_LABELS, type MatchingData, type QuestionData } from '@belmaster/shared';
 import { prisma } from './db';
 import type { Answer, ClientPassage, ClientQuestion, QuestionResult } from './quiz-types';
 
@@ -16,14 +16,18 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export function toClient(q: Question & { work?: Work | null }): ClientQuestion {
-  const m = q.matching as { left: string[]; right: string[] } | null;
+  const m = q.matching as MatchingData | null;
+  const d = q.data as QuestionData;
   return {
     id: q.id,
     type: q.type,
     prompt: q.prompt,
     context: q.context,
     options: q.type === 'SINGLE_CHOICE' ? q.options : [],
+    answerCount: q.answerCount,
     matching: q.type === 'MATCHING' && m ? { left: m.left, right: m.right } : null,
+    blanks: q.type === 'FILL_BLANKS' && d?.blanks ? { text: d.blanks.text, blanks: d.blanks.blanks.map((b) => ({ label: b.label, options: b.options })) } : null,
+    tokens: q.type === 'PUNCTUATION' && d?.punctuation ? d.punctuation.tokens : null,
     passageId: q.passageId,
     workTitle: q.work ? `${q.work.title} — ${q.work.author}` : null,
     label: q.topic ? TOPIC_LABELS[q.topic] : SECTION_LABELS[q.section],
@@ -89,17 +93,22 @@ export async function buildExamTest(grade: Grade, examId: string) {
 }
 
 export function grade(q: Question, a: Answer | undefined): QuestionResult {
-  let correct = false;
-  const m = q.matching as { left: string[]; right: string[]; pairs: number[] } | null;
-  if (q.type === 'SINGLE_CHOICE') correct = a?.index != null && a.index === q.correctIndex;
-  else if (q.type === 'SHORT_ANSWER') correct = !!a?.text && isShortAnswerCorrect(a.text, q.acceptedAnswers);
-  else if (q.type === 'MATCHING' && m) correct = !!a?.pairs && m.pairs.every((p, i) => a.pairs?.[i] === p);
+  const m = q.matching as MatchingData | null;
+  const d = q.data as QuestionData;
+  const r = scoreAnswer(
+    { type: q.type, correctIndex: q.correctIndex, acceptedAnswers: q.acceptedAnswers, answerCount: q.answerCount, matching: m, data: d },
+    a,
+  );
   return {
     id: q.id,
-    correct,
+    score: r.score,
+    correct: r.correct,
     correctIndex: q.type === 'SINGLE_CHOICE' ? q.correctIndex : null,
     correctText: q.type === 'SHORT_ANSWER' ? q.acceptedAnswers.join(' / ') : null,
     correctPairs: q.type === 'MATCHING' && m ? m.pairs : null,
+    correctBlanks: q.type === 'FILL_BLANKS' && d?.blanks ? d.blanks.blanks.map((b) => b.correct) : null,
+    correctMarks: q.type === 'PUNCTUATION' && d?.punctuation ? d.punctuation.marks : null,
+    correctFull: q.type === 'PUNCTUATION' && d?.punctuation ? renderPunctuated(d.punctuation) : null,
     explanation: q.explanation,
   };
 }

@@ -77,7 +77,7 @@ export default async function AdminQuestions({ searchParams }: { searchParams: P
               <div className="mt-1 flex flex-wrap gap-1.5">
                 <Badge>{gradeLabel(q.grade)}</Badge>
                 <Badge tone="blue">{q.topic ? TOPIC_LABELS[q.topic] : SECTION_LABELS[q.section]}</Badge>
-                {q.type !== 'SINGLE_CHOICE' && <Badge tone="purple">{q.type === 'SHORT_ANSWER' ? 'кратък отговор' : 'свързване'}</Badge>}
+                {q.type !== 'SINGLE_CHOICE' && <Badge tone="purple">{({ SHORT_ANSWER: 'кратък отговор', MATCHING: 'свързване', FILL_BLANKS: 'празни места', PUNCTUATION: 'пунктуация' } as Record<string, string>)[q.type]}</Badge>}
                 {q.work && <Badge tone="yellow">{q.work.title}</Badge>}
                 {q.exam && <Badge>{q.exam.title}{q.sourceNo ? ` · №${q.sourceNo}` : ''}</Badge>}
                 {q.status !== 'ACTIVE' && <Badge tone="red">{STATUS_LABEL[q.status]}</Badge>}

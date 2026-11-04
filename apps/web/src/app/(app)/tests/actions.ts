@@ -30,8 +30,9 @@ export async function finishTestAction(
     const q = byId.get(a.id);
     if (q) results.push(grade(q, a.answer));
   }
-  const score = results.filter((r) => r.correct).length;
-  const xpEarned = score * XP_PER_CORRECT;
+  // частични точки (свързване, празни места, пунктуация) се събират
+  const score = Math.round(results.reduce((s, r) => s + r.score, 0) * 100) / 100;
+  const xpEarned = Math.round(score * XP_PER_CORRECT);
   const before = user.level;
 
   await prisma.$transaction([
@@ -46,7 +47,7 @@ export async function finishTestAction(
     ),
   ]);
   const { user: updated, unlocked } = await awardProgress(user.id, xpEarned, {
-    perfect: results.length >= 5 && score === results.length,
+    perfect: results.length >= 5 && results.every((r) => r.correct),
   });
 
   return {

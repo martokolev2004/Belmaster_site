@@ -13,7 +13,8 @@ import {
   type RevealResult,
   type Standing,
 } from '@belmaster/shared';
-import { QuestionPool, isCorrect, type PoolQuestion } from './questions.js';
+import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
+import type { AnyAnswer } from '@belmaster/shared';
 
 export interface PlayerInternal {
   uid: string;
@@ -49,7 +50,7 @@ interface ActiveQuestion {
   participants: string[];
   startedAt: number;
   deadlines: Map<string, number>;
-  answers: Map<string, { index?: number; text?: string; at: number; correct: boolean }>;
+  answers: Map<string, { answer: AnyAnswer; at: number; score: number; correct: boolean }>;
 }
 
 export interface ReviewItem {
@@ -494,11 +495,11 @@ export class Room {
       q,
       participants,
       startedAt: now,
-      deadlines: new Map(participants.map((uid) => [uid, now + RULES.QUESTION_MS])),
+      deadlines: new Map(participants.map((uid) => [uid, now + q.timeMs])),
       answers: new Map(),
     };
-    this.deadline = now + RULES.QUESTION_MS;
-    this.schedule(RULES.QUESTION_MS + 150, () => this.resolveQuestion());
+    this.deadline = now + q.timeMs;
+    this.schedule(q.timeMs + 150, () => this.resolveQuestion());
     for (const uid of participants) {
       const p = this.players.get(uid)!;
       if (p.isBot) this.botAnswer(uid);
@@ -507,15 +508,27 @@ export class Room {
     this.maybeResolveEarly();
   }
 
-  answer(uid: string, questionId: string, a: { index?: number; text?: string }) {
+  answer(uid: string, questionId: string, a: AnyAnswer) {
     const aq = this.question;
     if (!aq || aq.q.id !== questionId || !aq.participants.includes(uid) || aq.answers.has(uid)) return;
     if (this.phase !== 'expansion_question' && this.phase !== 'battle_question') return;
     const now = Date.now();
     if (now > (aq.deadlines.get(uid) ?? 0) + 300) return;
-    const text = typeof a.text === 'string' ? a.text.slice(0, 200) : undefined;
-    const index = typeof a.index === 'number' ? a.index : undefined;
-    aq.answers.set(uid, { index, text, at: now, correct: isCorrect(aq.q, { index, text }) });
+    const clean: AnyAnswer = {
+      index: typeof a.index === 'number' ? a.index : null,
+      text: typeof a.text === 'string' ? a.text.slice(0, 200) : null,
+      texts: Array.isArray(a.texts) ? a.texts.slice(0, 5).map((t) => (typeof t === 'string' ? t.slice(0, 200) : null)) : null,
+      pairs: Array.isArray(a.pairs) ? a.pairs.slice(0, 12).map((x) => (typeof x === 'number' ? x : null)) : null,
+      blanks: Array.isArray(a.blanks) ? a.blanks.slice(0, 12).map((x) => (typeof x === 'number' ? x : null)) : null,
+      marks: Array.isArray(a.marks)
+        ? a.marks
+            .slice(0, 60)
+            .filter((m) => m && typeof m.i === 'number' && (m.pos === 'before' || m.pos === 'after') && typeof m.mark === 'string')
+            .map((m) => ({ i: m.i, pos: m.pos, mark: m.mark.slice(0, 2) }))
+        : null,
+    };
+    const r = grade(aq.q, clean);
+    aq.answers.set(uid, { answer: clean, at: now, score: r.score, correct: r.correct });
     this.emit();
     this.maybeResolveEarly();
   }
@@ -563,10 +576,11 @@ export class Room {
       if (a?.correct) p.correct++;
       return {
         uid,
+        score: a?.score ?? 0,
         correct: !!a?.correct,
         timeMs: a ? a.at - aq.startedAt : null,
-        index: a?.index ?? null,
-        text: a?.text ?? null,
+        index: a?.answer.index ?? null,
+        text: a?.answer.text ?? (a?.answer.texts ? a.answer.texts.filter(Boolean).join('; ') : null),
       };
     });
     this.review.push({
@@ -574,22 +588,30 @@ export class Room {
       type: aq.q.type,
       options: aq.q.options,
       correctIndex: aq.q.correctIndex,
-      correctText: aq.q.type === 'SHORT_ANSWER' ? aq.q.acceptedAnswers[0] ?? null : null,
+      correctText: correctText(aq.q),
       explanation: aq.q.explanation,
       workTitle: aq.q.workTitle,
       results: results.map((r) => ({
         uid: r.uid,
         name: this.players.get(r.uid)!.name,
         correct: r.correct,
-        timeMs: r.correct ? r.timeMs : null,
-        answer: r.index != null ? LETTERS[r.index] ?? null : r.text,
+        timeMs: r.score > 0 ? r.timeMs : null,
+        answer:
+          r.index != null
+            ? LETTERS[r.index] ?? null
+            : r.text ?? (r.score > 0 && !r.correct ? `${Math.round(r.score * 100)}% верни` : null),
       })),
     });
 
-    const correctSorted = results.filter((r) => r.correct).sort((a, b) => (a.timeMs ?? 0) - (b.timeMs ?? 0));
+    // повече верни елементи печели; при равенство — по-бързият
+    const better = (a: RevealResult, b: RevealResult) => b.score - a.score || (a.timeMs ?? Infinity) - (b.timeMs ?? Infinity);
+    const correctSorted = results.filter((r) => r.score > 0).sort(better);
     const base = {
       correctIndex: aq.q.correctIndex,
-      correctText: aq.q.type === 'SHORT_ANSWER' ? aq.q.acceptedAnswers.join(' / ') : null,
+      correctText: aq.q.type === 'SINGLE_CHOICE' ? null : correctText(aq.q),
+      correctPairs: aq.q.type === 'MATCHING' ? aq.q.matching?.pairs ?? null : null,
+      correctBlanks: aq.q.type === 'FILL_BLANKS' ? aq.q.data?.blanks?.blanks.map((b) => b.correct) ?? null : null,
+      correctMarks: aq.q.type === 'PUNCTUATION' ? aq.q.data?.punctuation?.marks ?? null : null,
       explanation: aq.q.explanation,
       results,
     };
@@ -614,13 +636,15 @@ export class Room {
     const defender = battle.defenderUid ? this.players.get(battle.defenderUid)! : null;
     const aRes = results.find((r) => r.uid === attacker.uid);
     const dRes = defender ? results.find((r) => r.uid === defender.uid) : undefined;
-    const aOk = !!aRes?.correct;
-    const dOk = !!dRes?.correct;
+    const aScore = aRes?.score ?? 0;
+    const dScore = dRes?.score ?? 0;
+    const aOk = aScore > 0;
+    const dOk = dScore > 0;
     let message: string;
     let winnerUid: string | null = null;
     let toEliminate: { uid: string; msg: string } | null = null;
 
-    const attackerWins = aOk && (!dOk || (aRes!.timeMs ?? 0) < (dRes!.timeMs ?? 0));
+    const attackerWins = aOk && (aScore > dScore || (aScore === dScore && (aRes!.timeMs ?? Infinity) < (dRes?.timeMs ?? Infinity)));
     const defenderWins = !!defender && dOk && !attackerWins;
 
     if (attackerWins) {
@@ -645,7 +669,9 @@ export class Room {
       } else {
         region.owner = attacker.uid;
         message = dOk
-          ? `${attacker.name} беше по-бърз и завладя ${this.regionName(battle.regionId)}!`
+          ? aScore > dScore
+            ? `${attacker.name} имаше повече верни и завладя ${this.regionName(battle.regionId)}!`
+            : `${attacker.name} беше по-бърз и завладя ${this.regionName(battle.regionId)}!`
           : `${attacker.name} завладя ${this.regionName(battle.regionId)}!`;
         if (defender && ![...this.regions.values()].some((r) => r.owner === defender.uid)) {
           toEliminate = { uid: defender.uid, msg: `${defender.name} остана без области.` };
@@ -654,7 +680,9 @@ export class Room {
     } else if (defenderWins) {
       winnerUid = defender!.uid;
       message = aOk
-        ? `${defender!.name} отговори по-бързо и удържа ${this.regionName(battle.regionId)}.`
+        ? dScore > aScore
+          ? `${defender!.name} имаше повече верни и удържа ${this.regionName(battle.regionId)}.`
+          : `${defender!.name} отговори по-бързо и удържа ${this.regionName(battle.regionId)}.`
         : `${attacker.name} сгреши — ${defender!.name} удържа ${this.regionName(battle.regionId)}.`;
     } else {
       message = 'Никой не отговори вярно — нищо не се променя.';
@@ -779,17 +807,10 @@ export class Room {
 
   private botAnswer(uid: string) {
     const aq = this.question!;
-    const delay = 4000 + Math.random() * 10_000;
+    const delay = 4000 + Math.random() * Math.min(aq.q.timeMs - 6000, 16_000);
     this.botAfter(delay, () => {
       if (this.question !== aq) return;
-      const right = Math.random() < 0.6;
-      if (aq.q.type === 'SINGLE_CHOICE') {
-        const wrong = aq.q.options.map((_, i) => i).filter((i) => i !== aq.q.correctIndex);
-        const index = right ? aq.q.correctIndex! : wrong[Math.floor(Math.random() * wrong.length)];
-        this.answer(uid, aq.q.id, { index });
-      } else {
-        this.answer(uid, aq.q.id, { text: right ? aq.q.acceptedAnswers[0] : '...' });
-      }
+      this.answer(uid, aq.q.id, botAnswer(aq.q, Math.random() < 0.6));
     });
   }
 
@@ -889,6 +910,14 @@ export class Room {
             prompt: aq.q.prompt,
             context: aq.q.context,
             options: aq.q.options,
+            answerCount: aq.q.answerCount,
+            matching: aq.q.type === 'MATCHING' && aq.q.matching ? { left: aq.q.matching.left, right: aq.q.matching.right } : null,
+            blanks:
+              aq.q.type === 'FILL_BLANKS' && aq.q.data?.blanks
+                ? { text: aq.q.data.blanks.text, blanks: aq.q.data.blanks.blanks.map((b) => ({ label: b.label, options: b.options })) }
+                : null,
+            tokens: aq.q.type === 'PUNCTUATION' ? aq.q.data?.punctuation?.tokens ?? null : null,
+            timeMs: aq.q.timeMs,
             workTitle: aq.q.workTitle,
             topicLabel: aq.q.topicLabel,
             participants: aq.participants,

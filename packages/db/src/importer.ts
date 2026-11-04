@@ -1,4 +1,5 @@
 import type { Grade, LanguageTopic, PrismaClient, QuestionType, Section } from '@prisma/client';
+import { punctuationFromTexts } from '@belmaster/shared';
 
 /**
  * Формат на файл за импорт (виж data/questions/README.md).
@@ -24,6 +25,12 @@ export interface ImportQuestion {
   correct?: string | number | null;
   acceptedAnswers?: string[];
   matching?: { left: string[]; right: string[]; pairs: number[] } | null;
+  /** FILL_BLANKS: текстът е в context с маркери {{А}}; correct е буква или индекс */
+  blanks?: { label: string; options: string[]; correct: string | number }[];
+  /** PUNCTUATION: текстът без знаците и поправеният текст */
+  punctuation?: { text: string; answer: string };
+  /** SHORT_ANSWER: колко отговора се искат */
+  answerCount?: number;
   explanation?: string | null;
   work?: { title: string; author: string; period?: string } | null;
   passage?: string | null;
@@ -111,6 +118,25 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
           status = 'DRAFT';
         }
 
+        let data: object | undefined;
+        if (type === 'FILL_BLANKS') {
+          const blanks = (q.blanks ?? []).map((b) => ({ label: b.label, options: b.options, correct: toIndex(b.correct, b.options.length) ?? -1 }));
+          if (!q.context || !blanks.length || blanks.some((b) => b.correct < 0)) {
+            report.warnings.push(`${label}: празните места са непълни — записан като непроверен.`);
+            status = 'DRAFT';
+          }
+          data = { blanks: { text: q.context ?? '', blanks } };
+        }
+        if (type === 'PUNCTUATION') {
+          try {
+            if (!q.punctuation) throw new Error('липсва "punctuation"');
+            data = { punctuation: punctuationFromTexts(q.punctuation.text, q.punctuation.answer) };
+          } catch (e) {
+            report.warnings.push(`${label}: ${(e as Error).message} — записан като непроверен.`);
+            status = 'DRAFT';
+          }
+        }
+
         let workId: string | null = null;
         if (q.work && q.section === 'LITERATURE') {
           const key = `${q.work.title}|${q.work.author}`;
@@ -144,11 +170,13 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
             topic: q.section === 'LANGUAGE' ? q.topic ?? null : null,
             type,
             prompt: q.prompt,
-            context: q.context ?? null,
+            context: type === 'FILL_BLANKS' ? null : q.context ?? null,
             options,
             correctIndex,
             acceptedAnswers: q.acceptedAnswers ?? [],
             matching: q.matching ?? undefined,
+            data,
+            answerCount: q.answerCount ?? 1,
             explanation: q.explanation ?? null,
             status,
             workId,
