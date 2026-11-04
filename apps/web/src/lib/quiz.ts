@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Grade, Question, Work } from '@belmaster/db';
-import { renderPunctuated, scoreAnswer, SECTION_LABELS, TOPIC_LABELS, type MatchingData, type QuestionData } from '@belmaster/shared';
+import { displayAccepted, renderPunctuated, scoreAnswer, SECTION_LABELS, TOPIC_LABELS, type MatchingData, type QuestionData } from '@belmaster/shared';
 import { prisma } from './db';
 import type { Answer, ClientPassage, ClientQuestion, QuestionResult } from './quiz-types';
 
@@ -104,7 +104,7 @@ export function grade(q: Question, a: Answer | undefined): QuestionResult {
     score: r.score,
     correct: r.correct,
     correctIndex: q.type === 'SINGLE_CHOICE' ? q.correctIndex : null,
-    correctText: q.type === 'SHORT_ANSWER' ? q.acceptedAnswers.join(' / ') : null,
+    correctText: q.type === 'SHORT_ANSWER' ? displayAccepted(q.acceptedAnswers) : null,
     correctPairs: q.type === 'MATCHING' && m ? m.pairs : null,
     correctBlanks: q.type === 'FILL_BLANKS' && d?.blanks ? d.blanks.blanks.map((b) => b.correct) : null,
     correctMarks: q.type === 'PUNCTUATION' && d?.punctuation ? d.punctuation.marks : null,

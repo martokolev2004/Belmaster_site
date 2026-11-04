@@ -1,4 +1,4 @@
-import { isShortAnswerCorrect, normalizeAnswer } from './answers';
+import { isShortAnswerCorrect, matchesAccepted } from './answers';
 
 /** Типове, които по подразбиране влизат в мултиплейъра (пунктуацията и четенето — не). */
 export const MULTIPLAYER_TYPES: QType[] = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING', 'FILL_BLANKS'];
@@ -91,8 +91,7 @@ export function scoreAnswer(q: GradableQuestion, a: AnyAnswer | null | undefined
       let hits = 0;
       for (const t of a.texts ?? []) {
         if (!t) continue;
-        const n = normalizeAnswer(t);
-        const match = q.acceptedAnswers.find((acc) => normalizeAnswer(acc) === n);
+        const match = q.acceptedAnswers.find((acc) => !used.has(acc) && matchesAccepted(t, acc));
         if (match && !used.has(match)) {
           used.add(match);
           hits++;

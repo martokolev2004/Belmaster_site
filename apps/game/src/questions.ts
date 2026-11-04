@@ -1,5 +1,6 @@
 import { prisma, type Grade } from '@belmaster/db';
 import {
+  displayAccepted,
   TOPIC_LABELS,
   SECTION_LABELS,
   questionTimeMs,
@@ -142,7 +143,7 @@ export function correctText(q: PoolQuestion): string | null {
     case 'SINGLE_CHOICE':
       return null;
     case 'SHORT_ANSWER':
-      return q.acceptedAnswers.join(' / ');
+      return displayAccepted(q.acceptedAnswers);
     case 'MATCHING':
       return q.matching ? q.matching.pairs.map((p, i) => `${q.matching!.left[i]} → ${q.matching!.right[p]}`).join('; ') : null;
     case 'FILL_BLANKS':
@@ -162,7 +163,7 @@ export function botAnswer(q: PoolQuestion, right: boolean): AnyAnswer {
       return { index: right ? q.correctIndex! : wrong[rnd(wrong.length)] };
     }
     case 'SHORT_ANSWER':
-      return { text: right ? q.acceptedAnswers[0] : '...' };
+      return { text: right ? displayAccepted([q.acceptedAnswers[0]]) : '...' };
     case 'MATCHING': {
       const m = q.matching!;
       return { pairs: right ? [...m.pairs] : m.pairs.map(() => rnd(m.right.length)) };

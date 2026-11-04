@@ -10,6 +10,7 @@ import type { Answer, ClientPassage, ClientQuestion, FinishResult, QuestionResul
 import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app/(app)/tests/actions';
 
 import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
+import { PassageText } from './PassageText';
 export { LETTERS };
 
 interface Props {
@@ -121,7 +122,9 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
                 <span className="font-extrabold text-ink-strong">{passage.title ?? 'Текст'}</span>
                 <span className="text-sm font-bold text-secondary lg:hidden">{showPassage ? 'Скрий' : 'Покажи'}</span>
               </button>
-              <div className={cn('mt-3 whitespace-pre-line leading-relaxed', !showPassage && 'hidden lg:block')}>{passage.text}</div>
+              <div className={cn('mt-3', !showPassage && 'hidden lg:block')}>
+                <PassageText text={passage.text} />
+              </div>
             </div>
           </aside>
         )}

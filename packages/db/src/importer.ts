@@ -11,6 +11,8 @@ export interface ImportFile {
   exam?: { year: number; session: string; title?: string };
   passages?: { key: string; title?: string; text: string }[];
   questions: ImportQuestion[];
+  /** произведения, които да се махнат (напр. създадени погрешка при стар импорт) */
+  removeWorks?: { title: string; author: string }[];
 }
 
 export interface ImportQuestion {
@@ -94,6 +96,10 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
         const del = await tx.question.deleteMany({ where: { grade: file.grade, sourceNote: file.sourceNote ?? 'ДЕМО' } });
         await tx.passage.deleteMany({ where: { grade: file.grade, examId: null, questions: { none: {} } } });
         report.replaced = del.count;
+      }
+
+      for (const w of file.removeWorks ?? []) {
+        await tx.work.deleteMany({ where: { grade: file.grade, title: w.title, author: w.author } });
       }
 
       const passageIds = new Map<string, string>();
