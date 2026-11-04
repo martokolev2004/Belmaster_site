@@ -1,0 +1,84 @@
+# Локално или на VPS:  docker compose up -d --build
+# После (първия път):  docker compose run --rm setup
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: belmaster
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-belmaster}
+      POSTGRES_DB: belmaster
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U belmaster']
+      interval: 5s
+      retries: 10
+
+  # Еднократно: създава таблиците и зарежда началните данни
+  setup:
+    build: .
+    image: belmaster-app:latest
+    profiles: ['setup']
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run db:push && npm run db:seed${SEED_DEMO:+:demo}"
+
+  web:
+    build: .
+    image: belmaster-app:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+      GAME_INTERNAL_URL: http://game:4000
+    depends_on:
+      db:
+        condition: service_healthy
+      game:
+        condition: service_started
+    ports:
+      - '127.0.0.1:3000:3000'
+    command: npm run start --workspace @belmaster/web
+
+  game:
+    build: .
+    image: belmaster-app:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+      GAME_PORT: 4000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '127.0.0.1:4000:4000'
+    command: npm run start --workspace @belmaster/game
+
+  # Само на сървъра: HTTPS с автоматичен сертификат (docker compose --profile prod up -d)
+  caddy:
+    image: caddy:2.8.4
+    profiles: ['prod']
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-belmaster.eu}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - game
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

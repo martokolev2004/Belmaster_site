@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/nunito';
+
+/* телефон, държан вертикално / хоризонтално */
+@custom-variant phone-portrait (@media (orientation: portrait) and (pointer: coarse) and (max-width: 900px));
+@custom-variant phone-landscape (@media (orientation: landscape) and (pointer: coarse) and (max-height: 540px));
+
+/* ── Цветове: светла тема ── */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f7f7;
+  --line: #e5e5e5;
+  --ink: #3c3c3c;
+  --ink-strong: #1f1f1f;
+  --muted: #8a8a8a;
+  --map-sea: #dff3fd;
+  --map-sea-line: #bfe6fa;
+  color-scheme: light;
+}
+
+/* ── Тъмна тема (по системата или ръчно) ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #131f24;
+    --surface: #1a2a31;
+    --surface-2: #202f36;
+    --line: #37464f;
+    --ink: #dce6ea;
+    --ink-strong: #ffffff;
+    --muted: #8fa3ad;
+    --map-sea: #0f2a36;
+    --map-sea-line: #17394a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #131f24;
+  --surface: #1a2a31;
+  --surface-2: #202f36;
+  --line: #37464f;
+  --ink: #dce6ea;
+  --ink-strong: #ffffff;
+  --muted: #8fa3ad;
+  --map-sea: #0f2a36;
+  --map-sea-line: #17394a;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
+  --color-muted: var(--muted);
+}
+
+@theme {
+  --color-primary: #58cc02;
+  --color-primary-dark: #46a302;
+  --color-secondary: #1cb0f6;
+  --color-secondary-dark: #1899d6;
+  --color-accent: #ffc800;
+  --color-accent-dark: #e5a400;
+  --color-error: #ff4b4b;
+  --color-error-dark: #ea2b2b;
+  --color-purple: #ce82ff;
+  --color-purple-dark: #a568cc;
+  --color-orange: #ff9600;
+  --font-sans: 'Nunito Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --animate-pop: pop 0.35s ease-out;
+  --animate-rise: rise 0.4s ease-out both;
+  --animate-shake: shake 0.4s ease-in-out;
+  --animate-pulse-ring: pulse-ring 1.4s ease-in-out infinite;
+  --animate-spin-phone: spin-phone 2.2s ease-in-out infinite;
+
+  @keyframes pop {
+    0% { transform: scale(0.8); opacity: 0; }
+    70% { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes rise {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+  @keyframes spin-phone {
+    0%, 20% { transform: rotate(0deg); }
+    50%, 80% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+}
+
+@layer base {
+  html,
+  body {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    color: var(--ink-strong);
+  }
+}
+
+/* Duolingo-подобни „3D“ бутони */
+.btn3d {
+  box-shadow: 0 4px 0 var(--btn-shadow, rgba(0, 0, 0, 0.2));
+  transition: transform 0.06s, box-shadow 0.06s, filter 0.15s;
+}
+.btn3d:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 var(--btn-shadow, rgba(0, 0, 0, 0.2));
+}
+.btn3d:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+  opacity: 0.6;
+}
+
+.card3d {
+  border: 2px solid var(--line);
+  border-bottom-width: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

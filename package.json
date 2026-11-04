@@ -1,0 +1,28 @@
+{
+  "name": "belmaster-site",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @belmaster/game & npm run dev --workspace @belmaster/web",
+    "dev:web": "npm run dev --workspace @belmaster/web",
+    "dev:game": "npm run dev --workspace @belmaster/game",
+    "build": "npm run build --workspace @belmaster/web && npm run build --workspace @belmaster/game",
+    "db:generate": "npm run generate --workspace @belmaster/db",
+    "db:push": "npm run push --workspace @belmaster/db",
+    "db:migrate": "npm run migrate --workspace @belmaster/db",
+    "db:seed": "npm run seed --workspace @belmaster/db",
+    "db:seed:demo": "SEED_DEMO=1 npm run seed --workspace @belmaster/db",
+    "import:questions": "npm run import --workspace @belmaster/db --",
+    "maps:build": "node scripts/build-maps.mjs",
+    "typecheck": "tsc -p packages/shared --noEmit && tsc -p apps/game --noEmit && tsc -p apps/web --noEmit"
+  },
+  "devDependencies": {
+    "d3-delaunay": "^6.0.4",
+    "polygon-clipping": "^0.15.7",
+    "typescript": "~5.9.2"
+  }
+}
