@@ -12,7 +12,8 @@ export function normalizeAnswer(s: string, keepCase = false): string {
  * Допустим отговор:
  *  - обикновен текст — трябва да съвпада (без значение от главни букви, кавички, интервали);
  *  - „~показване|ключ1 ключ2“ — приема се всеки отговор, който съдържа всички ключови думи
- *    (може и част от дума: „зрени“ хваща „зрението“, „зрение“);
+ *    (може и част от дума: „зрени“ хваща „зрението“, „зрение“); интервал = И, запетая = ИЛИ:
+ *    „~…|тич всичк, тич всек“ — „тич“ и „всичк“, или „тич“ и „всек“;
  *  - „=Текст“ — точно съвпадение И с главните/малките букви (за задачи за главна буква).
  */
 export function matchesAccepted(given: string, accepted: string): boolean {
@@ -22,9 +23,12 @@ export function matchesAccepted(given: string, accepted: string): boolean {
     return normalizeAnswer(given, true) === normalizeAnswer(accepted.slice(1), true);
   }
   if (accepted.startsWith('~')) {
+    // интервал = И (всички думи); запетая = ИЛИ (друга група думи)
     const [, keys = ''] = accepted.slice(1).split('|');
-    const words = normalizeAnswer(keys).split(' ').filter(Boolean);
-    return words.length > 0 && words.every((w) => g.includes(w));
+    return keys.split(',').some((group) => {
+      const words = normalizeAnswer(group).split(' ').filter(Boolean);
+      return words.length > 0 && words.every((w) => g.includes(w));
+    });
   }
   return normalizeAnswer(accepted) === g;
 }
