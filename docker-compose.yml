@@ -1,0 +1,58 @@
+# Локално или на VPS:  docker compose up -d --build
+# После (първия път):  docker compose run --rm setup
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: belmaster
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-belmaster}
+      POSTGRES_DB: belmaster
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U belmaster']
+      interval: 5s
+      retries: 10
+
+  # Еднократно: създава таблиците и зарежда началните данни
+  setup:
+    build: .
+    profiles: ['setup']
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "npm run db:push && npm run db:seed${SEED_DEMO:+:demo}"
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    command: npm run start --workspace @belmaster/web
+
+  game:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://belmaster:${POSTGRES_PASSWORD:-belmaster}@db:5432/belmaster?schema=public
+      GAME_PORT: 4000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '4000:4000'
+    command: npm run start --workspace @belmaster/game
+
+volumes:
+  pgdata:

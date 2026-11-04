@@ -1,0 +1,12 @@
+# Пример за VPS с Caddy (автоматичен HTTPS).
+# В .env тогава:  APP_URL=https://belmaster.eu   NEXT_PUBLIC_GAME_URL=https://belmaster.eu
+belmaster.eu, www.belmaster.eu {
+	encode gzip
+	# мултиплейърът (WebSocket) отива към игровия сървър
+	handle /socket.io/* {
+		reverse_proxy localhost:4000
+	}
+	handle {
+		reverse_proxy localhost:3000
+	}
+}
