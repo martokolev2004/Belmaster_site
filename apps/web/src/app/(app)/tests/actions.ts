@@ -1,6 +1,7 @@
 'use server';
 
 import { XP_PER_CORRECT } from '@belmaster/shared';
+import { recordAnswers } from '@belmaster/db';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { awardProgress } from '@/lib/progress';
@@ -46,6 +47,8 @@ export async function finishTestAction(
       }),
     ),
   ]);
+  await recordAnswers(prisma, user.id, results.map((r) => ({ questionId: r.id, score: r.score, correct: r.correct })));
+  const mistakesCount = await prisma.userMistake.count({ where: { userId: user.id, question: { status: 'ACTIVE', grade: user.grade } } });
   const { user: updated, unlocked } = await awardProgress(user.id, xpEarned, {
     perfect: results.length >= 5 && results.every((r) => r.correct),
   });
@@ -60,6 +63,7 @@ export async function finishTestAction(
     streak: updated.streak,
     unlocked,
     results,
+    mistakesCount,
   };
 }
 

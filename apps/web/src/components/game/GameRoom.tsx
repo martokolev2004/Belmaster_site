@@ -9,6 +9,7 @@ import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
 import { MapBoard } from './MapBoard';
+import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
 import { attackOptions, landOwner, pickOptions, territoryCount } from './logic';
 import { AnswerInput, hasAnswer, type InputQuestion } from '@/components/quiz/inputs';
@@ -73,6 +74,7 @@ export function GameRoom({ code, me, friends }: { code: string; me: string; frie
           </button>
         </div>
       )}
+      <BattleSounds state={state} me={me} />
       {state.phase === 'lobby' ? <Lobby state={state} me={me} friends={friends} /> : state.phase === 'finished' ? <Finished state={state} me={me} /> : <Battle state={state} me={me} />}
     </>
   );
@@ -221,6 +223,8 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   const map = MAPS[state.mapId!];
   const meP = state.players.find((p) => p.uid === me);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const bubbles = useMapBubbles(state, map);
+  const attackColor = state.battle ? state.players.find((p) => p.uid === state.battle!.attackerUid)?.color : undefined;
 
   const selectable = useMemo(() => {
     if (state.phase === 'expansion_pick' && state.pick?.uid === me) return pickOptions(state, map, me);
@@ -265,6 +269,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
           <span className="truncate font-extrabold text-ink-strong phone-landscape:text-sm">{stage}</span>
         </div>
         <div className="flex items-center gap-3">
+          <SoundToggle />
           <FullscreenButton />
           <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
             <LogOut className="size-4" /> Напусни
@@ -275,7 +280,8 @@ function Battle({ state, me }: { state: GameState; me: string }) {
       <PlayersBar state={state} map={map} me={me} />
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_400px] phone-landscape:mt-1.5 phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:grid-cols-[minmax(0,1fr)_minmax(250px,42%)] phone-landscape:gap-2">
-        <div className="card3d relative self-start overflow-hidden rounded-3xl bg-surface p-1.5 lg:sticky lg:top-20 phone-landscape:flex phone-landscape:h-full phone-landscape:items-center phone-landscape:justify-center phone-landscape:rounded-2xl phone-landscape:p-1">
+        <div className="space-y-3 self-start lg:sticky lg:top-20 phone-landscape:h-full phone-landscape:space-y-0">
+        <div className="card3d relative overflow-hidden rounded-3xl bg-surface p-1.5 phone-landscape:flex phone-landscape:h-full phone-landscape:items-center phone-landscape:justify-center phone-landscape:rounded-2xl phone-landscape:p-1">
           <MapBoard
             map={map}
             state={state}
@@ -283,11 +289,15 @@ function Battle({ state, me }: { state: GameState; me: string }) {
             onSelect={onSelect}
             onBlocked={onBlocked}
             highlight={state.battle?.regionId ?? null}
+            attackColor={attackColor}
+            bubbles={bubbles}
             className="phone-landscape:h-full phone-landscape:max-h-full phone-landscape:w-auto phone-landscape:max-w-full"
           />
           {hint && (
             <div className="pointer-events-none absolute inset-x-3 bottom-3 animate-pop rounded-xl bg-ink-strong/90 px-3 py-2 text-center text-sm font-bold text-bg">{hint}</div>
           )}
+        </div>
+        <BattlePanel state={state} map={map} me={me} />
         </div>
         <div className="space-y-3 phone-landscape:h-full phone-landscape:space-y-2 phone-landscape:overflow-y-auto phone-landscape:overscroll-contain phone-landscape:pb-2">
           <ActionPanel state={state} me={me} meP={meP} />
@@ -690,6 +700,7 @@ function Finished({ state, me }: { state: GameState; me: string }) {
 
   return (
     <div className="mx-auto max-w-3xl">
+      {standings[0]?.uid === me && <Confetti />}
       <div className="animate-pop text-center">
         <div className="mx-auto mb-4 flex size-24 items-center justify-center rounded-full bg-accent text-[#4b3b00] shadow-[0_6px_0_var(--color-accent-dark)]">
           <Crown className="size-12" />
@@ -753,6 +764,10 @@ function Finished({ state, me }: { state: GameState; me: string }) {
           Към битките
         </Button>
       </div>
+      <a href="/tests/mistakes" className="mt-4 flex items-center justify-between rounded-2xl border-2 border-line bg-surface px-4 py-3 font-extrabold text-ink hover:bg-surface-2">
+        <span>🔁 Упражни грешките си от битките и тестовете</span>
+        <span className="text-secondary">→</span>
+      </a>
       <ChatBarFinished state={state} />
       <p className="mt-4 text-center text-sm text-muted">
         <Link href="/leaderboard" className="font-bold text-secondary">

@@ -1,4 +1,4 @@
-import { prisma, type Grade } from '@belmaster/db';
+import { prisma, recordAnswers, type Grade } from '@belmaster/db';
 import { ACHIEVEMENTS, XP_MATCH_PLAY, XP_MATCH_WIN, currentSeason, levelForXp, sofiaDay } from '@belmaster/shared';
 import { eloDeltas } from './elo.js';
 import type { Room } from './room.js';
@@ -94,6 +94,14 @@ export async function persistMatch(room: Room) {
     },
   });
   room.matchId = match.id;
+
+  // грешки и статистика по теми — от въпросите, на които играчът е отговарял
+  for (const s of humans) {
+    const items = room.review.flatMap((r) =>
+      r.results.filter((x) => x.uid === s.uid).map((x) => ({ questionId: r.questionId, score: x.score, correct: x.correct })),
+    );
+    await recordAnswers(prisma, s.uid, items).catch((e) => console.error('[persist] answers', e));
+  }
 
   for (const s of humans) {
     const p = room.players.get(s.uid);

@@ -45,6 +45,8 @@ model User {
   friendsRequested Friendship[]      @relation("requester")
   friendsReceived  Friendship[]      @relation("addressee")
   invitesSent      GameInvite[]      @relation("inviteFrom")
+  mistakes         UserMistake[]
+  topicStats       UserTopicStat[]
   invitesReceived  GameInvite[]      @relation("inviteTo")
 }
 
@@ -186,7 +188,8 @@ model Question {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reports QuestionReport[]
+  reports  QuestionReport[]
+  mistakes UserMistake[]
 
   @@index([grade, section, status])
   @@index([grade, inMultiplayer, status])
@@ -322,4 +325,31 @@ model PlayerRating {
 
   @@id([userId, grade, season])
   @@index([grade, season, rating])
+}
+
+// ─────────────────────────── Учене: грешки и статистика ───────────────────────────
+
+// Въпрос, на който ученикът е сгрешил. Маха се след 2 поредни верни отговора.
+model UserMistake {
+  userId     String
+  questionId String
+  streak     Int      @default(0) // поредни верни отговора след грешката
+  wrongCount Int      @default(1)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+}
+
+// Натрупана статистика по тема. key: "S:LANGUAGE", "T:SPELLING", "W:<workId>"
+model UserTopicStat {
+  userId    String
+  key       String
+  answered  Int      @default(0)
+  score     Float    @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
 }

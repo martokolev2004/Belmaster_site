@@ -282,6 +282,12 @@ function ResultScreen({
           🏅 Ново постижение: {result.unlocked.map((c) => ACHIEVEMENTS.find((a) => a.code === c)?.name).join(', ')}
         </div>
       )}
+      {result.mistakesCount > 0 && (
+        <a href="/tests/mistakes" className="mt-4 flex items-center justify-between rounded-2xl border-2 border-error/40 bg-error/10 px-4 py-3 font-extrabold text-error-dark hover:bg-error/15">
+          <span>🔁 Упражни грешките си</span>
+          <span className="rounded-full bg-error px-2.5 py-0.5 text-sm text-white">{result.mistakesCount}</span>
+        </a>
+      )}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <ButtonLink href={againHref} block size="lg">
           Нов тест

@@ -112,3 +112,18 @@ export function grade(q: Question, a: Answer | undefined): QuestionResult {
     explanation: q.explanation,
   };
 }
+
+/** Тест от „Моите грешки“: до 10 случайни въпроса, на които ученикът е сгрешил. */
+export async function buildMistakesTest(userId: string, grade: Grade): Promise<{ questions: ClientQuestion[]; passages: ClientPassage[] }> {
+  const rows = await prisma.userMistake.findMany({
+    where: { userId, question: { status: 'ACTIVE', grade } },
+    select: { questionId: true },
+  });
+  const ids = shuffle(rows.map((r) => r.questionId)).slice(0, TEST_SIZE);
+  const qs = await prisma.question.findMany({ where: { id: { in: ids } }, include: { work: true, passage: true } });
+  const passages = new Map<string, ClientPassage>();
+  for (const q of qs) if (q.passage) passages.set(q.passage.id, { id: q.passage.id, title: q.passage.title, text: q.passage.text });
+  // въпросите към един текст — един след друг
+  qs.sort((a, b) => (a.passageId ?? '').localeCompare(b.passageId ?? ''));
+  return { questions: qs.map((q) => toClient(q)), passages: [...passages.values()] };
+}

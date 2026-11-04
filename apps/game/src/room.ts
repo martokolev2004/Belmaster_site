@@ -56,6 +56,7 @@ interface ActiveQuestion {
 }
 
 export interface ReviewItem {
+  questionId: string;
   prompt: string;
   type: PoolQuestion['type'];
   options: string[];
@@ -63,7 +64,7 @@ export interface ReviewItem {
   correctText: string | null;
   explanation: string | null;
   workTitle: string | null;
-  results: { uid: string; name: string; correct: boolean; timeMs: number | null; answer: string | null }[];
+  results: { uid: string; name: string; correct: boolean; score: number; timeMs: number | null; answer: string | null }[];
 }
 
 export interface RoomHooks {
@@ -591,6 +592,7 @@ export class Room {
       };
     });
     this.review.push({
+      questionId: aq.q.id,
       prompt: aq.q.prompt,
       type: aq.q.type,
       options: aq.q.options,
@@ -602,6 +604,7 @@ export class Room {
         uid: r.uid,
         name: this.players.get(r.uid)!.name,
         correct: r.correct,
+        score: r.score,
         timeMs: r.score > 0 ? r.timeMs : null,
         answer:
           r.index != null
