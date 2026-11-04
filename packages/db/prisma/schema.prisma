@@ -1,0 +1,317 @@
+// БЕЛ Мастер — схема на базата (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Потребители ───────────────────────────
+
+enum Grade {
+  G7
+  G10
+  G12
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String?   @unique
+  passwordHash  String?
+  googleId      String?   @unique
+  displayName   String
+  avatarColor   String    @default("#58cc02")
+  friendCode    String    @unique
+  isGuest       Boolean   @default(false)
+  grade         Grade?
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  streak        Int       @default(0)
+  bestStreak    Int       @default(0)
+  lastActiveDay String? // YYYY-MM-DD (Europe/Sofia), за серията
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions         Session[]
+  achievements     UserAchievement[]
+  attempts         QuizAttempt[]
+  reports          QuestionReport[]
+  ratings          PlayerRating[]
+  matchPlayers     MatchPlayer[]
+  friendsRequested Friendship[]      @relation("requester")
+  friendsReceived  Friendship[]      @relation("addressee")
+  invitesSent      GameInvite[]      @relation("inviteFrom")
+  invitesReceived  GameInvite[]      @relation("inviteTo")
+}
+
+model Session {
+  id        String   @id // sha256 на токена от бисквитката
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserAchievement {
+  userId     String
+  code       String
+  unlockedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, code])
+}
+
+// ─────────────────────────── Съдържание ───────────────────────────
+
+// Литературно произведение (библиотека + „Битка на произведенията“)
+model Work {
+  id          String   @id @default(cuid())
+  grade       Grade
+  title       String
+  author      String
+  period      String?
+  genre       String?
+  year        String?
+  summary     String? // резюме
+  themes      String? // теми, идеи, послания
+  characters  String? // герои
+  authorInfo  String? // за автора
+  quotes      String? // ключови цитати (по един на ред)
+  extra       String? // свободен текст / бележки
+  published   Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions Question[]
+
+  @@unique([grade, title, author])
+  @@index([grade])
+}
+
+// Изпит (матура), от който идват въпросите
+model Exam {
+  id        String   @id @default(cuid())
+  grade     Grade
+  year      Int
+  session   String // напр. "май", "август"
+  title     String // напр. "ДЗИ по БЕЛ — май 2023"
+  createdAt DateTime @default(now())
+
+  questions Question[]
+  passages  Passage[]
+
+  @@unique([grade, year, session])
+}
+
+// Текст за четене с разбиране
+model Passage {
+  id        String   @id @default(cuid())
+  grade     Grade
+  title     String?
+  text      String
+  examId    String?
+  exam      Exam?    @relation(fields: [examId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  questions Question[]
+}
+
+enum Section {
+  LANGUAGE // граматика, лексика, правопис, пунктуация
+  LITERATURE
+  READING // четене с разбиране
+}
+
+enum LanguageTopic {
+  GRAMMAR
+  LEXIS
+  SPELLING
+  PUNCTUATION
+}
+
+enum QuestionType {
+  SINGLE_CHOICE // избор на един отговор
+  SHORT_ANSWER // кратък писмен отговор
+  MATCHING // свързване (само в мини тестовете)
+}
+
+enum QuestionStatus {
+  ACTIVE
+  DRAFT // непроверен
+  HIDDEN
+}
+
+model Question {
+  id              String         @id @default(cuid())
+  grade           Grade
+  section         Section
+  topic           LanguageTopic?
+  type            QuestionType   @default(SINGLE_CHOICE)
+  prompt          String // условие
+  context         String? // кратък откъс/пример към въпроса
+  options         String[] // за SINGLE_CHOICE
+  correctIndex    Int? // за SINGLE_CHOICE (0-базиран)
+  acceptedAnswers String[] // за SHORT_ANSWER — всички допустими отговори
+  matching        Json? // за MATCHING: { left: string[], right: string[], pairs: number[] }
+  explanation     String?
+  status          QuestionStatus @default(ACTIVE)
+
+  // Етикети
+  workId     String? // литература: към кое произведение (null = общ въпрос)
+  work       Work?    @relation(fields: [workId], references: [id], onDelete: SetNull)
+  passageId  String?
+  passage    Passage? @relation(fields: [passageId], references: [id], onDelete: Cascade)
+  examId     String?
+  exam       Exam?    @relation(fields: [examId], references: [id], onDelete: SetNull)
+  sourceNo   Int? // номер на задачата в матурата
+  sourceNote String? // свободен текст за източника
+
+  // Статистика
+  timesAsked   Int @default(0)
+  timesCorrect Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports QuestionReport[]
+
+  @@index([grade, section, status])
+  @@index([workId])
+  @@index([passageId])
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model QuestionReport {
+  id         String       @id @default(cuid())
+  questionId String
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reason     String
+  message    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+
+  @@index([status])
+}
+
+// ─────────────────────────── Мини тестове ───────────────────────────
+
+model QuizAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grade      Grade
+  kind       String // "LANGUAGE" | "LITERATURE" | "READING" | "EXAM"
+  examId     String?
+  score      Int
+  total      Int
+  xpEarned   Int
+  answers    Json
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────── Приятели ───────────────────────────
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  requester   User             @relation("requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User             @relation("addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+}
+
+model GameInvite {
+  id        String   @id @default(cuid())
+  fromId    String
+  toId      String
+  from      User     @relation("inviteFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to        User     @relation("inviteTo", fields: [toId], references: [id], onDelete: Cascade)
+  lobbyCode String
+  seen      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([toId, expiresAt])
+}
+
+// ─────────────────────────── Мултиплейър ───────────────────────────
+
+enum GameMode {
+  CLASSIC // случайни въпроси
+  WORKS // всяко поле е произведение
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  grade     Grade
+  mode      GameMode
+  mapId     String
+  rated     Boolean  @default(false)
+  vsBot     Boolean  @default(false)
+  rounds    Int
+  winnerUid String?
+  review    Json // въпросите от битката за „Разбор“
+  startedAt DateTime
+  endedAt   DateTime @default(now())
+
+  players MatchPlayer[]
+
+  @@index([endedAt])
+}
+
+model MatchPlayer {
+  id          String  @id @default(cuid())
+  matchId     String
+  match       Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name        String
+  color       String
+  place       Int
+  territories Int
+  correct     Int
+  answered    Int
+  ratingDelta Int?
+  isBot       Boolean @default(false)
+  isGuest     Boolean @default(false)
+
+  @@index([userId])
+}
+
+// Рейтинг — отделен за всеки клас; season = "all" или "2026-11"
+model PlayerRating {
+  userId String
+  grade  Grade
+  season String
+  rating Int    @default(1000)
+  games  Int    @default(0)
+  wins   Int    @default(0)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, grade, season])
+  @@index([grade, season, rating])
+}

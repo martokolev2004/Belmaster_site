@@ -1,0 +1,22 @@
+{
+  "name": "@belmaster/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "push": "prisma db push",
+    "migrate": "prisma migrate deploy",
+    "seed": "tsx src/seed.ts",
+    "import": "tsx src/import.ts"
+  },
+  "prisma": { "schema": "prisma/schema.prisma" },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "prisma": "6.19.3",
+    "tsx": "4.20.6"
+  }
+}
