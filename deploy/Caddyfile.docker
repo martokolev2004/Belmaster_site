@@ -1,0 +1,9 @@
+{$DOMAIN}, www.{$DOMAIN} {
+	encode gzip
+	handle /socket.io/* {
+		reverse_proxy game:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
