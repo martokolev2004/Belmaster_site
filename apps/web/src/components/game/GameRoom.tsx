@@ -233,24 +233,35 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   const stage = state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
 
   return (
-    <div className="-mt-2">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge tone="purple">{MODE_LABELS[state.mode].name}</Badge>
-          <span className="font-extrabold text-ink-strong">{stage}</span>
+    <div className="-mt-2 phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:m-0 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-[max(0.5rem,env(safe-area-inset-left))] phone-landscape:py-1.5">
+      <RotateOverlay />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 phone-landscape:mb-1 phone-landscape:flex-nowrap">
+        <div className="flex min-w-0 items-center gap-2">
+          <Badge tone="purple" className="phone-landscape:hidden">{MODE_LABELS[state.mode].name}</Badge>
+          <span className="truncate font-extrabold text-ink-strong phone-landscape:text-sm">{stage}</span>
         </div>
-        <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
-          <LogOut className="size-4" /> Напусни
-        </button>
+        <div className="flex items-center gap-3">
+          <FullscreenButton />
+          <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
+            <LogOut className="size-4" /> Напусни
+          </button>
+        </div>
       </div>
 
       <PlayersBar state={state} map={map} me={me} />
 
-      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_400px]">
-        <div className="card3d relative self-start overflow-hidden rounded-3xl bg-surface p-1.5 lg:sticky lg:top-20">
-          <MapBoard map={map} state={state} selectable={selectable} onSelect={onSelect} highlight={state.battle?.regionId ?? null} />
+      <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_400px] phone-landscape:mt-1.5 phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:grid-cols-[minmax(0,1fr)_minmax(250px,42%)] phone-landscape:gap-2">
+        <div className="card3d relative self-start overflow-hidden rounded-3xl bg-surface p-1.5 lg:sticky lg:top-20 phone-landscape:flex phone-landscape:h-full phone-landscape:items-center phone-landscape:justify-center phone-landscape:rounded-2xl phone-landscape:p-1">
+          <MapBoard
+            map={map}
+            state={state}
+            selectable={selectable}
+            onSelect={onSelect}
+            highlight={state.battle?.regionId ?? null}
+            className="phone-landscape:h-full phone-landscape:max-h-full phone-landscape:w-auto phone-landscape:max-w-full"
+          />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-3 phone-landscape:h-full phone-landscape:space-y-2 phone-landscape:overflow-y-auto phone-landscape:overscroll-contain phone-landscape:pb-2">
           <ActionPanel state={state} me={me} meP={meP} />
           <ChatBar state={state} />
           <details className="card3d rounded-2xl bg-surface p-3 text-sm">
@@ -290,10 +301,59 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   );
 }
 
+/** Вертикален телефон по време на битка → молба да се завърти. */
+function RotateOverlay() {
+  return (
+    <div className="fixed inset-0 z-[60] hidden flex-col items-center justify-center gap-5 bg-bg p-8 text-center phone-portrait:flex">
+      <div className="relative size-28">
+        <div className="absolute inset-0 m-auto h-24 w-14 animate-spin-phone rounded-2xl border-4 border-secondary bg-secondary/10">
+          <span className="absolute bottom-1.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-secondary" />
+        </div>
+      </div>
+      <div>
+        <p className="text-2xl font-black">Завърти телефона</p>
+        <p className="mt-1 text-muted">Битката се играе хоризонтално, за да виждаш цялата карта.</p>
+      </div>
+      <FullscreenButton big />
+    </div>
+  );
+}
+
+/** Цял екран + заключване хоризонтално (Android/Chrome). На iPhone бутонът не се показва. */
+function FullscreenButton({ big }: { big?: boolean }) {
+  const [supported, setSupported] = useState(false);
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    setSupported(typeof document !== 'undefined' && !!document.documentElement.requestFullscreen && window.matchMedia('(pointer: coarse)').matches);
+    const onChange = () => setActive(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+  if (!supported || (active && !big)) return null;
+  const go = async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+      await o.lock?.('landscape');
+    } catch {
+      /* браузърът не позволява — остава ръчното завъртане */
+    }
+  };
+  return big ? (
+    <Button variant="secondary" onClick={go}>
+      Цял екран
+    </Button>
+  ) : (
+    <button onClick={go} className="text-sm font-extrabold text-secondary phone-landscape:inline hidden">
+      Цял екран
+    </button>
+  );
+}
+
 function PlayersBar({ state, map, me }: { state: GameState; map: (typeof MAPS)[string]; me: string }) {
   const lands = map.lands.map((l) => ({ ...l, owner: landOwner(state, map, l.id) }));
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
+    <div className="flex gap-2 overflow-x-auto pb-1 phone-landscape:gap-1.5 phone-landscape:pb-0">
       {state.players.map((p) => {
         const count = territoryCount(state, p.uid);
         const hp = p.capital ? state.regions[p.capital]?.hp ?? 0 : 0;
@@ -303,13 +363,14 @@ function PlayersBar({ state, map, me }: { state: GameState; map: (typeof MAPS)[s
           <div
             key={p.uid}
             className={cn(
-              'card3d flex min-w-40 shrink-0 items-center gap-2.5 rounded-2xl bg-surface px-3 py-2',
+              'card3d flex min-w-40 shrink-0 items-center gap-2.5 rounded-2xl bg-surface px-3 py-2 phone-landscape:min-w-0 phone-landscape:gap-1.5 phone-landscape:rounded-xl phone-landscape:px-2 phone-landscape:py-0.5',
               isTurn && 'border-secondary! bg-secondary/10',
               (p.eliminated || p.left) && 'opacity-40',
             )}
           >
-            <Avatar name={p.name} color={p.color} size={34} />
-            <div className="min-w-0">
+            <Avatar name={p.name} color={p.color} size={34} className="phone-landscape:hidden" />
+            <span className="hidden size-3 shrink-0 rounded-full phone-landscape:block" style={{ background: p.color }} />
+            <div className="min-w-0 phone-landscape:flex phone-landscape:items-center phone-landscape:gap-2">
               <p className="flex items-center gap-1 truncate text-sm font-extrabold text-ink-strong">
                 {p.isBot && <Bot className="size-3.5" />}
                 {p.name}
@@ -443,11 +504,11 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
         <Badge tone="blue">{q.topicLabel}</Badge>
         {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
       </div>
-      <p className="mt-2 whitespace-pre-line text-lg font-extrabold leading-snug text-ink-strong">{q.prompt}</p>
+      <p className="mt-2 whitespace-pre-line text-lg font-extrabold leading-snug text-ink-strong phone-landscape:mt-1 phone-landscape:text-[15px]">{q.prompt}</p>
       {q.context && <p className="mt-2 whitespace-pre-line rounded-xl border-2 border-dashed border-line px-3 py-2 text-sm italic">{q.context}</p>}
 
       {q.type === 'SINGLE_CHOICE' ? (
-        <div className="mt-3 grid gap-2">
+        <div className="mt-3 grid gap-2 phone-landscape:mt-2 phone-landscape:gap-1.5">
           {q.options.map((opt, i) => {
             const isRemoved = removed.has(i) && !reveal;
             const correct = reveal && reveal.correctIndex === i;
@@ -461,7 +522,7 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
                   send({ index: i });
                 }}
                 className={cn(
-                  'card3d flex items-center gap-2 rounded-xl bg-surface p-2.5 text-left text-sm font-bold',
+                  'card3d flex items-center gap-2 rounded-xl bg-surface p-2.5 text-left text-sm font-bold phone-landscape:p-1.5',
                   participant && !answered && !reveal && 'hover:bg-surface-2',
                   choice === i && !reveal && 'border-secondary! bg-secondary/10',
                   correct && 'border-primary! bg-primary/15',
@@ -546,7 +607,7 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
 }
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn('card3d animate-rise rounded-2xl bg-surface p-4', className)}>{children}</div>;
+  return <div className={cn('card3d animate-rise rounded-2xl bg-surface p-4 phone-landscape:p-2.5', className)}>{children}</div>;
 }
 
 function ChatBar({ state }: { state: GameState }) {

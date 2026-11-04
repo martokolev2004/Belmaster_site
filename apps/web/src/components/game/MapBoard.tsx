@@ -9,6 +9,7 @@ interface Props {
   selectable: string[];
   onSelect?: (regionId: string) => void;
   highlight?: string | null;
+  className?: string;
 }
 
 const NEUTRAL = 'var(--surface-2)';
@@ -17,12 +18,12 @@ function shorten(s: string, n = 14) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
-export function MapBoard({ map, state, selectable, onSelect, highlight }: Props) {
+export function MapBoard({ map, state, selectable, onSelect, highlight, className }: Props) {
   const colors = new Map(state.players.map((p) => [p.uid, p.color]));
   const sel = new Set(selectable);
   const works = state.mode === 'WORKS';
   return (
-    <svg viewBox={`0 0 ${map.width} ${map.height}`} className="h-auto w-full select-none" role="img" aria-label={map.name}>
+    <svg viewBox={`0 0 ${map.width} ${map.height}`} className={cn('h-auto w-full select-none', className)} role="img" aria-label={map.name}>
       <defs>
         <pattern id="hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="12" height="12" fill={NEUTRAL} />
