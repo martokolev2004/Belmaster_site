@@ -644,14 +644,18 @@ export class Room {
         }
       } else {
         region.owner = attacker.uid;
-        message = `${attacker.name} завладя ${this.regionName(battle.regionId)}!`;
+        message = dOk
+          ? `${attacker.name} беше по-бърз и завладя ${this.regionName(battle.regionId)}!`
+          : `${attacker.name} завладя ${this.regionName(battle.regionId)}!`;
         if (defender && ![...this.regions.values()].some((r) => r.owner === defender.uid)) {
           toEliminate = { uid: defender.uid, msg: `${defender.name} остана без области.` };
         }
       }
     } else if (defenderWins) {
       winnerUid = defender!.uid;
-      message = `${defender!.name} удържа ${this.regionName(battle.regionId)}!`;
+      message = aOk
+        ? `${defender!.name} отговори по-бързо и удържа ${this.regionName(battle.regionId)}.`
+        : `${attacker.name} сгреши — ${defender!.name} удържа ${this.regionName(battle.regionId)}.`;
     } else {
       message = 'Никой не отговори вярно — нищо не се променя.';
     }

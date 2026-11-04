@@ -8,6 +8,7 @@ interface Props {
   state: GameState;
   selectable: string[];
   onSelect?: (regionId: string) => void;
+  onBlocked?: (regionId: string) => void;
   highlight?: string | null;
   className?: string;
 }
@@ -18,7 +19,7 @@ function shorten(s: string, n = 14) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
-export function MapBoard({ map, state, selectable, onSelect, highlight, className }: Props) {
+export function MapBoard({ map, state, selectable, onSelect, onBlocked, highlight, className }: Props) {
   const colors = new Map(state.players.map((p) => [p.uid, p.color]));
   const sel = new Set(selectable);
   const works = state.mode === 'WORKS';
@@ -39,7 +40,7 @@ export function MapBoard({ map, state, selectable, onSelect, highlight, classNam
         const canSelect = sel.has(r.id);
         const isTarget = highlight === r.id;
         return (
-          <g key={r.id} onClick={canSelect && onSelect ? () => onSelect(r.id) : undefined} className={cn(canSelect && 'cursor-pointer')}>
+          <g key={r.id} onClick={canSelect && onSelect ? () => onSelect(r.id) : onBlocked ? () => onBlocked(r.id) : undefined} className={cn(canSelect && 'cursor-pointer')}>
             <path
               d={r.path}
               fill={fill}

@@ -230,6 +230,27 @@ function Battle({ state, me }: { state: GameState; me: string }) {
     else if (state.phase === 'battle_choose') socket?.emit('game:attack', { regionId: id });
   };
 
+  const [hint, setHint] = useState<string | null>(null);
+  useEffect(() => {
+    if (!hint) return;
+    const t = setTimeout(() => setHint(null), 3000);
+    return () => clearTimeout(t);
+  }, [hint]);
+
+  const onBlocked = (id: string) => {
+    const reg = state.regions[id];
+    const expansion = state.phase.startsWith('expansion');
+    if (expansion) {
+      if (reg?.owner && reg.owner !== me) setHint('Сега е разпределяне — взимат се само свободни (сиви) области. Атаките започват след това.');
+      else if (state.phase === 'expansion_pick' && state.pick?.uid === me) setHint('Избери от мигащите области — свободни и съседни на твоите.');
+      else setHint('Изчакай своя ред да избереш област.');
+      return;
+    }
+    if (reg?.owner === me) return setHint('Тази област е твоя.');
+    if (state.phase !== 'battle_choose' || state.turnUid !== me) return setHint('Изчакай своя ход, за да атакуваш.');
+    setHint('Можеш да атакуваш само области, съседни на твоите (мигащите).');
+  };
+
   const stage = state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
 
   return (
@@ -257,9 +278,13 @@ function Battle({ state, me }: { state: GameState; me: string }) {
             state={state}
             selectable={selectable}
             onSelect={onSelect}
+            onBlocked={onBlocked}
             highlight={state.battle?.regionId ?? null}
             className="phone-landscape:h-full phone-landscape:max-h-full phone-landscape:w-auto phone-landscape:max-w-full"
           />
+          {hint && (
+            <div className="pointer-events-none absolute inset-x-3 bottom-3 animate-pop rounded-xl bg-ink-strong/90 px-3 py-2 text-center text-sm font-bold text-bg">{hint}</div>
+          )}
         </div>
         <div className="space-y-3 phone-landscape:h-full phone-landscape:space-y-2 phone-landscape:overflow-y-auto phone-landscape:overscroll-contain phone-landscape:pb-2">
           <ActionPanel state={state} me={me} meP={meP} />
@@ -449,7 +474,8 @@ function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: P
       <Panel>
         <TimerBar deadline={state.deadline} total={RULES.EXPANSION_PICK_MS} />
         <p className="mt-3 text-lg font-black">{mine ? 'Избери свободна област на картата!' : `${name(state, state.pick.uid)} избира област…`}</p>
-        {mine && <p className="text-sm text-muted">Може само съседна на твоите, ако има такава. Ако не избереш — получаваш случайна.</p>}
+        {mine && <p className="text-sm text-muted">Мигащите области са свободни и съседни на твоите. Ако не избереш — получаваш случайна.</p>}
+        <p className="mt-2 text-xs font-bold text-muted">Първо се разпределят свободните земи. Атаките по чужди области започват след това.</p>
         {state.pick.queue.length > 1 && <p className="mt-2 text-sm text-muted">След това: {state.pick.queue.slice(1).map((u) => name(state, u)).join(', ')}</p>}
       </Panel>
     );
@@ -462,7 +488,7 @@ function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: P
         <TimerBar deadline={state.deadline} total={RULES.ATTACK_CHOOSE_MS} />
         <p className="mt-3 text-lg font-black">{mine ? 'Твой ход! Избери съседна област за атака.' : `${name(state, state.turnUid)} избира атака…`}</p>
         {mine && state.attacksLeft > 1 && <Badge tone="yellow" className="mt-2">★ Бонус за земя: {state.attacksLeft} атаки този ход</Badge>}
-        {mine && <p className="mt-1 text-sm text-muted">Столица пада след 3 победи — и взимаш всичките области на противника.</p>}
+        {mine && <p className="mt-1 text-sm text-muted">Мигащите области можеш да нападнеш. Печелиш, ако отговориш вярно и по-бързо от защитника. Столица (🏰) пада след 3 победи — и взимаш всичките му области.</p>}
       </Panel>
     );
   }
