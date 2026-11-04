@@ -247,7 +247,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
       <PlayersBar state={state} map={map} me={me} />
 
       <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_400px]">
-        <div className="card3d relative overflow-hidden rounded-3xl bg-surface p-1.5">
+        <div className="card3d relative self-start overflow-hidden rounded-3xl bg-surface p-1.5 lg:sticky lg:top-20">
           <MapBoard map={map} state={state} selectable={selectable} onSelect={onSelect} highlight={state.battle?.regionId ?? null} />
         </div>
         <div className="space-y-3">

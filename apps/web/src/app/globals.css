@@ -92,19 +92,21 @@
   }
 }
 
-html,
-body {
-  background: var(--bg);
-  color: var(--ink);
-}
+@layer base {
+  html,
+  body {
+    background: var(--bg);
+    color: var(--ink);
+  }
 
-body {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
 
-h1, h2, h3 {
-  color: var(--ink-strong);
+  h1, h2, h3 {
+    color: var(--ink-strong);
+  }
 }
 
 /* Duolingo-подобни „3D“ бутони */

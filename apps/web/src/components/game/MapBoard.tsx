@@ -13,7 +13,7 @@ interface Props {
 
 const NEUTRAL = 'var(--surface-2)';
 
-function shorten(s: string, n = 16) {
+function shorten(s: string, n = 14) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
 }
 
@@ -60,7 +60,7 @@ export function MapBoard({ map, state, selectable, onSelect, highlight }: Props)
         return (
           <g key={`l-${r.id}`} className="pointer-events-none">
             {reg?.capital && (
-              <g transform={`translate(${x - 17}, ${y - 44})`}>
+              <g transform={`translate(${x - 24}, ${y - 66}) scale(1.4)`}>
                 <path d="M2 30V10h6v5h5V8h8v7h5v-5h6v20z" fill="#fff" stroke="#1f1f1f" strokeWidth="2.5" strokeLinejoin="round" />
                 {Array.from({ length: 3 }).map((_, i) => (
                   <circle key={i} cx={8 + i * 9} cy={38} r={3.6} fill={i < reg.hp ? '#ff4b4b' : 'rgba(0,0,0,.25)'} stroke="#fff" strokeWidth="1.5" />
@@ -69,10 +69,10 @@ export function MapBoard({ map, state, selectable, onSelect, highlight }: Props)
             )}
             <text
               x={x}
-              y={reg?.capital ? y + 14 : y}
+              y={reg?.capital ? y + 16 : y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fontSize={works ? 14 : 16}
+              fontSize={works ? 19 : 24}
               fontWeight={800}
               fill="#fff"
               style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,.45)', strokeWidth: 3.5 }}
