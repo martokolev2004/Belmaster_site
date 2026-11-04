@@ -38,6 +38,14 @@ model User {
   announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
   announcedItems String[] // отключени части, за които вече е показана анимацията
   seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
+
+  // учител
+  teacherStatus  TeacherStatus @default(NONE)
+  teacherSchool  String?
+  teacherSubject String?
+  teacherEmail   String? // служебен имейл (по желание)
+  teacherNote    String?
+  teacherAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -53,6 +61,18 @@ model User {
   mistakes         UserMistake[]
   topicStats       UserTopicStat[]
   invitesReceived  GameInvite[]      @relation("inviteTo")
+  classesTaught    SchoolClass[]
+  membership       ClassMember?
+  teacherTests     TeacherTest[]
+  submissions      Submission[]
+  notifications    Notification[]
+}
+
+enum TeacherStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Session {
@@ -358,4 +378,116 @@ model UserTopicStat {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, key])
+}
+
+// ─────────────────────────── Учителски режим ───────────────────────────
+
+model SchoolClass {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  name      String // напр. „12Б“
+  grade     Grade
+  code      String   @unique
+  capacity  Int
+  createdAt DateTime @default(now())
+
+  members     ClassMember[]
+  assignments Assignment[]
+
+  @@index([teacherId])
+}
+
+enum MemberStatus {
+  PENDING
+  APPROVED
+}
+
+// Ученик в клас (един ученик — един клас)
+model ClassMember {
+  id        String       @id @default(cuid())
+  classId   String
+  class     SchoolClass  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId    String       @unique
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  realName  String
+  status    MemberStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  @@index([classId, status])
+}
+
+// Тест в библиотеката на учителя
+model TeacherTest {
+  id          String   @id @default(cuid())
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  grade       Grade
+  description String?
+  questions   Json // TeacherQuestion[] (packages/shared/src/teacher.ts)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments Assignment[]
+
+  @@index([teacherId])
+}
+
+// Тест, даден на клас (с копие на въпросите към момента на даване)
+model Assignment {
+  id           String      @id @default(cuid())
+  classId      String
+  class        SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  testId       String?
+  test         TeacherTest? @relation(fields: [testId], references: [id], onDelete: SetNull)
+  title        String
+  questions    Json
+  opensAt      DateTime
+  closesAt     DateTime
+  timeLimitMin Int? // null = без таймер
+  showResult   Boolean // true = ученикът вижда резултата веднага
+  releasedAt   DateTime? // кога учителят е пуснал резултатите (при showResult = false)
+  createdAt    DateTime    @default(now())
+
+  submissions Submission[]
+
+  @@index([classId, opensAt])
+}
+
+enum SubmissionStatus {
+  STARTED
+  SUBMITTED
+}
+
+// Опит на ученик (само един)
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       SubmissionStatus @default(STARTED)
+  answers      Json             @default("{}")
+  autoScores   Json             @default("{}") // { questionId: точки }
+  manualScores Json             @default("{}") // { questionId: точки } — свободен текст, или промяна от учителя
+  score        Float            @default(0)
+  maxScore     Float            @default(0)
+  startedAt    DateTime         @default(now())
+  submittedAt  DateTime?
+
+  @@unique([assignmentId, userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
 }

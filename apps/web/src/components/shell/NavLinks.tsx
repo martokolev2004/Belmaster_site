@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Home, ListChecks, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const ITEMS = [
@@ -19,9 +19,14 @@ function isActive(path: string, href: string) {
   return href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
 }
 
-export function NavLinks({ admin }: { admin: boolean }) {
+export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher: boolean; inClass: boolean }) {
   const path = usePathname();
-  const items = admin ? [...ITEMS, { href: '/admin', label: 'Админ', icon: Shield }] : ITEMS;
+  const items = [
+    ...ITEMS,
+    ...(inClass || !teacher ? [{ href: '/class', label: 'Моят клас', icon: School }] : []),
+    ...(teacher ? [{ href: '/teacher', label: 'Учител', icon: GraduationCap }] : []),
+    ...(admin ? [{ href: '/admin', label: 'Админ', icon: Shield }] : []),
+  ];
   return (
     <nav className="flex flex-col gap-1">
       {items.map(({ href, label, icon: Icon }) => {

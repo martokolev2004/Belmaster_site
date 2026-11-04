@@ -1,21 +1,28 @@
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel } from '@belmaster/shared';
-import { Flame, Gem, Star } from 'lucide-react';
+import { Bell, Flame, Gem, Star } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Avatar } from '@/components/ui';
 import { isAdmin } from '@/lib/auth';
 import { diamondsOf } from '@/lib/avatar';
 import { newItemKeys } from '@/lib/unlocks';
+import { isTeacher } from '@/lib/teacher';
+import { prisma } from '@/lib/db';
 import { UnlockCelebration } from '@/components/unlocks/UnlockCelebration';
 import { NavLinks, BottomNav } from './NavLinks';
 import { GameSocketProvider } from '@/components/game/GameSocketProvider';
 import { InviteToasts } from '@/components/game/InviteToasts';
 
-export function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
+export async function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const admin = isAdmin(user);
   const hasNew = newItemKeys(user).length > 0;
   const diamonds = admin ? 9999 : diamondsOf(user);
+  const teacher = isTeacher(user);
+  const [unread, member] = await Promise.all([
+    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    prisma.classMember.findUnique({ where: { userId: user.id }, select: { id: true } }),
+  ]);
   return (
     <GameSocketProvider>
       <div className="min-h-dvh md:pl-64">
@@ -24,7 +31,7 @@ export function AppShell({ user, children }: { user: User; children: React.React
           <Link href="/" className="mb-8 px-3">
             <Logo />
           </Link>
-          <NavLinks admin={admin} />
+          <NavLinks admin={admin} teacher={teacher} inClass={!!member} />
           <Link href="/profile" className="mt-auto flex items-center gap-3 rounded-2xl px-3 py-2 hover:bg-surface-2">
             <span className="relative">
               <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={36} />
@@ -55,6 +62,12 @@ export function AppShell({ user, children }: { user: User; children: React.React
               <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-accent-dark" title="Опит (XP)">
                 <Star className="size-5" fill="currentColor" /> {user.xp}
               </span>
+              <Link href="/notifications" className="relative rounded-xl p-1.5 text-muted hover:bg-surface-2" aria-label="Известия" title="Известия">
+                <Bell className="size-5" />
+                {unread > 0 && (
+                  <span className="absolute -right-1 -top-1 flex min-w-5 items-center justify-center rounded-full bg-error px-1 text-[11px] font-black text-white">{unread > 9 ? '9+' : unread}</span>
+                )}
+              </Link>
               <Link href="/profile/avatar" className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-secondary hover:bg-surface-2" title="Диаманти — за магазина на аватара">
                 <Gem className="size-5" /> {diamonds}
               </Link>

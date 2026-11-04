@@ -11,6 +11,7 @@ const ITEMS = [
   { href: '/admin/exams', label: 'Матури' },
   { href: '/admin/import', label: 'Импорт' },
   { href: '/admin/reports', label: 'Доклади' },
+  { href: '/admin/teachers', label: 'Учители' },
 ];
 
 export function AdminNav() {

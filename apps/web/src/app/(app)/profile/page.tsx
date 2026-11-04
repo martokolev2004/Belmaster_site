@@ -46,6 +46,12 @@ export default async function ProfilePage() {
             <Link href="/profile/avatar" className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20">
               ✏️ Промени аватара
             </Link>
+            <Link href="/class" className="inline-flex items-center gap-1.5 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-extrabold text-ink hover:bg-line">
+              🏫 Моят клас
+            </Link>
+            <Link href="/teacher" className="inline-flex items-center gap-1.5 rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-extrabold text-ink hover:bg-line">
+              🎓 {user.teacherStatus === 'APPROVED' ? 'Учител' : 'Аз съм учител'}
+            </Link>
             {fresh.length > 0 && (
               <Link href="/profile/avatar?new=1" className="relative inline-flex items-center gap-1.5 rounded-xl bg-error/10 px-3 py-1.5 text-sm font-extrabold text-error hover:bg-error/20">
                 <span className="size-2.5 rounded-full bg-error" /> Имаш {fresh.length} {fresh.length === 1 ? 'ново нещо' : 'нови неща'} — виж
