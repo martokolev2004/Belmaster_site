@@ -1,7 +1,7 @@
 import type { AnyAnswer, PunctMark } from '@belmaster/shared';
 import type { InputQuestion } from '@/components/quiz/inputs';
 
-export type TestKind = 'LANGUAGE' | 'LITERATURE' | 'READING' | 'EXAM' | 'MISTAKES';
+export type TestKind = 'LANGUAGE' | 'LITERATURE' | 'READING' | 'EXAM' | 'MISTAKES' | 'SURVIVAL';
 
 export interface ClientQuestion extends InputQuestion {
   prompt: string;

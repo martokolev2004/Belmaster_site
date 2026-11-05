@@ -3,6 +3,7 @@ import { ACHIEVEMENTS, levelForXp, type AchievementMetric } from '@belmaster/sha
 
 /** Всички броячи за постиженията на един потребител. */
 export async function achievementMetrics(prisma: PrismaClient, userId: string): Promise<Record<AchievementMetric, number>> {
+  const survival = await prisma.quizAttempt.aggregate({ where: { userId, kind: 'SURVIVAL' }, _max: { score: true } });
   const [user, tests, exams, topic, battleGames, battleWins, climbGames, climbWins, friends, stats, attempts, examGroups, leagues, assignments, member] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { xp: true, level: true, bestStreak: true, mistakesCleared: true, ownedItems: true } }),
     prisma.quizAttempt.count({ where: { userId } }),
@@ -14,7 +15,7 @@ export async function achievementMetrics(prisma: PrismaClient, userId: string): 
     prisma.matchPlayer.count({ where: { userId, match: { mode: 'CLIMB', winnerUid: userId } } }),
     prisma.friendship.count({ where: { status: 'ACCEPTED', OR: [{ requesterId: userId }, { addresseeId: userId }] } }),
     prisma.userTopicStat.findMany({ where: { userId }, select: { key: true, score: true, answered: true } }),
-    prisma.quizAttempt.findMany({ where: { userId, kind: { not: 'EXAM' }, total: { gte: 5 } }, select: { score: true, total: true } }),
+    prisma.quizAttempt.findMany({ where: { userId, kind: { notIn: ['EXAM', 'SURVIVAL'] }, total: { gte: 5 } }, select: { score: true, total: true } }),
     prisma.quizAttempt.groupBy({ by: ['examId'], where: { userId, kind: 'EXAM', examId: { not: null } } }),
     prisma.leagueMember.findMany({ where: { userId }, select: { tier: true } }),
     prisma.submission.count({ where: { userId, status: 'SUBMITTED' } }),
@@ -47,6 +48,7 @@ export async function achievementMetrics(prisma: PrismaClient, userId: string): 
     leagueTierMax: leagues.reduce((m, l) => Math.max(m, l.tier), 0),
     assignments,
     classJoined: member ? 1 : 0,
+    survivalBest: Math.round(survival._max.score ?? 0),
   };
 }
 

@@ -314,7 +314,7 @@ export function correctAnswerText(q: ClientQuestion, r: QuestionResult): string 
   return '';
 }
 
-function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuestion; answer?: Answer; result?: QuestionResult; onAnswer: (a: Answer) => void }) {
+export function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuestion; answer?: Answer; result?: QuestionResult; onAnswer: (a: Answer) => void }) {
   return (
     <AnswerInput
       q={q}

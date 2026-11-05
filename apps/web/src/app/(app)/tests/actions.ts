@@ -5,7 +5,7 @@ import { recordAnswers } from '@belmaster/db';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { awardProgress } from '@/lib/progress';
-import { grade } from '@/lib/quiz';
+import { grade, nextSurvivalQuestion, survivalBest } from '@/lib/quiz';
 import type { Answer, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
 
 export async function checkAnswerAction(questionId: string, answer: Answer): Promise<QuestionResult | null> {
@@ -119,4 +119,33 @@ export async function reportQuestionAction(questionId: string, reason: string, m
     },
   });
   return { ok: true };
+}
+
+// ───────────── „До първа грешка“ ─────────────
+
+export async function nextSurvivalAction(seen: string[]) {
+  const user = await getCurrentUser();
+  if (!user?.grade) return null;
+  return nextSurvivalQuestion(user.grade, Array.isArray(seen) ? seen.map(String) : []);
+}
+
+export async function finishSurvivalAction(answers: { id: string; answer: Answer }[]): Promise<{ streak: number; best: number; record: boolean; xpEarned: number } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user?.grade) return { error: 'Не си влязъл.' };
+  const list = answers.slice(0, 500);
+  const qs = await prisma.question.findMany({ where: { id: { in: list.map((a) => a.id) } } });
+  const byId = new Map(qs.map((q) => [q.id, q]));
+  const results = list.map((a) => byId.get(a.id)).map((q, i) => (q ? grade(q, list[i].answer) : null)).filter((r): r is QuestionResult => !!r);
+  // серията = верните отговори до първата грешка (проверява се на сървъра)
+  let streak = 0;
+  for (const r of results) {
+    if (!r.correct) break;
+    streak++;
+  }
+  const previous = await survivalBest(user.id);
+  const xpEarned = streak * XP_PER_CORRECT;
+  await prisma.quizAttempt.create({ data: { userId: user.id, grade: user.grade, kind: 'SURVIVAL', score: streak, total: results.length, xpEarned, answers: list as object[] } });
+  await recordAnswers(prisma, user.id, results.map((r) => ({ questionId: r.id, score: r.score, correct: r.correct })));
+  await awardProgress(user.id, xpEarned);
+  return { streak, best: Math.max(previous, streak), record: streak > previous && streak > 0, xpEarned };
 }

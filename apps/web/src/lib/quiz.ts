@@ -139,3 +139,17 @@ export async function mistakesSummary(userId: string, grade: Grade) {
   ]);
   return { due, later: total - due, nextAt: next?.dueAt ?? null };
 }
+
+/** „До първа грешка“: случаен въпрос по език или литература, който още не е бил в серията. */
+export async function nextSurvivalQuestion(grade: Grade, seen: string[]): Promise<ClientQuestion | null> {
+  const where = { grade, status: 'ACTIVE' as const, section: { in: ['LANGUAGE' as const, 'LITERATURE' as const] }, id: { notIn: seen.slice(-300) } };
+  const count = await prisma.question.count({ where });
+  if (!count) return null;
+  const q = await prisma.question.findFirst({ where, skip: Math.floor(Math.random() * count), include: { work: true } });
+  return q ? toClient(q) : null;
+}
+
+export async function survivalBest(userId: string): Promise<number> {
+  const r = await prisma.quizAttempt.aggregate({ where: { userId, kind: 'SURVIVAL' }, _max: { score: true } });
+  return Math.round(r._max.score ?? 0);
+}

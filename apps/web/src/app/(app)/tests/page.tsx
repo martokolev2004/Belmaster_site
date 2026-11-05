@@ -3,7 +3,7 @@ import { TOPIC_LABELS } from '@belmaster/shared';
 import { BookOpen, ChevronRight, FileText, Languages, ScrollText } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { mistakesSummary } from '@/lib/quiz';
+import { mistakesSummary, survivalBest } from '@/lib/quiz';
 import { PageHeader } from '@/components/ui';
 
 export const metadata = { title: 'Тестове' };
@@ -13,10 +13,22 @@ export default async function TestsPage() {
   const grade = user.grade!;
   const ms = await mistakesSummary(user.id, grade);
   const mistakes = ms.due;
+  const best = await survivalBest(user.id);
 
   return (
     <div>
       <PageHeader title="Мини тестове" subtitle="По 10 случайни въпроса от минали матури. Всеки верен отговор носи 20 XP." />
+      <Link href="/tests/survival" className="card3d mb-3 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange/15 to-accent/15 p-4">
+        <span className="text-4xl">🔥</span>
+        <span className="flex-1">
+          <span className="block text-lg font-extrabold text-ink-strong">До първа грешка</span>
+          <span className="block text-sm text-muted">Колко поредни верни ще отговориш?</span>
+        </span>
+        <span className="shrink-0 rounded-xl bg-surface px-3 py-1.5 text-center">
+          <span className="block text-[10px] font-extrabold uppercase text-muted">Рекорд</span>
+          <span className="block text-xl font-black tabular-nums text-orange">{best}</span>
+        </span>
+      </Link>
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <Link href="/tests/mistakes" className={`card3d flex items-center gap-3 rounded-2xl p-4 ${mistakes ? 'border-error/40! bg-error/8' : 'bg-surface'}`}>
           <span className="text-3xl">🔁</span>
