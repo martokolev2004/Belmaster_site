@@ -16,6 +16,7 @@ import {
 import { Room, type RoomHooks } from './room.js';
 import { areFriends, persistMatch } from './persist.js';
 import { registerClimb } from './climb.js';
+import { ADMIN_UIDS } from './admins.js';
 
 const PORT = Number(process.env.GAME_PORT ?? process.env.PORT ?? 4000);
 const SECRET = new TextEncoder().encode(process.env.GAME_JWT_SECRET ?? 'dev-secret');
@@ -56,6 +57,11 @@ function newCode(): string {
 const hooks: RoomHooks = {
   broadcast(room) {
     io.to(`room:${room.code}`).emit('state', room.toState());
+    const aq = room.question;
+    if (aq && aq.q.type === 'SINGLE_CHOICE' && aq.q.correctIndex != null) {
+      for (const uid of room.players.keys())
+        if (ADMIN_UIDS.has(uid)) for (const sid of userSockets.get(uid) ?? []) io.to(sid).emit('admin:hint', { questionId: aq.q.id, index: aq.q.correctIndex });
+    }
   },
   sendFifty(uid, questionId, removed) {
     for (const sid of userSockets.get(uid) ?? []) io.to(sid).emit('joker:fifty', { questionId, removed });
@@ -139,6 +145,7 @@ async function authenticate(socket: { handshake: { auth: Record<string, unknown>
       frame: ['none', 'bronze', 'silver', 'gold', 'legend'].includes(String(claims.frame)) ? claims.frame : 'none',
       weapon: WEAPONS.some((w) => w.id === claims.weapon) ? claims.weapon : 'stone',
     };
+    if (claims.admin === true) ADMIN_UIDS.add(claims.uid);
     next();
   } catch {
     next(new Error('unauthorized'));

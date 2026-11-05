@@ -89,6 +89,8 @@ export interface ClimbQuestion {
   options: string[];
   answerCount: number;
   matching: { left: string[]; right: string[] } | null;
+  /** само за администратора: верният отговор (зелена точка) */
+  hint?: number | null;
   blanks: { text: string; blanks: { label: string; options: string[] }[] } | null;
   tokens: string[] | null;
   timeMs: number;

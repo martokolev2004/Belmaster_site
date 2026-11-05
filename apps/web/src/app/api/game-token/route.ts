@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { frameForRating, isUnlocked, sanitizeAvatar, weaponById, weaponKey } from '@belmaster/shared';
 import { unlockProgress } from '@/lib/avatar';
 import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { signGameToken } from '@/lib/game-token';
 
 export async function GET() {
@@ -16,6 +16,7 @@ export async function GET() {
     name: user.displayName,
     grade: user.grade,
     isGuest: user.isGuest,
+    admin: isAdmin(user),
     avatar: sanitizeAvatar(user.avatar, null, user.id),
     frame: rating && rating.games > 0 ? frameForRating(rating.rating, better < 10) : 'none',
     weapon: (() => {

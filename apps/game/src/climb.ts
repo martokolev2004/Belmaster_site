@@ -27,6 +27,7 @@ import {
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
 import { eloDeltas } from './elo.js';
 import { awardXp } from './persist.js';
+import { ADMIN_UIDS } from './admins.js';
 
 type NS = Namespace<ClimbClientToServer, ClimbServerToClient, Record<string, never>, { user: GameTokenClaims }>;
 type S = Socket<ClimbClientToServer, ClimbServerToClient, Record<string, never>, { user: GameTokenClaims }>;
@@ -597,6 +598,7 @@ export class ClimbRoom {
               answered: [...aq.answers.keys()],
               myDeadline: aq.deadlines.get(forUid) ?? aq.deadline,
               removed: this.players.get(forUid)?.removed.get(aq.q.id) ?? [],
+              hint: ADMIN_UIDS.has(forUid) && aq.q.type === 'SINGLE_CHOICE' ? aq.q.correctIndex : null,
             }
           : null,
       reveal: this.phase === 'reveal' ? this.reveal : null,

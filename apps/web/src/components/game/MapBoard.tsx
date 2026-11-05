@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { GameMap, GameState } from '@belmaster/shared';
 import { cn } from '@/lib/cn';
 
@@ -15,8 +15,6 @@ interface Props {
   attackColor?: string;
   bubbles?: MapBubble[];
 }
-
-const NEUTRAL = 'var(--surface-2)';
 
 function shorten(s: string, n = 14) {
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
@@ -34,6 +32,9 @@ export function MapBoard({ map, state, selectable, onSelect, onBlocked, highligh
   const colors = new Map(state.players.map((p) => [p.uid, p.color]));
   const sel = new Set(selectable);
   const works = state.mode === 'WORKS';
+  // класическата битка — рисувана карта (море и трева), битката на произведенията — стара карта (пергамент)
+  const uid = useId().replace(/:/g, '');
+  const id = (n: string) => `${n}-${uid}`;
 
   // кои области току-що смениха собственик / коя столица беше ударена → кратка анимация
   const prev = useRef<Record<string, { owner: string | null; hp: number }>>({});
@@ -61,28 +62,74 @@ export function MapBoard({ map, state, selectable, onSelect, onBlocked, highligh
   return (
     <svg viewBox={`0 0 ${map.width} ${map.height}`} className={cn('h-auto w-full select-none', className)} role="img" aria-label={map.name}>
       <defs>
-        <pattern id="hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <rect width="12" height="12" fill={NEUTRAL} />
-          <line x1="0" y1="0" x2="0" y2="12" stroke="var(--line)" strokeWidth="5" />
+        <pattern id={id('sea')} width="1024" height="1024" patternUnits="userSpaceOnUse">
+          <image href="/map/sea.webp" width="1024" height="1024" />
         </pattern>
+        <pattern id={id('grass')} width="840" height="840" patternUnits="userSpaceOnUse">
+          <image href="/map/grass.webp" width="840" height="840" />
+        </pattern>
+        <pattern id={id('parch')} width={map.width} height={map.height} patternUnits="userSpaceOnUse">
+          <image href="/map/parchment.webp" width={map.width} height={map.height} preserveAspectRatio="none" />
+        </pattern>
+        <pattern id={id('waves')} width="60" height="30" patternUnits="userSpaceOnUse">
+          <path d="M5 18 q8 -8 16 0 t16 0" fill="none" stroke="#5b7f8f" strokeWidth="2" opacity=".45" />
+        </pattern>
+        <filter id={id('glow')}>
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+        <filter id={id('shadow')}>
+          <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor="#06324a" floodOpacity=".5" />
+        </filter>
+        <filter id={id('rough')}>
+          <feTurbulence baseFrequency=".04" numOctaves="2" seed="3" />
+          <feDisplacementMap in="SourceGraphic" scale="6" />
+        </filter>
       </defs>
-      <rect width={map.width} height={map.height} rx="36" fill="var(--map-sea)" />
-      <path d={map.outline} fillRule="evenodd" fill="var(--line)" stroke="var(--map-sea-line)" strokeWidth="20" strokeLinejoin="round" />
+      {works ? (
+        <>
+          <rect width={map.width} height={map.height} rx="36" fill={`url(#${id('parch')})`} />
+          <rect width={map.width} height={map.height} rx="36" fill="#7fb3c4" opacity=".28" />
+          <rect width={map.width} height={map.height} rx="36" fill={`url(#${id('waves')})`} />
+          <path d={map.outline} fillRule="evenodd" fill={`url(#${id('parch')})`} stroke="#4a3426" strokeWidth="7" strokeLinejoin="round" filter={`url(#${id('rough')})`} />
+        </>
+      ) : (
+        <>
+          <rect width={map.width} height={map.height} rx="36" fill={`url(#${id('sea')})`} />
+          <path d={map.outline} fillRule="evenodd" fill="none" stroke="#bff3ff" strokeWidth="46" strokeLinejoin="round" opacity=".55" filter={`url(#${id('glow')})`} />
+          <path d={map.outline} fillRule="evenodd" fill="#e9d9a6" stroke="#e9d9a6" strokeWidth="22" strokeLinejoin="round" filter={`url(#${id('shadow')})`} />
+          <path d={map.outline} fillRule="evenodd" fill={`url(#${id('grass')})`} />
+        </>
+      )}
       {map.regions.map((r) => {
         const reg = state.regions[r.id];
         const owner = reg?.owner;
-        const fill = owner ? colors.get(owner) ?? '#999' : state.phase === 'lobby' ? NEUTRAL : 'url(#hatch)';
+        const color = owner ? colors.get(owner) ?? '#999' : null;
         const canSelect = sel.has(r.id);
         return (
           <g key={r.id} onClick={canSelect && onSelect ? () => onSelect(r.id) : onBlocked ? () => onBlocked(r.id) : undefined} className={cn(canSelect && 'cursor-pointer')}>
-            <path
-              d={r.path}
-              fill={fill}
-              stroke="var(--bg)"
-              strokeWidth={4}
-              strokeLinejoin="round"
-              className={cn('transition-[fill] duration-700', canSelect && 'hover:brightness-110', flash.captured.has(r.id) && 'animate-capture')}
-            />
+            {works ? (
+              <path
+                d={r.path}
+                fill={color ?? 'transparent'}
+                fillOpacity={color ? 0.55 : 1}
+                stroke="#5a3f2c"
+                strokeWidth={3}
+                strokeDasharray={color ? undefined : '8 6'}
+                strokeLinejoin="round"
+                className={cn('transition-[fill] duration-700', canSelect && 'hover:brightness-110', flash.captured.has(r.id) && 'animate-capture')}
+              />
+            ) : (
+              <path
+                d={r.path}
+                fill={color ?? 'transparent'}
+                fillOpacity={color ? 0.62 : 1}
+                stroke="#fff"
+                strokeOpacity={color ? 1 : 0.7}
+                strokeWidth={color ? 4 : 3}
+                strokeLinejoin="round"
+                className={cn('transition-[fill] duration-700', canSelect && 'hover:brightness-110', flash.captured.has(r.id) && 'animate-capture')}
+              />
+            )}
             {canSelect && (
               <path d={r.path} fill="#fff" fillOpacity={0.25} stroke="#fff" strokeWidth={5} strokeDasharray="10 8" className="pointer-events-none animate-pulse-ring" />
             )}

@@ -15,6 +15,7 @@ interface Ctx {
   chat: ChatEvent[];
   quick: { searching: boolean; since: number | null; offerBot: boolean };
   fifty: { questionId: string; removed: number[] } | null;
+  hint: { questionId: string; index: number } | null;
   invites: InviteEvent[];
   online: Set<string>;
   lastError: string | null;
@@ -38,6 +39,7 @@ export function GameSocketProvider({ children }: { children: React.ReactNode }) 
   const [chat, setChat] = useState<ChatEvent[]>([]);
   const [quick, setQuick] = useState<Ctx['quick']>({ searching: false, since: null, offerBot: false });
   const [fifty, setFifty] = useState<Ctx['fifty']>(null);
+  const [hint, setHint] = useState<Ctx['hint']>(null);
   const [invites, setInvites] = useState<InviteEvent[]>([]);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [lastError, setLastError] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function GameSocketProvider({ children }: { children: React.ReactNode }) 
       s.on('chat', (c) => setChat((prev) => [...prev.slice(-30), c]));
       s.on('quick:status', setQuick);
       s.on('joker:fifty', setFifty);
+      s.on('admin:hint', setHint);
       s.on('invite', (i) => setInvites((prev) => [...prev.filter((p) => p.id !== i.id), i]));
       s.on('presence', (p) => setOnline(new Set(p.online)));
       s.on('error', (e) => setLastError(e.message));
@@ -82,8 +85,8 @@ export function GameSocketProvider({ children }: { children: React.ReactNode }) 
   const clearError = useCallback(() => setLastError(null), []);
 
   const value = useMemo(
-    () => ({ socket, connected, clockOffset, state, chat, quick, fifty, invites, online, lastError, dismissInvite, clearError }),
-    [socket, connected, clockOffset, state, chat, quick, fifty, invites, online, lastError, dismissInvite, clearError],
+    () => ({ socket, connected, clockOffset, state, chat, quick, fifty, hint, invites, online, lastError, dismissInvite, clearError }),
+    [socket, connected, clockOffset, state, chat, quick, fifty, hint, invites, online, lastError, dismissInvite, clearError],
   );
   return <GameCtx.Provider value={value}>{children}</GameCtx.Provider>;
 }

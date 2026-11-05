@@ -209,6 +209,8 @@ export interface ServerToClient {
   error: (p: { message: string }) => void;
   chat: (c: ChatEvent) => void;
   'joker:fifty': (p: { questionId: string; removed: number[] }) => void;
+  /** само към администратора: верният отговор на въпроса с избор */
+  'admin:hint': (p: { questionId: string; index: number }) => void;
   'quick:status': (p: { searching: boolean; since: number | null; offerBot: boolean }) => void;
   invite: (i: InviteEvent) => void;
   presence: (p: { online: string[] }) => void;
@@ -224,4 +226,6 @@ export interface GameTokenClaims {
   frame?: FrameTier;
   /** оръжие в „Към върха“ */
   weapon?: string;
+  /** администраторът вижда зелена точка на верния отговор */
+  admin?: boolean;
 }

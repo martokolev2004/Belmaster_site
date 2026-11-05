@@ -265,6 +265,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
   const other = state.players.find((p) => p.uid !== state.you);
   const left = useLeft(state.phase === 'question' && state.question ? state.question.myDeadline : state.deadline, offset);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const desktop = useDesktop();
   const canShield = !me.shieldUsed && ['question', 'reveal', 'choose'].includes(state.phase) && !(state.phase === 'choose' && state.actorUid === me.uid);
 
   useEffect(() => {
@@ -308,6 +309,9 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
         </div>
       </div>
 
+      {desktop ? (
+        <DesktopLayout socket={socket} state={state} offset={offset} chat={chat} left={left} me={me} other={other} canShield={canShield} />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:grid-cols-[1.1fr_1fr] phone-landscape:gap-2">
         <div className="card3d overflow-hidden rounded-2xl bg-surface phone-landscape:min-h-0">
           <ClimbScene state={state} chat={chat} />
@@ -350,6 +354,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
         </div>
       </div>
 
+      )}
       {confirmLeave && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmLeave(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-surface p-5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -364,6 +369,103 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
               </Button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Компютър (широк екран с мишка): сцената е голяма, а въпросът изскача върху нея. */
+function useDesktop() {
+  const [d, setD] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
+    const on = () => setD(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return d;
+}
+
+function DesktopLayout({
+  socket,
+  state,
+  offset,
+  chat,
+  left,
+  me,
+  other,
+  canShield,
+}: {
+  socket: ClimbSocket;
+  state: ClimbState;
+  offset: number;
+  chat: { uid: string; key: string; at: number }[];
+  left: number;
+  me: ClimbState['players'][number];
+  other: ClimbState['players'][number] | undefined;
+  canShield: boolean;
+}) {
+  const q = state.question;
+  const answered = state.phase === 'question' && !!q && q.answered.includes(state.you);
+  const last = state.log[state.log.length - 1];
+  // какво се показва върху сцената
+  const modal = (state.phase === 'question' && q && !answered) || state.phase === 'finished';
+  const bottom = state.phase === 'choose' || state.phase === 'aim';
+  const banner =
+    state.phase === 'question' && answered
+      ? `Изпратено — чакаме ${other?.name ?? 'другия'}…`
+      : state.phase === 'resolve'
+        ? last
+        : null;
+  return (
+    <div className="space-y-3">
+      {state.phase !== 'finished' && state.deadline && (
+        <div className="flex items-center gap-2">
+          <ProgressBar value={state.phase === 'question' && q ? (left / q.timeMs) * 100 : Math.min(100, left / 120)} color={left < 5000 ? 'bg-error' : 'bg-secondary'} />
+          <span className="w-10 shrink-0 text-right font-mono text-sm font-black tabular-nums">{Math.ceil(left / 1000)}</span>
+        </div>
+      )}
+      <div className="card3d relative overflow-hidden rounded-2xl bg-surface">
+        <ClimbScene state={state} chat={chat} />
+        {banner && (
+          <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
+            <span className="rounded-full bg-black/60 px-4 py-2 text-sm font-extrabold text-white backdrop-blur">{banner}</span>
+          </div>
+        )}
+        {state.phase === 'reveal' && state.reveal && (
+          <div className="absolute inset-x-0 top-3 flex justify-center px-4">
+            <div className="w-full max-w-md">
+              <RevealPanel state={state} />
+            </div>
+          </div>
+        )}
+        {modal && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 p-5 backdrop-blur-[2px]">
+            <div className={cn('max-h-full w-full overflow-y-auto rounded-2xl animate-rise', state.phase === 'finished' ? 'max-w-sm' : q?.context ? 'max-w-4xl' : 'max-w-2xl')}>
+              {state.phase === 'question' && q && <QuestionPanel key={q.id} socket={socket} state={state} wide />}
+              {state.phase === 'finished' && <FinishedPanel socket={socket} state={state} />}
+            </div>
+          </div>
+        )}
+        {bottom && (
+          <div className="absolute inset-x-0 bottom-3 flex justify-center px-4">
+            <div className="w-full max-w-md animate-rise">
+              {state.phase === 'choose' && <ChoosePanel socket={socket} state={state} />}
+              {state.phase === 'aim' && state.aim && <AimPanel socket={socket} state={state} offset={offset} />}
+            </div>
+          </div>
+        )}
+      </div>
+      {state.phase !== 'finished' && (
+        <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+          <ShieldBox armed={me.shieldArmed} used={me.shieldUsed} can={canShield} onShield={() => socket.emit('climb:shield')} />
+          {other && (
+            <span className="text-right text-xs font-bold text-muted">
+              {me.name}: {me.correct}/{me.answered} верни · {other.name}: {other.correct}/{other.answered} верни
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -391,7 +493,7 @@ function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boole
   );
 }
 
-function QuestionPanel({ socket, state }: { socket: ClimbSocket; state: ClimbState }) {
+function QuestionPanel({ socket, state, wide = false }: { socket: ClimbSocket; state: ClimbState; wide?: boolean }) {
   const q = state.question!;
   const [ans, setAns] = useState<AnyAnswer>({});
   const sent = q.answered.includes(state.you);
@@ -409,10 +511,14 @@ function QuestionPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
         {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
         {other && q.answered.includes(other.uid) && <Badge tone="red">{other.name} отговори</Badge>}
       </div>
-      <h2 className="whitespace-pre-line text-lg font-extrabold leading-snug phone-landscape:text-base">{q.prompt}</h2>
-      {q.context && q.type !== 'FILL_BLANKS' && <ContextBox text={q.context} compact />}
-      <div className="mt-3">
-        <AnswerInput q={q as never} value={ans} onChange={(a) => setAns((p) => ({ ...p, ...a }))} disabled={sent} compact onSubmit={submit} removed={removed} />
+      <div className={cn(wide && q.context && q.type !== 'FILL_BLANKS' && 'grid grid-cols-2 gap-5')}>
+        <div>
+          <h2 className={cn('whitespace-pre-line font-extrabold leading-snug phone-landscape:text-base', wide ? 'text-xl' : 'text-lg')}>{q.prompt}</h2>
+          {q.context && q.type !== 'FILL_BLANKS' && <ContextBox text={q.context} compact />}
+        </div>
+        <div className="mt-3">
+          <AnswerInput q={q as never} value={ans} onChange={(a) => setAns((p) => ({ ...p, ...a }))} disabled={sent} compact onSubmit={submit} removed={removed} />
+        </div>
       </div>
       <div className="mt-3 flex gap-2">
         <button

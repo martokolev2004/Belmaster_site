@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { TOPIC_LABELS } from '@belmaster/shared';
-import { requireUser } from '@/lib/auth';
-import { buildMistakesTest, buildPracticeTest } from '@/lib/quiz';
+import { isAdmin, requireUser } from '@/lib/auth';
+import { buildMistakesTest, buildPracticeTest, withAdminHints } from '@/lib/quiz';
 import { QuizRunner } from '@/components/quiz/QuizRunner';
 import { ButtonLink, EmptyState } from '@/components/ui';
 
@@ -30,5 +30,5 @@ export default async function TestPage({ params, searchParams }: { params: Promi
     );
   }
   const again = `/tests/${kind}${topic ? `?topic=${topic}` : work ? `?work=${work}` : ''}`;
-  return <QuizRunner key={questions.map((q) => q.id).join()} kind={KINDS[k]} mode="practice" title={title} questions={questions} passages={passages} backHref="/tests" againHref={again} />;
+  return <QuizRunner key={questions.map((q) => q.id).join()} kind={KINDS[k]} mode="practice" title={title} questions={await withAdminHints(questions, isAdmin(user))} passages={passages} backHref="/tests" againHref={again} />;
 }

@@ -552,7 +552,7 @@ function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: P
 }
 
 function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: string; meP?: PublicPlayer; regionName: (id: string) => string }) {
-  const { socket, fifty } = useGame();
+  const { socket, fifty, hint } = useGame();
   const q = state.question!;
   const reveal = state.reveal;
   const participant = q.participants.includes(me);
@@ -569,7 +569,7 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
     socket?.emit('game:answer', { questionId: q.id, ...payload });
   };
   const instant = q.type === 'SINGLE_CHOICE';
-  const iq: InputQuestion = { id: q.id, type: q.type, options: q.options, answerCount: q.answerCount, matching: q.matching, blanks: q.blanks, tokens: q.tokens };
+  const iq: InputQuestion = { id: q.id, type: q.type, options: q.options, answerCount: q.answerCount, matching: q.matching, blanks: q.blanks, tokens: q.tokens, hint: hint?.questionId === q.id ? hint.index : null };
 
   const myResult = reveal?.results.find((r) => r.uid === me);
   const header =

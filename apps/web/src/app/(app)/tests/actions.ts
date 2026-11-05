@@ -3,9 +3,9 @@
 import { XP_PER_CORRECT, estimateGrade } from '@belmaster/shared';
 import { recordAnswers } from '@belmaster/db';
 import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { awardProgress } from '@/lib/progress';
-import { grade, nextSurvivalQuestion, survivalBest } from '@/lib/quiz';
+import { grade, nextSurvivalQuestion, survivalBest, withAdminHints } from '@/lib/quiz';
 import type { Answer, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
 
 export async function checkAnswerAction(questionId: string, answer: Answer): Promise<QuestionResult | null> {
@@ -126,7 +126,8 @@ export async function reportQuestionAction(questionId: string, reason: string, m
 export async function nextSurvivalAction(seen: string[]) {
   const user = await getCurrentUser();
   if (!user?.grade) return null;
-  return nextSurvivalQuestion(user.grade, Array.isArray(seen) ? seen.map(String) : []);
+  const q = await nextSurvivalQuestion(user.grade, Array.isArray(seen) ? seen.map(String) : []);
+  return q ? (await withAdminHints([q], isAdmin(user)))[0] : null;
 }
 
 export async function finishSurvivalAction(answers: { id: string; answer: Answer }[]): Promise<{ streak: number; best: number; record: boolean; xpEarned: number } | { error: string }> {

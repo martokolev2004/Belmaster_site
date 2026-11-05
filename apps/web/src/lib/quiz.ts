@@ -153,3 +153,13 @@ export async function survivalBest(userId: string): Promise<number> {
   const r = await prisma.quizAttempt.aggregate({ where: { userId, kind: 'SURVIVAL' }, _max: { score: true } });
   return Math.round(r._max.score ?? 0);
 }
+
+/** Само за администратора: добавя индекса на верния отговор към въпросите с избор (А–Г). */
+export async function withAdminHints<T extends { id: string; type: string }>(questions: T[], admin: boolean): Promise<T[]> {
+  if (!admin) return questions;
+  const ids = questions.filter((q) => q.type === 'SINGLE_CHOICE').map((q) => q.id);
+  if (!ids.length) return questions;
+  const rows = await prisma.question.findMany({ where: { id: { in: ids } }, select: { id: true, correctIndex: true } });
+  const m = new Map(rows.map((r) => [r.id, r.correctIndex]));
+  return questions.map((q) => (m.has(q.id) ? { ...q, hint: m.get(q.id) ?? null } : q));
+}

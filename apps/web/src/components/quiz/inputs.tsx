@@ -16,6 +16,8 @@ export interface InputQuestion {
   matching: { left: string[]; right: string[] } | null;
   blanks: { text: string; blanks: { label: string; options: string[] }[] } | null;
   tokens: string[] | null;
+  /** само за администратора: индекс на верния отговор (зелена точка) */
+  hint?: number | null;
 }
 
 /** Верните отговори — показват се след проверка. */
@@ -115,6 +117,7 @@ function ChoiceInput({ q, value, onChange, disabled, reveal, removed, compact }:
               {LETTERS[i]}
             </span>
             <span className="whitespace-pre-line">{opt}</span>
+            {q.hint === i && <span className="ml-auto size-2.5 shrink-0 rounded-full bg-primary" title="Верен (вижда се само от админа)" />}
           </button>
         );
       })}
