@@ -9,7 +9,7 @@ export interface ImportFile {
   grade: Grade;
   demo?: boolean;
   sourceNote?: string;
-  exam?: { year: number; session: string; title?: string };
+  exam?: { year: number; session: string; title?: string; listed?: boolean };
   passages?: { key: string; title?: string; text: string }[];
   questions: ImportQuestion[];
   /** произведения, които да се махнат (напр. създадени погрешка при стар импорт) */
@@ -109,8 +109,8 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
           `${file.grade === 'G12' ? 'ДЗИ' : 'НВО'} по БЕЛ — ${file.exam.session} ${file.exam.year}`;
         const exam = await tx.exam.upsert({
           where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
-          update: { title, sourceHash: hash },
-          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title, sourceHash: hash },
+          update: { title, sourceHash: hash, listed: file.exam.listed ?? true },
+          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title, sourceHash: hash, listed: file.exam.listed ?? true },
         });
         examId = exam.id;
         report.examTitle = title;

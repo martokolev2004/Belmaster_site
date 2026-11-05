@@ -78,7 +78,7 @@ export async function buildPracticeTest(
 
 export async function buildExamTest(grade: Grade, examId: string) {
   const exam = await prisma.exam.findFirst({
-    where: { id: examId, grade },
+    where: { id: examId, grade, listed: true },
     include: {
       questions: { where: { status: 'ACTIVE' }, include: { work: true }, orderBy: [{ sourceNo: 'asc' }, { createdAt: 'asc' }] },
       passages: true,

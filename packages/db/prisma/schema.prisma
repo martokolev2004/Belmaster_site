@@ -130,6 +130,7 @@ model Exam {
   session   String // напр. "май", "август"
   title     String // напр. "ДЗИ по БЕЛ — май 2023"
   sourceHash String? // отпечатък на импортирания JSON — при същия файл импортът се пропуска
+  listed    Boolean  @default(true) // false = въпросите са в банката, но матурата не се показва като цяла
   createdAt DateTime @default(now())
 
   questions Question[]

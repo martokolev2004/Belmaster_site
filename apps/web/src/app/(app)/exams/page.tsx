@@ -10,7 +10,7 @@ export const metadata = { title: 'Матури' };
 export default async function ExamsPage() {
   const user = await requireUser();
   const exams = await prisma.exam.findMany({
-    where: { grade: user.grade! },
+    where: { grade: user.grade!, listed: true },
     orderBy: [{ year: 'desc' }, { session: 'asc' }],
   });
   const best = await prisma.quizAttempt.groupBy({
