@@ -77,6 +77,8 @@ export interface ClimbPlayer {
   correct: number;
   answered: number;
   ready: boolean;
+  /** жокери — по един от всеки за игра (виждаш само своите) */
+  jokers: { fifty: boolean; time: boolean };
 }
 
 export interface ClimbQuestion {
@@ -96,6 +98,10 @@ export interface ClimbQuestion {
   deadline: number;
   /** кой вече е отговорил (без самия отговор) */
   answered: string[];
+  /** твоят краен срок (с жокера +5 с) */
+  myDeadline: number;
+  /** махнатите от 50/50 отговори (само за теб) */
+  removed: number[];
 }
 
 export interface ClimbReveal {
@@ -164,6 +170,7 @@ export interface ClimbClientToServer {
   'climb:choose': (p: { action: 'climb' | 'throw' }) => void;
   'climb:aim': (p: { elapsed: number }) => void;
   'climb:shield': () => void;
+  'climb:joker': (p: { kind: 'fifty' | 'time' }) => void;
   'climb:rematch': () => void;
   'climb:chat': (p: { key: string }) => void;
 }
@@ -175,3 +182,5 @@ export interface ClimbServerToClient {
   quick: (p: { searching: boolean; since: number | null; offerBot: boolean }) => void;
   chat: (p: { uid: string; key: string; at: number }) => void;
 }
+
+export const CLIMB_JOKER_TIME_MS = 5_000;

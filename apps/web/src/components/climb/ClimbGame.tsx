@@ -123,6 +123,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <li>❓ Двамата отговаряте на един въпрос. <b>Само най-бързият верен</b> избира.</li>
             <li>⬆️ <b>Качи се</b> — +1 стъпало.</li>
             <li>🎯 <b>Хвърли</b> — натисни, когато маркерът е в зеленото. Уцелиш ли, другият пада стъпало. Не уцелиш ли — пада твоето.</li>
+            <li>🃏 <b>Жокери</b> — 50/50 и +5 секунди, по веднъж за игра.</li>
             <li>🛡️ <b>Щит</b> — веднъж за игра. Вдигни го, ако мислиш, че другият ще те цели — ударът се връща към него.</li>
             <li>🧗 Колкото по-високо си, толкова по-тясна е зелената зона.</li>
             <li>🏁 Пръв до 10 стъпала, или по-високият след {CLIMB.MAX_QUESTIONS} въпроса.</li>
@@ -253,7 +254,7 @@ function Lobby({ socket, state }: { socket: ClimbSocket; state: ClimbState }) {
 function Match({ socket, state, offset }: { socket: ClimbSocket; state: ClimbState; offset: number }) {
   const me = state.players.find((p) => p.uid === state.you)!;
   const other = state.players.find((p) => p.uid !== state.you);
-  const left = useLeft(state.deadline, offset);
+  const left = useLeft(state.phase === 'question' && state.question ? state.question.myDeadline : state.deadline, offset);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const canShield = !me.shieldUsed && ['question', 'reveal', 'choose'].includes(state.phase) && !(state.phase === 'choose' && state.actorUid === me.uid);
 
@@ -365,6 +366,8 @@ function QuestionPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
   const [ans, setAns] = useState<AnyAnswer>({});
   const sent = q.answered.includes(state.you);
   const other = state.players.find((p) => p.uid !== state.you);
+  const me = state.players.find((p) => p.uid === state.you)!;
+  const removed = new Set(q.removed);
   const submit = () => {
     if (sent || !hasAnswer(q as never, ans)) return;
     socket.emit('climb:answer', { questionId: q.id, ...ans });
@@ -379,11 +382,29 @@ function QuestionPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
       <h2 className="whitespace-pre-line text-lg font-extrabold leading-snug phone-landscape:text-base">{q.prompt}</h2>
       {q.context && q.type !== 'FILL_BLANKS' && <ContextBox text={q.context} compact />}
       <div className="mt-3">
-        <AnswerInput q={q as never} value={ans} onChange={(a) => setAns((p) => ({ ...p, ...a }))} disabled={sent} compact onSubmit={submit} />
+        <AnswerInput q={q as never} value={ans} onChange={(a) => setAns((p) => ({ ...p, ...a }))} disabled={sent} compact onSubmit={submit} removed={removed} />
       </div>
-      <Button block className="mt-3" disabled={sent || !hasAnswer(q as never, ans)} onClick={submit}>
-        {sent ? 'Изпратено — чакаме…' : 'Изпрати'}
-      </Button>
+      <div className="mt-3 flex gap-2">
+        <button
+          disabled={sent || !me.jokers.fifty || q.type !== 'SINGLE_CHOICE' || q.options.length < 3}
+          onClick={() => socket.emit('climb:joker', { kind: 'fifty' })}
+          title="Маха два грешни отговора (веднъж за игра)"
+          className="rounded-xl border-2 border-purple px-3 text-sm font-black text-purple-dark disabled:opacity-35"
+        >
+          50/50
+        </button>
+        <button
+          disabled={sent || !me.jokers.time}
+          onClick={() => socket.emit('climb:joker', { kind: 'time' })}
+          title="+5 секунди за теб (веднъж за игра)"
+          className="rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
+        >
+          +5 с
+        </button>
+        <Button block disabled={sent || !hasAnswer(q as never, ans)} onClick={submit}>
+          {sent ? 'Изпратено — чакаме…' : 'Изпрати'}
+        </Button>
+      </div>
     </div>
   );
 }

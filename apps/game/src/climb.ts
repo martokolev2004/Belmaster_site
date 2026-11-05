@@ -20,6 +20,7 @@ import {
   type ClimbServerToClient,
   type ClimbState,
   type GameTokenClaims,
+  CLIMB_JOKER_TIME_MS,
 } from '@belmaster/shared';
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
 import { eloDeltas } from './elo.js';
@@ -32,6 +33,7 @@ const COLORS = ['#ff4b4b', '#1cb0f6'];
 const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 
 interface P extends Omit<ClimbPlayer, 'shieldArmed'> {
+  removed: Map<string, number[]>;
   shieldArmed: boolean;
   sockets: Set<string>;
   dropTimer: NodeJS.Timeout | null;
@@ -66,7 +68,7 @@ export class ClimbRoom {
   log: string[] = [];
 
   private pool: QuestionPool | null = null;
-  private q: { q: PoolQuestion; startedAt: number; deadline: number; answers: Map<string, { a: AnyAnswer; at: number; correct: boolean; score: number }> } | null = null;
+  private q: { q: PoolQuestion; startedAt: number; deadline: number; deadlines: Map<string, number>; answers: Map<string, { a: AnyAnswer; at: number; correct: boolean; score: number }> } | null = null;
   private reveal: ClimbReveal | null = null;
   private actorUid: string | null = null;
   private aim: ClimbAim | null = null;
@@ -109,6 +111,8 @@ export class ClimbRoom {
       correct: 0,
       answered: 0,
       ready: !!u.isBot,
+      jokers: { fifty: true, time: true },
+      removed: new Map(),
       sockets: new Set(),
       dropTimer: null,
     });
@@ -198,7 +202,7 @@ export class ClimbRoom {
     const q = this.pool!.random();
     const now = Date.now();
     this.phase = 'question';
-    this.q = { q, startedAt: now, deadline: now + q.timeMs, answers: new Map() };
+    this.q = { q, startedAt: now, deadline: now + q.timeMs, deadlines: new Map(this.order.map((u) => [u, now + q.timeMs])), answers: new Map() };
     this.reveal = null;
     this.actorUid = null;
     this.aim = null;
@@ -212,7 +216,7 @@ export class ClimbRoom {
     const aq = this.q;
     if (this.phase !== 'question' || !aq || aq.q.id !== questionId || aq.answers.has(uid) || !this.players.has(uid)) return;
     const now = Date.now();
-    if (now > aq.deadline + 300) return;
+    if (now > (aq.deadlines.get(uid) ?? aq.deadline) + 300) return;
     const clean: AnyAnswer = {
       index: typeof a.index === 'number' ? a.index : null,
       text: typeof a.text === 'string' ? a.text.slice(0, 2000) : null,
@@ -235,6 +239,27 @@ export class ClimbRoom {
       // ако вторият още може да отговори, но първият е верен — той вече е най-бързият верен
       this.schedule(400, () => this.resolveQuestion());
     }
+  }
+
+  /** Жокери: 50/50 (маха два грешни отговора) и +5 секунди — по един за игра. */
+  useJoker(uid: string, kind: 'fifty' | 'time') {
+    const aq = this.q;
+    const p = this.players.get(uid);
+    if (this.phase !== 'question' || !aq || !p || aq.answers.has(uid)) return;
+    if (kind === 'fifty') {
+      if (!p.jokers.fifty || aq.q.type !== 'SINGLE_CHOICE' || aq.q.options.length < 3) return;
+      p.jokers.fifty = false;
+      const wrong = aq.q.options.map((_, i) => i).filter((i) => i !== aq.q.correctIndex).sort(() => Math.random() - 0.5);
+      p.removed.set(aq.q.id, wrong.slice(0, aq.q.options.length - 2));
+    } else {
+      if (!p.jokers.time) return;
+      p.jokers.time = false;
+      aq.deadlines.set(uid, (aq.deadlines.get(uid) ?? aq.deadline) + CLIMB_JOKER_TIME_MS);
+      aq.deadline = Math.max(...aq.deadlines.values());
+      this.deadline = aq.deadline;
+      this.schedule(aq.deadline - Date.now() + 150, () => this.resolveQuestion());
+    }
+    this.emit();
   }
 
   private resolveQuestion() {
@@ -509,6 +534,7 @@ export class ClimbRoom {
           correct: p.correct,
           answered: p.answered,
           ready: p.ready,
+          jokers: uid === forUid ? p.jokers : { fifty: false, time: false },
         };
       }),
       questionNo: this.questionNo,
@@ -531,6 +557,8 @@ export class ClimbRoom {
               startedAt: aq.startedAt,
               deadline: aq.deadline,
               answered: [...aq.answers.keys()],
+              myDeadline: aq.deadlines.get(forUid) ?? aq.deadline,
+              removed: this.players.get(forUid)?.removed.get(aq.q.id) ?? [],
             }
           : null,
       reveal: this.phase === 'reveal' ? this.reveal : null,
@@ -766,6 +794,7 @@ export function registerClimb(ns: NS, newCode: () => string) {
     socket.on('climb:choose', ({ action }) => my()?.choose(user.uid, action === 'throw' ? 'throw' : 'climb'));
     socket.on('climb:aim', ({ elapsed }) => my()?.throwAt(user.uid, typeof elapsed === 'number' ? elapsed : null));
     socket.on('climb:shield', () => my()?.shield(user.uid));
+    socket.on('climb:joker', ({ kind }) => my()?.useJoker(user.uid, kind === 'time' ? 'time' : 'fifty'));
     socket.on('climb:chat', ({ key }) => {
       const room = my();
       if (!room || !CHAT_MESSAGES.some((m) => m.key === key) || !room.chat(user.uid, key)) return;
