@@ -129,8 +129,13 @@ export type ClimbOutcome =
   | { kind: 'reflect'; actorUid: string; targetUid: string; weapon: string; pos: number; actorAtGround: boolean }
   | { kind: 'shield_wasted'; actorUid: string; targetUid: string };
 
+export type ClimbTheme = 'dusk' | 'night' | 'canyon';
+export const CLIMB_THEMES: ClimbTheme[] = ['dusk', 'night', 'canyon'];
+
 export interface ClimbState {
   code: string;
+  /** фонът — избира се случайно при всяка игра */
+  theme: ClimbTheme;
   grade: string;
   phase: ClimbPhase;
   you: string;

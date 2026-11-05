@@ -21,6 +21,8 @@ import {
   type ClimbState,
   type GameTokenClaims,
   CLIMB_JOKER_TIME_MS,
+  CLIMB_THEMES,
+  type ClimbTheme,
 } from '@belmaster/shared';
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
 import { eloDeltas } from './elo.js';
@@ -64,6 +66,7 @@ export class ClimbRoom {
   ratingDelta: Record<string, number> | null = null;
   rematchCode: string | null = null;
   startedAt = 0;
+  theme: ClimbTheme = CLIMB_THEMES[Math.floor(Math.random() * CLIMB_THEMES.length)];
   review: Review[] = [];
   log: string[] = [];
 
@@ -509,6 +512,7 @@ export class ClimbRoom {
     const aq = this.q;
     return {
       code: this.code,
+      theme: this.theme,
       grade: this.grade,
       phase: this.phase,
       you: forUid,

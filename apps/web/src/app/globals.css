@@ -233,3 +233,4 @@
 .climb-cloud { animation: climb-cloud 30s linear infinite alternate; }
 @keyframes climb-cloud { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
 .climb-crown { animation: pop .5s ease-out; }
+.climb-twinkle { animation: pulse-ring 2.4s ease-in-out infinite; }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CLIMB, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';
+import { ClimbBackground, THEME_PALETTE } from './themes';
 import { play } from '@/lib/sound';
 
 const W = 800;
@@ -38,6 +39,8 @@ function useAvatarUri(p: ClimbPlayer | undefined) {
 
 export function ClimbScene({ state }: { state: ClimbState }) {
   const players = state.players;
+  const theme = state.theme ?? 'dusk';
+  const pal = THEME_PALETTE[theme];
   const heights = players.map((p) => p.height);
   const [disp, setDisp] = useState<number[]>(heights);
   const [fx, setFx] = useState<Fx[]>([]);
@@ -108,7 +111,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
         add({ kind: 'projectile', from, to, via, start: t0 + T.throw, dur: T.flight, emoji });
         at(T.throw + T.flight, () => {
           if (out.targetAtGround) add({ kind: 'dust', x: to[0], y: GROUND, start: performance.now() });
-          else add({ kind: 'crumble', x: TOWER_X[b], y: yOf(before[b]), color: players[b].color, start: performance.now() });
+          else add({ kind: 'crumble', x: TOWER_X[b], y: yOf(before[b]), color: pal.stone, start: performance.now() });
           play('hit');
           setDisp(heights);
         });
@@ -121,7 +124,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
         add({ kind: 'projectile', from, to, via: mid, start: t0 + T.throw, dur: T.flight + 250, emoji });
         at(T.throw + T.flight + 250, () => {
           if (out.actorAtGround) add({ kind: 'dust', x: to[0], y: GROUND, start: performance.now() });
-          else add({ kind: 'crumble', x: TOWER_X[a], y: yOf(before[a]), color: players[a].color, start: performance.now() });
+          else add({ kind: 'crumble', x: TOWER_X[a], y: yOf(before[a]), color: pal.stone, start: performance.now() });
           play('lost');
           setDisp(heights);
         });
@@ -140,7 +143,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
       add({ kind: 'projectile', from: shieldAt, to, via: via2, start: t0 + T.throw + T.flight, dur: T.back, emoji });
       at(T.throw + T.flight + T.back, () => {
         if (out.actorAtGround) add({ kind: 'dust', x: to[0], y: GROUND, start: performance.now() });
-        else add({ kind: 'crumble', x: TOWER_X[a], y: yOf(before[a]), color: players[a].color, start: performance.now() });
+        else add({ kind: 'crumble', x: TOWER_X[a], y: yOf(before[a]), color: pal.stone, start: performance.now() });
         play('hit');
         setDisp(heights);
       });
@@ -166,28 +169,16 @@ export function ClimbScene({ state }: { state: ClimbState }) {
   return (
     <svg viewBox={`0 ${-TOP} ${W} ${H + TOP}`} className="block h-auto w-full select-none" role="img" aria-label="Кулите">
       <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="var(--climb-sky-top, #bfe9ff)" />
-          <stop offset="1" stopColor="var(--climb-sky-bottom, #f2fbff)" />
-        </linearGradient>
-        <pattern id="bricks" width="32" height="18" patternUnits="userSpaceOnUse">
-          <rect width="32" height="18" fill="none" />
-          <path d="M0 9h32M16 0v9M0 9v9M32 9v9" stroke="rgba(0,0,0,.14)" strokeWidth="1.5" />
+        <pattern id="stones" width="34" height="34" patternUnits="userSpaceOnUse">
+          <path d="M0 17h34M17 0v17M0 17v17" stroke={pal.mortar} strokeWidth="2" opacity=".55" />
         </pattern>
       </defs>
-      <rect y={-TOP} width={W} height={H + TOP} fill="url(#sky)" />
-      {/* планини и облаци */}
-      <path d={`M0 ${GROUND} L120 330 L210 410 L330 250 L420 380 L520 270 L640 400 L720 320 L800 380 L800 ${GROUND} Z`} fill="var(--climb-hills, #cde7d8)" opacity=".8" />
-      <g opacity=".85" fill="#fff">
-        <ellipse cx="120" cy="80" rx="46" ry="16" className="climb-cloud" />
-        <ellipse cx="650" cy="60" rx="56" ry="18" className="climb-cloud" style={{ animationDelay: '-6s' }} />
-        <ellipse cx="420" cy="120" rx="38" ry="12" className="climb-cloud" style={{ animationDelay: '-12s' }} />
-      </g>
-      <rect x="0" y={GROUND} width={W} height={H - GROUND} fill="var(--climb-ground, #8bc34a)" />
-      <rect x="0" y={GROUND} width={W} height="6" fill="rgba(0,0,0,.12)" />
+      <ClimbBackground theme={theme} top={TOP} ground={GROUND} />
+      <rect x="0" y={GROUND} width={W} height={H - GROUND} fill={pal.ground} />
+      <rect x="0" y={GROUND} width={W} height="4" fill="#fff" opacity=".08" />
 
       {players.map((p, i) => (
-        <Tower key={p.uid} p={p} side={i} h={shown[i]} />
+        <Tower key={p.uid} p={p} side={i} h={shown[i]} pal={pal} />
       ))}
 
       {fx.map((f) => {
@@ -215,8 +206,10 @@ export function ClimbScene({ state }: { state: ClimbState }) {
   );
 }
 
-function Tower({ p, side, h }: { p: ClimbPlayer; side: number; h: number }) {
+function Tower({ p, side, h, pal }: { p: ClimbPlayer; side: number; h: number; pal: (typeof THEME_PALETTE)[keyof typeof THEME_PALETTE] }) {
   const x = TOWER_X[side];
+  const topY = yOf(CLIMB.STEPS);
+  const flagX = x + (BLOCK_W + 34) / 2 - 14;
   return (
     <g>
       {Array.from({ length: CLIMB.STEPS }, (_, k) => {
@@ -225,31 +218,22 @@ function Tower({ p, side, h }: { p: ClimbPlayer; side: number; h: number }) {
         const top = n === CLIMB.STEPS;
         const y = yOf(n);
         const w = top ? BLOCK_W + 34 : BLOCK_W - k * 3;
+        if (!built) return <rect key={n} x={x - w / 2} y={y} width={w} height={STEP - 2} rx="3" fill="none" stroke={pal.ghost} strokeWidth="1.5" strokeDasharray="5 6" />;
         return (
-          <g key={n} className={built ? 'climb-block' : undefined}>
-            <rect
-              x={x - w / 2}
-              y={y}
-              width={w}
-              height={STEP - 2}
-              rx={top ? 10 : 6}
-              fill={built ? p.color : 'transparent'}
-              fillOpacity={built ? 0.85 : 0}
-              stroke={built ? 'rgba(0,0,0,.25)' : 'rgba(0,0,0,.18)'}
-              strokeWidth="2"
-              strokeDasharray={built ? undefined : '6 6'}
-            />
-            {built && <rect x={x - w / 2} y={y} width={w} height={STEP - 2} rx={top ? 10 : 6} fill="url(#bricks)" />}
-            {top && (
-              <g>
-                <line x1={x + w / 2 - 14} y1={y} x2={x + w / 2 - 14} y2={y - 46} stroke="#5b4636" strokeWidth="4" strokeLinecap="round" />
-                <path d={`M${x + w / 2 - 14} ${y - 46} l30 9 l-30 9 Z`} fill={built ? p.color : '#ffc800'} className="climb-flag" />
-              </g>
-            )}
+          <g key={n} className="climb-block">
+            <rect x={x - w / 2} y={y} width={w} height={STEP - 2} rx="3" fill={pal.stone} />
+            <rect x={x - w / 2} y={y} width={w} height={STEP - 2} rx="3" fill="url(#stones)" />
+            <rect x={x - w / 2} y={y} width={w} height="4" fill="#fff" opacity=".18" />
+            <rect x={x - w / 2} y={y + STEP - 8} width={w} height="6" fill="#000" opacity=".22" />
+            {/* ивица в цвета на играча */}
+            <rect x={side === 0 ? x - w / 2 : x + w / 2 - 6} y={y} width="6" height={STEP - 2} fill={p.color} opacity=".9" />
           </g>
         );
       })}
-      <text x={x} y={GROUND + 28} textAnchor="middle" fontSize="15" fontWeight="900" fill="rgba(0,0,0,.55)">
+      {/* знаме на върха в цвета на играча */}
+      <line x1={flagX} y1={topY} x2={flagX} y2={topY - 52} stroke={pal.mortar} strokeWidth="4" strokeLinecap="round" />
+      <path d={`M${flagX} ${topY - 52} l34 10 l-34 10 Z`} fill={p.color} className="climb-flag" />
+      <text x={x} y={GROUND + 28} textAnchor="middle" fontSize="15" fontWeight="900" fill={pal.label}>
         {h}/{CLIMB.STEPS}
       </text>
     </g>
@@ -263,6 +247,7 @@ function Climber({ p, side, h, throwing, winner, you }: { p: ClimbPlayer; side: 
   const flip = side === 1 ? -1 : 1;
   const id = `c${side}`;
   const ink = '#1f1f1f';
+  const label = `${p.name.slice(0, 16)}${you ? ' (ти)' : ''}`;
   return (
     <g className="climb-climber" style={{ transform: `translate(${x}px, ${yOf(h)}px)` }} opacity={p.left ? 0.35 : 1}>
       <g transform="scale(1.25)">
@@ -307,10 +292,9 @@ function Climber({ p, side, h, throwing, winner, you }: { p: ClimbPlayer; side: 
       {winner && <text x="0" y="-136" textAnchor="middle" fontSize="28" className="climb-crown">👑</text>}
       {p.shieldArmed && <circle cx="0" cy="-66" r="72" fill="#1cb0f6" fillOpacity=".12" stroke="#1cb0f6" strokeWidth="3" strokeDasharray="8 6" className="climb-shield-idle" />}
       <g transform={`translate(0 ${winner ? -168 : -134})`}>
-        <rect x={-Math.max(36, p.name.length * 4.4)} y="-14" width={Math.max(72, p.name.length * 8.8)} height="22" rx="11" fill="rgba(255,255,255,.92)" stroke={p.color} strokeWidth="2" />
+        <rect x={-Math.max(36, label.length * 4.2)} y="-14" width={Math.max(72, label.length * 8.4)} height="22" rx="11" fill="rgba(255,255,255,.92)" stroke={p.color} strokeWidth="2" />
         <text x="0" y="2" textAnchor="middle" fontSize="12" fontWeight="900" fill="#1f1f1f">
-          {p.name.slice(0, 16)}
-          {you ? ' (ти)' : ''}
+          {label}
         </text>
       </g>
       </g>
