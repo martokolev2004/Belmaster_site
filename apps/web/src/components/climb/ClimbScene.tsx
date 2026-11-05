@@ -8,7 +8,7 @@ import { play } from '@/lib/sound';
 const W = 800;
 const H = 520;
 /** място над върха — за победителя с короната */
-const TOP = 80;
+const TOP = 150;
 const GROUND = 482;
 const STEP = 36;
 const BLOCK_W = 128;
@@ -31,7 +31,7 @@ type NewFx = Fx extends infer F ? (F extends { id: number } ? Omit<F, 'id'> : ne
 function useAvatarUri(p: ClimbPlayer | undefined) {
   return useMemo(() => {
     if (!p) return '';
-    const svg = avatarSvg(sanitizeAvatar(p.avatar, null, p.isBot ? 'bot' : p.uid), p.frame);
+    const svg = avatarSvg(sanitizeAvatar(p.avatar, null, p.isBot ? 'bot' : p.uid), 'none', { noBg: true });
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }, [p]);
 }
@@ -79,7 +79,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
     const side = (uid: string) => players.findIndex((p) => p.uid === uid);
-    const hand = (s: number, h: number): [number, number] => [TOWER_X[s] + (s === 0 ? 26 : -26), yOf(h) - 78];
+    const hand = (s: number, h: number): [number, number] => [TOWER_X[s] + (s === 0 ? 45 : -45), yOf(h) - 78];
     const top = (s: number, h: number): [number, number] => [TOWER_X[s], yOf(h) - 6];
 
     const run = (out: ClimbOutcome) => {
@@ -92,7 +92,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
       }
       if (out.kind === 'shield_wasted') {
         const s = side(out.targetUid);
-        at(700, () => add({ kind: 'shield', x: TOWER_X[s], y: yOf(before[s]) - 55, start: performance.now(), wasted: true }));
+        at(700, () => add({ kind: 'shield', x: TOWER_X[s], y: yOf(before[s]) - 82, start: performance.now(), wasted: true }));
         return 1600;
       }
       const a = side(out.actorUid);
@@ -128,11 +128,11 @@ export function ClimbScene({ state }: { state: ClimbState }) {
         return T.throw + T.flight + 1400;
       }
       // reflect: до щита и обратно
-      const shieldAt: [number, number] = [TOWER_X[b] + (a === 0 ? -40 : 40), yOf(before[b]) - 55];
+      const shieldAt: [number, number] = [TOWER_X[b] + (a === 0 ? -75 : 75), yOf(before[b]) - 82];
       const via1: [number, number] = [(from[0] + shieldAt[0]) / 2, Math.min(from[1], shieldAt[1]) - 120];
       add({ kind: 'projectile', from, to: shieldAt, via: via1, start: t0 + T.throw, dur: T.flight, emoji });
       at(T.throw + T.flight, () => {
-        add({ kind: 'shield', x: TOWER_X[b], y: yOf(before[b]) - 55, start: performance.now() });
+        add({ kind: 'shield', x: TOWER_X[b], y: yOf(before[b]) - 82, start: performance.now() });
         play('capture');
       });
       const to = top(a, before[a]);
@@ -256,36 +256,63 @@ function Tower({ p, side, h }: { p: ClimbPlayer; side: number; h: number }) {
   );
 }
 
+/** Чиби човече: голяма глава (аватарът без фон), кръгло тяло, къси крачета, контур и светлосенки. */
 function Climber({ p, side, h, throwing, winner, you }: { p: ClimbPlayer; side: number; h: number; throwing: boolean; winner: boolean; you: boolean }) {
   const uri = useAvatarUri(p);
   const x = TOWER_X[side];
   const flip = side === 1 ? -1 : 1;
+  const id = `c${side}`;
+  const ink = '#1f1f1f';
   return (
     <g className="climb-climber" style={{ transform: `translate(${x}px, ${yOf(h)}px)` }} opacity={p.left ? 0.35 : 1}>
+      <g transform="scale(1.25)">
+      <defs>
+        <radialGradient id={`${id}-body`} cx="35%" cy="25%" r="85%">
+          <stop offset="0" stopColor="#fff" stopOpacity=".6" />
+          <stop offset=".35" stopColor={p.color} />
+          <stop offset="1" stopColor={p.color} />
+        </radialGradient>
+        <linearGradient id={`${id}-limb`} x1="0" x2="1">
+          <stop offset="0" stopColor={p.color} />
+          <stop offset=".35" stopColor="#fff" stopOpacity=".4" />
+          <stop offset=".55" stopColor={p.color} />
+          <stop offset="1" stopColor="#000" stopOpacity=".35" />
+        </linearGradient>
+        <linearGradient id={`${id}-leg`} x1="0" x2="1">
+          <stop offset="0" stopColor="#3b4252" />
+          <stop offset=".4" stopColor="#5b6478" />
+          <stop offset="1" stopColor="#222833" />
+        </linearGradient>
+        <radialGradient id={`${id}-shade`}>
+          <stop offset="0" stopColor="#000" stopOpacity=".35" />
+          <stop offset="1" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="0" cy="1" rx="30" ry="6" fill={`url(#${id}-shade)`} />
       <g transform={`scale(${flip} 1)`}>
-        {/* крака */}
-        <rect x="-13" y="-30" width="11" height="30" rx="5" fill="#4b5563" />
-        <rect x="2" y="-30" width="11" height="30" rx="5" fill="#374151" />
+        {/* крачета */}
+        <ellipse cx="-11" cy="-10" rx="9" ry="12" fill={`url(#${id}-leg)`} stroke={ink} strokeWidth="2.5" />
+        <ellipse cx="11" cy="-10" rx="9" ry="12" fill={`url(#${id}-leg)`} stroke={ink} strokeWidth="2.5" />
+        {/* задна ръчичка */}
+        <ellipse cx="-27" cy="-44" rx="8" ry="15" fill={`url(#${id}-limb)`} stroke={ink} strokeWidth="2.5" transform="rotate(25 -27 -44)" />
         {/* тяло */}
-        <rect x="-18" y="-70" width="36" height="44" rx="13" fill={p.color} stroke="rgba(0,0,0,.2)" strokeWidth="2" />
-        {/* задна ръка */}
-        <rect x="-24" y="-66" width="10" height="32" rx="5" fill={p.color} stroke="rgba(0,0,0,.2)" strokeWidth="2" transform="rotate(12 -19 -62)" />
-        {/* хвърляща ръка */}
-        <g className={throwing ? 'climb-arm-throw' : 'climb-arm'} style={{ transformOrigin: '14px -64px' }}>
-          <rect x="9" y="-66" width="10" height="32" rx="5" fill={p.color} stroke="rgba(0,0,0,.2)" strokeWidth="2" />
-          <circle cx="14" cy="-34" r="6" fill="#f2c9a0" />
+        <ellipse cx="0" cy="-40" rx="24" ry="27" fill={`url(#${id}-body)`} stroke={ink} strokeWidth="2.5" />
+        {/* хвърляща ръчичка — върти се от рамото */}
+        <g className={throwing ? 'climb-arm-throw' : 'climb-arm'} style={{ transformOrigin: '20px -56px' }}>
+          <ellipse cx="27" cy="-44" rx="8" ry="15" fill={`url(#${id}-limb)`} stroke={ink} strokeWidth="2.5" transform="rotate(-25 27 -44)" />
         </g>
       </g>
-      {/* глава (аватарът) */}
-      <image href={uri} x="-27" y="-124" width="54" height="54" />
-      {winner && <text x="0" y="-130" textAnchor="middle" fontSize="30" className="climb-crown">👑</text>}
-      {p.shieldArmed && <circle cx="0" cy="-62" r="66" fill="#1cb0f6" fillOpacity=".12" stroke="#1cb0f6" strokeWidth="3" strokeDasharray="8 6" className="climb-shield-idle" />}
-      <g transform={`translate(0 ${winner ? -168 : -138})`}>
+      {/* глава — аватарът без фон */}
+      <image href={uri} x="-48" y="-128" width="96" height="96" />
+      {winner && <text x="0" y="-136" textAnchor="middle" fontSize="28" className="climb-crown">👑</text>}
+      {p.shieldArmed && <circle cx="0" cy="-66" r="72" fill="#1cb0f6" fillOpacity=".12" stroke="#1cb0f6" strokeWidth="3" strokeDasharray="8 6" className="climb-shield-idle" />}
+      <g transform={`translate(0 ${winner ? -168 : -134})`}>
         <rect x={-Math.max(36, p.name.length * 4.4)} y="-14" width={Math.max(72, p.name.length * 8.8)} height="22" rx="11" fill="rgba(255,255,255,.92)" stroke={p.color} strokeWidth="2" />
         <text x="0" y="2" textAnchor="middle" fontSize="12" fontWeight="900" fill="#1f1f1f">
           {p.name.slice(0, 16)}
           {you ? ' (ти)' : ''}
         </text>
+      </g>
       </g>
     </g>
   );
@@ -327,8 +354,8 @@ function Dust({ x, y }: { x: number; y: number }) {
 function ShieldFlash({ x, y, wasted }: { x: number; y: number; wasted?: boolean }) {
   return (
     <g>
-      <circle cx={x} cy={y} r="70" fill="#1cb0f6" fillOpacity=".22" stroke="#1cb0f6" strokeWidth="5" className={wasted ? 'climb-shield-waste' : 'climb-shield-flash'} />
-      <text x={x} y={y - 80} textAnchor="middle" fontSize="15" fontWeight="900" fill="#1899d6" className="climb-pop-text">
+      <circle cx={x} cy={y} r="94" fill="#1cb0f6" fillOpacity=".22" stroke="#1cb0f6" strokeWidth="5" className={wasted ? 'climb-shield-waste' : 'climb-shield-flash'} />
+      <text x={x} y={y - 104} textAnchor="middle" fontSize="15" fontWeight="900" fill="#1899d6" className="climb-pop-text">
         {wasted ? 'Щитът изгоря напразно' : '🛡️ Отбито!'}
       </text>
     </g>

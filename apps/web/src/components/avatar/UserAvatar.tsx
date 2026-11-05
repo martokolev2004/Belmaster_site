@@ -7,7 +7,7 @@ import { sanitizeAvatar, type AvatarConfig, type FrameTier } from '@belmaster/sh
 import { cn } from '@/lib/cn';
 import { EXTRA_SVG, FRAME_SVG } from './extras';
 
-export function avatarSvg(cfg: AvatarConfig, frame: FrameTier = 'none'): string {
+export function avatarSvg(cfg: AvatarConfig, frame: FrameTier = 'none', opts: { noBg?: boolean } = {}): string {
   const svg = createAvatar(adventurer, {
     randomizeIds: true,
     hair: [cfg.hair as never],
@@ -22,11 +22,11 @@ export function avatarSvg(cfg: AvatarConfig, frame: FrameTier = 'none'): string 
     earringsProbability: cfg.earrings === 'none' ? 0 : 100,
     features: cfg.features === 'none' ? [] : [cfg.features as never],
     featuresProbability: cfg.features === 'none' ? 0 : 100,
-    backgroundColor: [cfg.bg],
-    radius: 20,
+    backgroundColor: opts.noBg ? [] : [cfg.bg],
+    radius: opts.noBg ? 0 : 20,
   }).toString();
   const extra = EXTRA_SVG[cfg.extra] ?? '';
-  const fr = FRAME_SVG[frame] ?? '';
+  const fr = opts.noBg ? '' : FRAME_SVG[frame] ?? '';
   return svg.replace(/<\/svg>\s*$/, `${extra}${fr}</svg>`);
 }
 
