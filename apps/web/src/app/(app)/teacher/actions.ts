@@ -15,6 +15,7 @@ import {
   type TeacherQuestion,
 } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
+import { syncAchievements } from '@belmaster/db';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { adminIds, isTeacher, notify, ownClass, questionsOf, computeScores, maxScoreOf } from '@/lib/teacher';
 
@@ -120,6 +121,7 @@ export async function approveMembersAction(classId: string, memberIds: string[] 
   const take = pending.slice(0, free);
   if (take.length) {
     await prisma.classMember.updateMany({ where: { id: { in: take.map((m) => m.id) } }, data: { status: 'APPROVED' } });
+    for (const m of take) await syncAchievements(prisma, m.userId).catch(() => {});
     await notify(take.map((m) => m.userId), { title: `Приет си в клас ${c.name} ✅`, body: 'Тук ще виждаш тестовете от учителя.', href: '/class' });
   }
   revalidatePath(`/teacher/classes/${classId}`);

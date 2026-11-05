@@ -5,6 +5,7 @@ import { isUnlocked, weaponById, weaponKey, WEAPONS } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { diamondsOf, unlockProgress } from '@/lib/avatar';
+import { unlock } from '@/lib/progress';
 
 export async function selectWeaponAction(id: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
@@ -13,6 +14,7 @@ export async function selectWeaponAction(id: string): Promise<{ ok: boolean; err
   if (!w) return { ok: false, error: 'Няма такова оръжие.' };
   if (w.rule && !isUnlocked(w.rule, unlockProgress(user), weaponKey(w.id))) return { ok: false, error: 'Още е заключено.' };
   await prisma.user.update({ where: { id: user.id }, data: { weapon: w.id } });
+  if (!user.isGuest && w.id !== 'stone') await unlock(user.id, ['weapon_change', ...(w.id === 'rocket' ? ['rocket_owner'] : [])]);
   revalidatePath('/climb');
   return { ok: true };
 }
@@ -30,6 +32,7 @@ export async function buyWeaponAction(id: string): Promise<{ ok: boolean; error?
     data: { diamondsSpent: { increment: w.rule.price }, ownedItems: { push: key }, weapon: w.id },
   });
   if (res.count !== 1) return { ok: false, error: 'Опитай пак.' };
+  await unlock(user.id, ['weapon_change', ...(w.id === 'rocket' ? ['rocket_owner'] : [])]);
   revalidatePath('/', 'layout');
   return { ok: true };
 }

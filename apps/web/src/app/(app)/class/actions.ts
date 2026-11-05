@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import type { AnyAnswer } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
+import { syncAchievements } from '@belmaster/db';
 import { getCurrentUser } from '@/lib/auth';
 import { assignmentState, computeScores, deadlineOf, notify, questionsOf } from '@/lib/teacher';
 
@@ -84,6 +85,7 @@ export async function submitAssignmentAction(assignmentId: string, answers: Reco
     where: { id: s.id },
     data: { status: 'SUBMITTED', answers: final as object, autoScores: auto, score, maxScore: max, submittedAt: late ? deadlineOf(r.a, s) : new Date() },
   });
+  await syncAchievements(prisma, r.u.id).catch(() => {});
   revalidatePath(`/class/${assignmentId}`);
   revalidatePath('/class');
   return {};

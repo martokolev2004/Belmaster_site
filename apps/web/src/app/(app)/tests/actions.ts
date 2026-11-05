@@ -16,6 +16,15 @@ export async function checkAnswerAction(questionId: string, answer: Answer): Pro
   return grade(q, answer);
 }
 
+/** Нощна птица / ранобудник — по часа в София. */
+function timeOfDayEvents(): string[] {
+  const [h, m] = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Sofia', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()).split(':').map(Number);
+  const t = h * 60 + m;
+  if (t >= 23 * 60 || t < 4 * 60) return ['night_owl'];
+  if (t >= 5 * 60 && t < 7 * 60 + 30) return ['early_bird'];
+  return [];
+}
+
 export async function finishTestAction(
   kind: TestKind,
   examId: string | null,
@@ -68,7 +77,11 @@ export async function finishTestAction(
   const mistakesCount = await prisma.userMistake.count({ where: { userId: user.id, dueAt: { lte: new Date() }, question: { status: 'ACTIVE', grade: user.grade } } });
   const { user: updated, unlocked } = await awardProgress(user.id, xpEarned, {
     perfect: results.length >= 5 && results.every((r) => r.correct),
-    events: exam && exam.grade >= 5.5 ? ['exam_550'] : [],
+    events: [
+      ...(exam && exam.grade >= 5.5 ? ['exam_550'] : []),
+      ...(exam && exam.maxPoints > 0 && exam.points >= exam.maxPoints ? ['exam_perfect'] : []),
+      ...timeOfDayEvents(),
+    ],
   });
 
   return {

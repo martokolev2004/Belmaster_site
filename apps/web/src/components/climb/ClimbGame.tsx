@@ -125,6 +125,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <li>⬆️ <b>Качи се</b> — +1 стъпало.</li>
             <li>🎯 <b>Хвърли</b> — натисни, когато маркерът е в зеленото. Уцелиш ли, другият пада стъпало. Не уцелиш ли — пада твоето.</li>
             <li>🃏 <b>Жокери</b> — 50/50 и +5 секунди, по веднъж за игра.</li>
+            <li>⛳ Ако другият е на земята, няма какво да целиш — направо се качваш.</li>
             <li>🛡️ <b>Щит</b> — веднъж за игра. Вдигни го, ако мислиш, че другият ще те цели — ударът се връща към него.</li>
             <li>🧗 Колкото по-високо си, толкова по-тясна е зелената зона.</li>
             <li>🏁 Пръв до 10 стъпала, или по-високият след {CLIMB.MAX_QUESTIONS} въпроса.</li>
@@ -436,6 +437,8 @@ function RevealPanel({ state }: { state: ClimbState }) {
   const r = state.reveal!;
   const actor = state.players.find((p) => p.uid === r.actorUid);
   const mine = r.results.find((x) => x.uid === state.you);
+  // другият е на земята — няма избор, направо стъпало
+  const autoClimb = !!actor && state.players.find((p) => p.uid !== actor.uid)?.height === 0;
   useEffect(() => play(mine?.correct ? 'correct' : 'wrong'), [mine?.correct]);
   return (
     <div className="card3d rounded-2xl bg-surface p-4">
@@ -443,7 +446,7 @@ function RevealPanel({ state }: { state: ClimbState }) {
       {r.correctIndex != null && <p className="text-sm font-bold">Верният отговор: {LETTERS[r.correctIndex]}</p>}
       {r.correctText && <p className="text-sm font-bold">Верният отговор: {r.correctText}</p>}
       <p className="mt-2 rounded-xl bg-surface-2 p-2 text-center font-extrabold">
-        {actor ? (actor.uid === state.you ? '⚡ Ти си най-бърз — ти избираш!' : `⚡ ${actor.name} е по-бърз и избира.`) : 'Никой не позна — следващ въпрос.'}
+        {actor ? (autoClimb ? (actor.uid === state.you ? '⚡ Ти си най-бърз — качваш се стъпало!' : `⚡ ${actor.name} е по-бърз и се качва.`) : actor.uid === state.you ? '⚡ Ти си най-бърз — ти избираш!' : `⚡ ${actor.name} е по-бърз и избира.`) : 'Никой не позна — следващ въпрос.'}
       </p>
     </div>
   );

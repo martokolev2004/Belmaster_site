@@ -46,14 +46,20 @@ export type AchievementIcon =
 /** Броячите, по които се отключват постиженията. */
 export type AchievementMetric =
   | 'tests' | 'correct' | 'exams' | 'mistakesCleared' | 'bestStreak' | 'level' | 'friends'
-  | 'battleGames' | 'battleWins' | 'climbGames' | 'climbWins';
+  | 'battleGames' | 'battleWins' | 'climbGames' | 'climbWins'
+  | 'xp' | 'langCorrect' | 'litCorrect' | 'readCorrect' | 'spellingCorrect' | 'punctCorrect' | 'worksTouched'
+  | 'perfectTests' | 'examsDistinct' | 'items' | 'leagueWeeks' | 'leagueTierMax' | 'assignments' | 'classJoined';
 
-export type AchievementCategory = 'learn' | 'streak' | 'battle' | 'climb' | 'social';
+export type AchievementCategory = 'learn' | 'topics' | 'streak' | 'battle' | 'climb' | 'league' | 'collect' | 'class' | 'social';
 export const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, string> = {
   learn: 'Учене',
-  streak: 'Серии и нива',
+  topics: 'Теми и произведения',
+  streak: 'Серии, нива и опит',
   battle: 'Битка за картата',
   climb: 'Към върха',
+  league: 'Седмична лига',
+  collect: 'Колекция',
+  class: 'Моят клас',
   social: 'Приятели',
 };
 
@@ -115,6 +121,54 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   A('climb_sniper', 'Снайперист', 'Уцели 3 пъти в една игра', 'target', 'climb'),
   A('climb_flawless', 'Без драскотина', 'Спечели, без да паднеш нито веднъж', 'zap', 'climb'),
   A('climb_comeback', 'Обрат', 'Спечели, след като си бил с 3 стъпала назад', 'rocket', 'climb'),
+  // още за ученето
+  A('perfect_5', 'Безгрешен', '5 теста без нито една грешка', 'check', 'learn', 'perfectTests', 5),
+  A('perfect_25', 'Перфекционист', '25 теста без нито една грешка', 'check', 'learn', 'perfectTests', 25),
+  A('exam_perfect', 'Пълен ключ', 'Всички точки на пробна матура', 'graduation', 'learn'),
+  A('exam_all', 'Всички матури', 'Реши 8 различни матури', 'scroll', 'learn', 'examsDistinct', 8),
+  A('night_owl', 'Нощна птица', 'Реши тест между 23:00 и 4:00', 'star', 'learn'),
+  A('early_bird', 'Ранобудник', 'Реши тест между 5:00 и 7:30', 'star', 'learn'),
+  // теми и произведения
+  A('lang_100', 'Езиковед', '100 верни по език', 'brain', 'topics', 'langCorrect', 100),
+  A('lang_500', 'Граматик', '500 верни по език', 'brain', 'topics', 'langCorrect', 500),
+  A('lit_100', 'Литератор', '100 верни по литература', 'book', 'topics', 'litCorrect', 100),
+  A('lit_500', 'Литературовед', '500 верни по литература', 'book', 'topics', 'litCorrect', 500),
+  A('read_50', 'Внимателен читател', '50 верни на четене с разбиране', 'scroll', 'topics', 'readCorrect', 50),
+  A('spelling_100', 'Правописник', '100 верни по правопис', 'check', 'topics', 'spellingCorrect', 100),
+  A('punct_50', 'Запетайко', '50 верни по пунктуация', 'check', 'topics', 'punctCorrect', 50),
+  A('works_10', 'Начетен', 'Отговори на въпроси за 10 различни произведения', 'book', 'topics', 'worksTouched', 10),
+  A('works_20', 'Познавач', 'Отговори на въпроси за 20 различни произведения', 'book', 'topics', 'worksTouched', 20),
+  // опит
+  A('xp_10k', '10 000 XP', 'Събери 10 000 XP', 'zap', 'streak', 'xp', 10000),
+  A('xp_50k', '50 000 XP', 'Събери 50 000 XP', 'zap', 'streak', 'xp', 50000),
+  A('xp_100k', '100 000 XP', 'Събери 100 000 XP', 'gem', 'streak', 'xp', 100000),
+  // още за битките
+  A('battle_4p_win', 'Крал на четирима', 'Спечели битка с 4 играчи', 'crown', 'battle'),
+  A('battle_flawless', 'Безупречна битка', 'Всички отговори верни в битка (поне 8)', 'check', 'battle'),
+  A('lightning', 'Светкавица', 'Верен отговор за под 3 секунди в игра', 'zap', 'battle'),
+  // още за „Към върха“
+  A('climb_high_sniper', 'Орлово око', 'Уцели от 8-о стъпало нагоре', 'target', 'climb'),
+  A('climb_shield_wasted', 'Напразно', 'Вдигни щит, а другият да се качи', 'shield', 'climb'),
+  A('climb_rocket_win', 'Ракетна победа', 'Спечели с ракетата', 'rocket', 'climb'),
+  // лига
+  A('league_join', 'В лигата', 'Влез в седмичната лига', 'trophy', 'league', 'leagueWeeks', 1),
+  A('league_weeks_10', 'Редовен', 'Участвай в лигата 10 седмици', 'medal', 'league', 'leagueWeeks', 10),
+  A('league_up', 'Нагоре!', 'Качи се в по-горна лига', 'rocket', 'league'),
+  A('league_first', 'Шампион на седмицата', 'Завърши седмица на 1-во място в групата', 'crown', 'league'),
+  A('league_gold', 'Златна лига', 'Стигни лига Злато', 'medal', 'league', 'leagueTierMax', 2),
+  A('league_ruby', 'Рубинена лига', 'Стигни лига Рубин', 'gem', 'league', 'leagueTierMax', 4),
+  A('league_diamond', 'Диамантена лига', 'Стигни най-високата лига', 'gem', 'league', 'leagueTierMax', 9),
+  // колекция
+  A('avatar_custom', 'Стилист', 'Запази свой аватар', 'star', 'collect'),
+  A('items_1', 'Първа покупка', 'Купи нещо с диаманти', 'gem', 'collect', 'items', 1),
+  A('items_5', 'Колекционер', 'Купи 5 неща с диаманти', 'gem', 'collect', 'items', 5),
+  A('items_15', 'Модна икона', 'Купи 15 неща с диаманти', 'gem', 'collect', 'items', 15),
+  A('weapon_change', 'Ново оръжие', 'Смени камъка с друго оръжие', 'target', 'collect'),
+  A('rocket_owner', 'Ракетчик', 'Купи ракетата', 'rocket', 'collect'),
+  // клас
+  A('class_join', 'Съученик', 'Влез в клас при учител', 'users', 'class', 'classJoined', 1),
+  A('assign_1', 'Първо контролно', 'Предай тест от учителя', 'scroll', 'class', 'assignments', 1),
+  A('assign_10', 'Отговорен ученик', 'Предай 10 теста от учителя', 'scroll', 'class', 'assignments', 10),
   // приятели
   A('friends_3', 'Дружина', 'Имай 3 приятели', 'users', 'social', 'friends', 3),
   A('friends_10', 'Компания', 'Имай 10 приятели', 'users', 'social', 'friends', 10),

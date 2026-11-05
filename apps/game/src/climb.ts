@@ -35,7 +35,7 @@ const COLORS = ['#ff4b4b', '#1cb0f6'];
 const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 
 interface P extends Omit<ClimbPlayer, 'shieldArmed'> {
-  stats: { hits: number; falls: number; reflects: number; maxBehind: number };
+  stats: { hits: number; falls: number; reflects: number; maxBehind: number; highHit: boolean; shieldWasted: boolean };
   removed: Map<string, number[]>;
   shieldArmed: boolean;
   sockets: Set<string>;
@@ -116,7 +116,7 @@ export class ClimbRoom {
       answered: 0,
       ready: !!u.isBot,
       jokers: { fifty: true, time: true },
-      stats: { hits: 0, falls: 0, reflects: 0, maxBehind: 0 },
+      stats: { hits: 0, falls: 0, reflects: 0, maxBehind: 0, highHit: false, shieldWasted: false },
       removed: new Map(),
       sockets: new Set(),
       dropTimer: null,
@@ -313,6 +313,15 @@ export class ClimbRoom {
   }
 
   private beginChoose(uid: string) {
+    // другият е на земята — няма какво да се цели: направо стъпало (щитът му не изгаря)
+    const target = this.other(uid);
+    if (target && target.height === 0) {
+      const p = this.players.get(uid)!;
+      this.actorUid = uid;
+      p.height = Math.min(CLIMB.STEPS, p.height + 1);
+      this.pushLog(`${p.name} се качи на стъпало ${p.height} (${target.name} е на земята).`);
+      return this.resolveOutcome([{ kind: 'climb', actorUid: uid }]);
+    }
     this.phase = 'choose';
     this.actorUid = uid;
     this.deadline = Date.now() + CLIMB.CHOOSE_MS;
@@ -345,6 +354,7 @@ export class ClimbRoom {
       const outcomes: ClimbOutcome[] = [{ kind: 'climb', actorUid: uid }];
       if (target.shieldArmed) {
         target.shieldArmed = false;
+        target.stats.shieldWasted = true;
         outcomes.push({ kind: 'shield_wasted', actorUid: uid, targetUid: target.uid });
       }
       const p = this.players.get(uid)!;
@@ -391,6 +401,7 @@ export class ClimbRoom {
       out = { kind: 'hit', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, targetAtGround: target.height === 0 };
       if (target.height > 0) target.stats.falls++;
       actor.stats.hits++;
+      if (actor.height >= 8) actor.stats.highHit = true;
       target.height = Math.max(0, target.height - 1);
       this.pushLog(`🎯 ${actor.name} уцели! ${target.name} пада на стъпало ${target.height}.`);
       if (target.isBot) this.botSay(Math.random() < 0.5 ? 'oops' : 'wow', 0.6, 1600);
@@ -671,6 +682,10 @@ async function persistClimb(room: ClimbRoom) {
       ...(p.stats.hits >= 3 ? ['climb_sniper'] : []),
       ...(won && p.stats.falls === 0 ? ['climb_flawless'] : []),
       ...(won && p.stats.maxBehind >= 3 ? ['climb_comeback'] : []),
+      ...(p.stats.highHit ? ['climb_high_sniper'] : []),
+      ...(p.stats.shieldWasted ? ['climb_shield_wasted'] : []),
+      ...(won && p.weapon === 'rocket' ? ['climb_rocket_win'] : []),
+      ...(room.review.some((r) => r.results.some((x) => x.uid === p.uid && x.correct && x.timeMs != null && x.timeMs < 3000)) ? ['lightning'] : []),
     ];
     await awardXp(p.uid, xp, events).catch((e) => console.error('[climb] xp', e));
   }

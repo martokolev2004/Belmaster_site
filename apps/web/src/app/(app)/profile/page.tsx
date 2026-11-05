@@ -96,6 +96,51 @@ export default async function ProfilePage() {
         </p>
       </Card>
 
+      <section className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <h2 className="mb-4 text-lg font-black">Профил</h2>
+          <ProfileForm displayName={user.displayName} avatarColor={user.avatarColor} />
+        </Card>
+        <div className="space-y-6">
+          <Card>
+            <h2 className="mb-4 text-lg font-black">Тема</h2>
+            <ThemePicker current={theme === 'light' || theme === 'dark' ? theme : 'system'} />
+          </Card>
+          {!user.isGuest && (
+            <Card>
+              <h2 className="mb-4 text-lg font-black">Парола</h2>
+              <PasswordForm hasPassword={!!user.passwordHash} />
+            </Card>
+          )}
+        </div>
+      </section>
+
+      <form action={logoutAction}>
+        <button className="inline-flex items-center gap-2 font-extrabold uppercase text-error">
+          <LogOut className="size-5" /> Изход
+        </button>
+      </form>
+
+      <section>
+        <h2 className="mb-3 text-xl font-black">История на битките</h2>
+        {matches.length === 0 ? (
+          <p className="text-muted">Още няма изиграни битки.</p>
+        ) : (
+          <ul className="card3d divide-y-2 divide-line rounded-2xl bg-surface">
+            {matches.map((m) => (
+              <li key={m.id}>
+                <Link href={`/match/${m.matchId}`} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2">
+                  <span className="font-bold">
+                    {m.match.mode === 'CLIMB' ? '⛰️ ' : ''}{m.place === 1 ? '🏆 Победа' : `${m.place}. място`} · {m.match.mode === 'CLIMB' ? `стъпало ${m.territories}` : `${m.territories} области`} · {m.correct}/{m.answered} верни
+                  </span>
+                  <span className="text-sm text-muted">{m.match.endedAt.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia' })}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section>
         <h2 className="mb-1 text-xl font-black">Постижения</h2>
         <p className="mb-3 text-sm text-muted">
@@ -134,50 +179,6 @@ export default async function ProfilePage() {
         ))}
       </section>
 
-      <section>
-        <h2 className="mb-3 text-xl font-black">История на битките</h2>
-        {matches.length === 0 ? (
-          <p className="text-muted">Още няма изиграни битки.</p>
-        ) : (
-          <ul className="card3d divide-y-2 divide-line rounded-2xl bg-surface">
-            {matches.map((m) => (
-              <li key={m.id}>
-                <Link href={`/match/${m.matchId}`} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2">
-                  <span className="font-bold">
-                    {m.match.mode === 'CLIMB' ? '⛰️ ' : ''}{m.place === 1 ? '🏆 Победа' : `${m.place}. място`} · {m.match.mode === 'CLIMB' ? `стъпало ${m.territories}` : `${m.territories} области`} · {m.correct}/{m.answered} верни
-                  </span>
-                  <span className="text-sm text-muted">{m.match.endedAt.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia' })}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <h2 className="mb-4 text-lg font-black">Профил</h2>
-          <ProfileForm displayName={user.displayName} avatarColor={user.avatarColor} />
-        </Card>
-        <div className="space-y-6">
-          <Card>
-            <h2 className="mb-4 text-lg font-black">Тема</h2>
-            <ThemePicker current={theme === 'light' || theme === 'dark' ? theme : 'system'} />
-          </Card>
-          {!user.isGuest && (
-            <Card>
-              <h2 className="mb-4 text-lg font-black">Парола</h2>
-              <PasswordForm hasPassword={!!user.passwordHash} />
-            </Card>
-          )}
-        </div>
-      </section>
-
-      <form action={logoutAction}>
-        <button className="inline-flex items-center gap-2 font-extrabold uppercase text-error">
-          <LogOut className="size-5" /> Изход
-        </button>
-      </form>
     </div>
   );
 }

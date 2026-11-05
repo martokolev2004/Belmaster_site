@@ -107,6 +107,9 @@ export async function persistMatch(room: Room) {
     const codes = ['first_battle'];
     if (s.place === 1 && humans.length + (room.vsBot ? 1 : 0) >= 2) codes.push('first_win');
     if (p?.capturedCapital) codes.push('capital_taker');
+    if (s.place === 1 && standings.length >= 4) codes.push('battle_4p_win');
+    if (s.answered >= 8 && s.correct === s.answered) codes.push('battle_flawless');
+    if (room.review.some((r) => r.results.some((x) => x.uid === s.uid && x.correct && x.timeMs != null && x.timeMs < 3000))) codes.push('lightning');
     const xp = XP_MATCH_PLAY + (s.place === 1 ? XP_MATCH_WIN : 0) + s.correct * 10;
     await awardXp(s.uid, xp, codes).catch((e) => console.error('[persist] xp', e));
   }

@@ -5,6 +5,7 @@ import { lockedItems, sanitizeAvatar } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { diamondsOf, unlockProgress } from '@/lib/avatar';
+import { unlock } from '@/lib/progress';
 
 export async function saveAvatarAction(config: unknown): Promise<{ ok: boolean }> {
   const user = await getCurrentUser();
@@ -12,6 +13,7 @@ export async function saveAvatarAction(config: unknown): Promise<{ ok: boolean }
   // заключените части, които не са отключени, се махат на сървъра
   const clean = sanitizeAvatar(config, unlockProgress(user), user.id);
   await prisma.user.update({ where: { id: user.id }, data: { avatar: clean } });
+  if (!user.isGuest) await unlock(user.id, ['avatar_custom']);
   revalidatePath('/', 'layout');
   return { ok: true };
 }
@@ -37,6 +39,7 @@ export async function buyItemAction(key: string): Promise<{ ok: boolean; error?:
     },
   });
   if (res.count !== 1) return { ok: false, error: 'Опитай пак.' };
+  await unlock(user.id);
   revalidatePath('/', 'layout');
   return { ok: true, diamonds: diamondsOf({ xp: user.xp, diamondsSpent: user.diamondsSpent + price }) };
 }
