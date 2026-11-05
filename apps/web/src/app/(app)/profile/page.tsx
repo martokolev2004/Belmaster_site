@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { cookies } from 'next/headers';
-import { ACHIEVEMENTS, currentSeason, gradeLabel, levelProgress } from '@belmaster/shared';
-import { Award, BookOpen, Castle, Crown, Flame, LogOut, Star, Swords, Users } from 'lucide-react';
+import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, currentSeason, gradeLabel, levelProgress, type AchievementCategory, type AchievementIcon } from '@belmaster/shared';
+import { achievementMetrics } from '@belmaster/db';
+import { Award, BookOpen, Brain, Castle, CheckCircle2, Crown, Flame, Gem, GraduationCap, LogOut, Medal, Mountain, Rocket, ScrollText, Shield, Star, Swords, Target, Trophy, Users, Zap } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { diamondsOf } from '@/lib/avatar';
@@ -13,15 +14,16 @@ import { PasswordForm, ProfileForm, ThemePicker } from './ProfileForms';
 
 export const metadata = { title: 'Профил' };
 
-const ICONS = { star: Star, flame: Flame, award: Award, swords: Swords, crown: Crown, castle: Castle, book: BookOpen, users: Users };
+const ICONS: Record<AchievementIcon, typeof Star> = { star: Star, flame: Flame, award: Award, swords: Swords, crown: Crown, castle: Castle, book: BookOpen, users: Users, target: Target, shield: Shield, mountain: Mountain, trophy: Trophy, brain: Brain, graduation: GraduationCap, zap: Zap, medal: Medal, scroll: ScrollText, check: CheckCircle2, gem: Gem, rocket: Rocket };
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [achievements, attempts, rating, matches] = await Promise.all([
+  const [achievements, attempts, rating, matches, metrics] = await Promise.all([
     prisma.userAchievement.findMany({ where: { userId: user.id } }),
     prisma.quizAttempt.aggregate({ where: { userId: user.id }, _count: true, _sum: { score: true, total: true } }),
     prisma.playerRating.findUnique({ where: { userId_grade_season: { userId: user.id, grade: user.grade!, season: currentSeason() } } }),
     prisma.matchPlayer.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { endedAt: 'desc' } }, take: 10 }),
+    achievementMetrics(prisma, user.id),
   ]);
   const unlocked = new Set(achievements.map((a) => a.code));
   const lp = levelProgress(user.xp, user.level);
@@ -95,22 +97,41 @@ export default async function ProfilePage() {
       </Card>
 
       <section>
-        <h2 className="mb-3 text-xl font-black">Постижения</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {ACHIEVEMENTS.map((a) => {
-            const Icon = ICONS[a.icon];
-            const on = unlocked.has(a.code);
-            return (
-              <div key={a.code} className={cn('card3d rounded-2xl bg-surface p-4 text-center', !on && 'opacity-45 grayscale')}>
-                <span className={cn('mx-auto mb-2 flex size-12 items-center justify-center rounded-full', on ? 'bg-accent text-[#4b3b00]' : 'bg-surface-2 text-muted')}>
-                  <Icon className="size-6" />
-                </span>
-                <p className="font-extrabold text-ink-strong">{a.name}</p>
-                <p className="text-xs text-muted">{a.description}</p>
-              </div>
-            );
-          })}
-        </div>
+        <h2 className="mb-1 text-xl font-black">Постижения</h2>
+        <p className="mb-3 text-sm text-muted">
+          {unlocked.size} от {ACHIEVEMENTS.length} отключени
+        </p>
+        {(Object.keys(ACHIEVEMENT_CATEGORIES) as AchievementCategory[]).map((cat) => (
+          <div key={cat} className="mb-5">
+            <h3 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-muted">{ACHIEVEMENT_CATEGORIES[cat]}</h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {ACHIEVEMENTS.filter((a) => a.category === cat).map((a) => {
+                const Icon = ICONS[a.icon];
+                const on = unlocked.has(a.code);
+                const cur = a.metric ? Math.min(metrics[a.metric], a.goal ?? 0) : 0;
+                return (
+                  <div key={a.code} className={cn('card3d rounded-2xl bg-surface p-3 text-center', !on && 'opacity-60')}>
+                    <span className={cn('mx-auto mb-1.5 flex size-11 items-center justify-center rounded-full', on ? 'bg-accent text-[#4b3b00]' : 'bg-surface-2 text-muted grayscale')}>
+                      <Icon className="size-5" />
+                    </span>
+                    <p className="text-sm font-extrabold leading-tight text-ink-strong">{a.name}</p>
+                    <p className="text-[11px] leading-tight text-muted">{a.description}</p>
+                    {!on && a.metric && a.goal && a.goal > 1 && (
+                      <div className="mt-2">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                          <div className="h-full rounded-full bg-secondary" style={{ width: `${(cur / a.goal) * 100}%` }} />
+                        </div>
+                        <p className="mt-0.5 text-[10px] font-bold text-muted">
+                          {cur}/{a.goal}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section>

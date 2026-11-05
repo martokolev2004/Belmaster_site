@@ -3,6 +3,7 @@ import { TOPIC_LABELS } from '@belmaster/shared';
 import { BookOpen, ChevronRight, FileText, Languages, ScrollText } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { mistakesSummary } from '@/lib/quiz';
 import { PageHeader } from '@/components/ui';
 
 export const metadata = { title: 'Тестове' };
@@ -10,7 +11,8 @@ export const metadata = { title: 'Тестове' };
 export default async function TestsPage() {
   const user = await requireUser();
   const grade = user.grade!;
-  const mistakes = await prisma.userMistake.count({ where: { userId: user.id, question: { status: 'ACTIVE', grade } } });
+  const ms = await mistakesSummary(user.id, grade);
+  const mistakes = ms.due;
 
   return (
     <div>
@@ -20,7 +22,7 @@ export default async function TestsPage() {
           <span className="text-3xl">🔁</span>
           <span className="flex-1">
             <span className="block font-extrabold text-ink-strong">Моите грешки</span>
-            <span className="block text-sm text-muted">{mistakes ? `${mistakes} въпроса за преговор` : 'Няма грешки за преговор'}</span>
+            <span className="block text-sm text-muted">{mistakes ? `${mistakes} въпроса за преговор днес` : ms.later ? `Следващ преговор: ${ms.nextAt?.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia', day: 'numeric', month: 'long' })} (${ms.later} чакат)` : 'Няма грешки за преговор'}</span>
           </span>
         </Link>
         <Link href="/stats" className="card3d flex items-center gap-3 rounded-2xl bg-surface p-4">

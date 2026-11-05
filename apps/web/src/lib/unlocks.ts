@@ -9,6 +9,8 @@ export interface Celebration {
   fromLevel: number;
   toLevel: number;
   items: { part: string; value: string; key: string }[];
+  /** нови постижения (кодове) */
+  achievements: string[];
 }
 
 /** Има ли ново ниво / нови части, за които още не е показана анимацията. */
@@ -23,16 +25,19 @@ export async function pendingCelebration(user: User): Promise<Celebration | null
   }
   const announced = new Set(user.announcedItems);
   const fresh = unlocked.filter((k) => !announced.has(k));
-  if (level <= user.announcedLevel && !fresh.length) return null;
+  const ach = await prisma.userAchievement.findMany({ where: { userId: user.id, seen: false }, orderBy: { unlockedAt: 'asc' }, select: { code: true } });
+  if (level <= user.announcedLevel && !fresh.length && !ach.length) return null;
   const byKey = new Map(lockedItems().map((i) => [i.key, i]));
   return {
     fromLevel: user.announcedLevel,
     toLevel: Math.max(level, user.announcedLevel),
     items: fresh.map((k) => byKey.get(k)!).filter(Boolean).map(({ part, value, key }) => ({ part, value, key })),
+    achievements: ach.map((a) => a.code),
   };
 }
 
 export async function ackCelebration(user: User) {
+  await prisma.userAchievement.updateMany({ where: { userId: user.id, seen: false }, data: { seen: true } });
   const level = nextLevel(user.level, user.xp);
   const unlocked = unlockedKeys(unlockProgress(user, { includeWorn: false }));
   await prisma.user.update({

@@ -114,10 +114,10 @@ export function grade(q: Question, a: Answer | undefined): QuestionResult {
   };
 }
 
-/** Тест от „Моите грешки“: до 10 случайни въпроса, на които ученикът е сгрешил. */
+/** Тест от „Моите грешки“: до 10 въпроса, на които им е дошло времето за преговор. */
 export async function buildMistakesTest(userId: string, grade: Grade): Promise<{ questions: ClientQuestion[]; passages: ClientPassage[] }> {
   const rows = await prisma.userMistake.findMany({
-    where: { userId, question: { status: 'ACTIVE', grade } },
+    where: { userId, dueAt: { lte: new Date() }, question: { status: 'ACTIVE', grade } },
     select: { questionId: true },
   });
   const ids = shuffle(rows.map((r) => r.questionId)).slice(0, TEST_SIZE);
@@ -127,4 +127,15 @@ export async function buildMistakesTest(userId: string, grade: Grade): Promise<{
   // въпросите към един текст — един след друг
   qs.sort((a, b) => (a.passageId ?? '').localeCompare(b.passageId ?? ''));
   return { questions: qs.map((q) => toClient(q)), passages: [...passages.values()] };
+}
+
+/** Колко грешки чакат преговор днес и кога е следващият. */
+export async function mistakesSummary(userId: string, grade: Grade) {
+  const base = { userId, question: { status: 'ACTIVE' as const, grade } };
+  const [due, total, next] = await Promise.all([
+    prisma.userMistake.count({ where: { ...base, dueAt: { lte: new Date() } } }),
+    prisma.userMistake.count({ where: base }),
+    prisma.userMistake.findFirst({ where: { ...base, dueAt: { gt: new Date() } }, orderBy: { dueAt: 'asc' }, select: { dueAt: true } }),
+  ]);
+  return { due, later: total - due, nextAt: next?.dueAt ?? null };
 }

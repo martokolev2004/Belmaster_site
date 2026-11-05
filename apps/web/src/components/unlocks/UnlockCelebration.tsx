@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { itemsForLevel, sanitizeAvatar, type AvatarPart } from '@belmaster/shared';
+import { ACHIEVEMENTS, itemsForLevel, sanitizeAvatar, type AvatarPart } from '@belmaster/shared';
 import { UserAvatar } from '@/components/avatar/UserAvatar';
 import { itemTitle } from '@/components/avatar/labels';
 import { Confetti } from '@/components/game/BattleExtras';
@@ -42,7 +42,7 @@ export function UnlockCelebration({ avatar, seed }: { avatar: unknown; seed: str
       const c = await checkCelebrationAction();
       if (c) {
         setData(c);
-        play(c.toLevel > c.fromLevel ? 'levelup' : 'unlock');
+        play(c.toLevel > c.fromLevel || c.achievements.length ? 'levelup' : 'unlock');
         if (c.items.length) setTimeout(() => play('unlock'), 1100);
       }
     } catch {
@@ -75,7 +75,7 @@ export function UnlockCelebration({ avatar, seed }: { avatar: unknown; seed: str
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal>
-      {levelUp && <Confetti />}
+      {(levelUp || data.achievements.length > 0) && <Confetti />}
       <div className="animate-pop relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-3xl bg-surface p-6 text-center shadow-2xl">
         {levelUp ? (
           <>
@@ -85,8 +85,29 @@ export function UnlockCelebration({ avatar, seed }: { avatar: unknown; seed: str
             <h2 className="mt-4 text-3xl font-black">Ниво {data.toLevel}!</h2>
             <p className="mt-1 text-muted">Браво! Продължавай така.</p>
           </>
-        ) : (
+        ) : data.items.length ? (
           <h2 className="text-2xl font-black">Отключи нещо ново!</h2>
+        ) : (
+          <h2 className="text-2xl font-black">{data.achievements.length > 1 ? 'Нови постижения!' : 'Ново постижение!'}</h2>
+        )}
+
+        {data.achievements.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {data.achievements.slice(0, 6).map((code, i) => {
+              const a = ACHIEVEMENTS.find((x) => x.code === code);
+              if (!a) return null;
+              return (
+                <div key={code} className="animate-rise flex items-center gap-3 rounded-2xl bg-accent/15 px-3 py-2 text-left" style={{ animationDelay: `${0.2 + i * 0.25}s` }}>
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-xl">🏅</span>
+                  <span>
+                    <span className="block font-extrabold text-ink-strong">{a.name}</span>
+                    <span className="block text-xs text-muted">{a.description}</span>
+                  </span>
+                </div>
+              );
+            })}
+            {data.achievements.length > 6 && <p className="text-xs font-bold text-muted">и още {data.achievements.length - 6} — виж ги в профила</p>}
+          </div>
         )}
 
         {data.items.length > 0 && (

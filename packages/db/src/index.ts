@@ -10,3 +10,5 @@ export const prisma: PrismaClient =
   globalForPrisma.__bmPrisma ?? new PrismaClient({ log: ['warn', 'error'] });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.__bmPrisma = prisma;
+export * from "./achievements";
+export * from "./league";

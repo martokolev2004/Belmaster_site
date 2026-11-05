@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowUp, Bot, Check, Copy, Gem, Lock, LogOut, Shield, Target, Users, Zap } from 'lucide-react';
+import { ArrowUp, Bot, Check, Copy, Gem, Lock, LogOut, MessageCircle, Shield, Target, Users, Zap } from 'lucide-react';
 import {
   CLIMB,
+  CLIMB_CHAT,
   aimMarker,
   ruleText,
   weaponById,
@@ -33,7 +34,7 @@ export interface WeaponView {
 }
 
 export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: WeaponView[]; selected: string; diamonds: number; isGuest: boolean }) {
-  const { socket, connected, state, offset, quick, error, clearError } = useClimb();
+  const { socket, connected, state, offset, quick, error, clearError, chat } = useClimb();
   const params = useSearchParams();
   const joined = useRef(false);
 
@@ -60,7 +61,7 @@ export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: W
       ) : state.phase === 'lobby' ? (
         <Lobby socket={socket} state={state} />
       ) : (
-        <Match socket={socket} state={state} offset={offset} />
+        <Match socket={socket} state={state} offset={offset} chat={chat} />
       )}
     </div>
   );
@@ -251,7 +252,8 @@ function Lobby({ socket, state }: { socket: ClimbSocket; state: ClimbState }) {
 }
 
 // ───────────── игра ─────────────
-function Match({ socket, state, offset }: { socket: ClimbSocket; state: ClimbState; offset: number }) {
+function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: ClimbState; offset: number; chat: { uid: string; key: string; at: number }[] }) {
+  const [chatOpen, setChatOpen] = useState(false);
   const me = state.players.find((p) => p.uid === state.you)!;
   const other = state.players.find((p) => p.uid !== state.you);
   const left = useLeft(state.phase === 'question' && state.question ? state.question.myDeadline : state.deadline, offset);
@@ -268,7 +270,28 @@ function Match({ socket, state, offset }: { socket: ClimbSocket; state: ClimbSta
         <span className="font-extrabold text-ink-strong phone-landscape:text-sm">
           ⛰️ Към върха · въпрос {Math.max(1, state.questionNo)}/{state.maxQuestions}
         </span>
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
+          {state.phase !== 'lobby' ? (
+            <button onClick={() => setChatOpen((o) => !o)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-ink" aria-label="Бързи съобщения">
+              <MessageCircle className="size-4" /> Чат
+            </button>
+          ) : null}
+          {chatOpen && (
+            <div className="absolute right-0 top-8 z-50 grid w-64 grid-cols-2 gap-1.5 rounded-2xl border-2 border-line bg-surface p-2 shadow-xl">
+              {CLIMB_CHAT.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => {
+                    socket.emit('climb:chat', { key: m.key });
+                    setChatOpen(false);
+                  }}
+                  className="rounded-xl bg-surface-2 px-2 py-1.5 text-left text-sm font-bold hover:bg-line"
+                >
+                  {m.text}
+                </button>
+              ))}
+            </div>
+          )}
           <SoundToggle />
           {state.phase !== 'finished' ? (
             <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
@@ -280,7 +303,7 @@ function Match({ socket, state, offset }: { socket: ClimbSocket; state: ClimbSta
 
       <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:grid-cols-[1.1fr_1fr] phone-landscape:gap-2">
         <div className="card3d overflow-hidden rounded-2xl bg-surface phone-landscape:min-h-0">
-          <ClimbScene state={state} />
+          <ClimbScene state={state} chat={chat} />
           {other && (
             <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-muted phone-landscape:hidden">
               <span>
@@ -397,7 +420,7 @@ function QuestionPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
           disabled={sent || !me.jokers.time}
           onClick={() => socket.emit('climb:joker', { kind: 'time' })}
           title="+5 секунди за теб (веднъж за игра)"
-          className="rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
+          className="whitespace-nowrap rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
         >
           +5 с
         </button>

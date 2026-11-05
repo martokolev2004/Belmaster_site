@@ -234,3 +234,5 @@
 @keyframes climb-cloud { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
 .climb-crown { animation: pop .5s ease-out; }
 .climb-twinkle { animation: pulse-ring 2.4s ease-in-out infinite; }
+.climb-bubble { animation: climb-bubble 2.6s ease-out forwards; }
+@keyframes climb-bubble { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }

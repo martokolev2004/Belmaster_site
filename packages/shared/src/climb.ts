@@ -189,3 +189,19 @@ export interface ClimbServerToClient {
 }
 
 export const CLIMB_JOKER_TIME_MS = 5_000;
+
+/** Бързи съобщения в „Към върха“ (без свободен текст). */
+export const CLIMB_CHAT: { key: string; text: string }[] = [
+  { key: 'hi', text: '👋 Здравей!' },
+  { key: 'gl', text: '🍀 Успех!' },
+  { key: 'bravo', text: '👏 Браво!' },
+  { key: 'wow', text: '😮 Уау!' },
+  { key: 'oops', text: '😅 Ох!' },
+  { key: 'think', text: '🤔 Труден въпрос…' },
+  { key: 'target', text: '🎯 Идвам за теб!' },
+  { key: 'shield', text: '🛡️ Внимавай!' },
+  { key: 'top', text: '⛰️ Чакам те горе!' },
+  { key: 'laugh', text: '😂' },
+  { key: 'gg', text: '🤝 Добра игра!' },
+  { key: 'again', text: '🔁 Още една?' },
+];

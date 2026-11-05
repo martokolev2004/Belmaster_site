@@ -42,6 +42,13 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Класация" subtitle={gradeLabel(grade)} />
+      <Link href="/league" className="card3d mb-4 flex items-center gap-3 rounded-2xl bg-surface p-4 hover:bg-surface-2">
+        <span className="text-3xl">🏆</span>
+        <span className="flex-1">
+          <span className="block font-extrabold text-ink-strong">Седмична лига</span>
+          <span className="block text-sm text-muted">Състезавай се с XP срещу 20 ученици — първите 5 се качват.</span>
+        </span>
+      </Link>
       <div className="mb-4 grid grid-cols-3 rounded-2xl bg-surface-2 p-1">
         {[
           { t: 'rating', label: 'Битки' },

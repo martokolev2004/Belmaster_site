@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CLIMB, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState } from '@belmaster/shared';
+import { CLIMB, CLIMB_CHAT, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';
 import { ClimbBackground, THEME_PALETTE } from './themes';
 import { play } from '@/lib/sound';
@@ -37,7 +37,7 @@ function useAvatarUri(p: ClimbPlayer | undefined) {
   }, [p]);
 }
 
-export function ClimbScene({ state }: { state: ClimbState }) {
+export function ClimbScene({ state, chat = [] }: { state: ClimbState; chat?: { uid: string; key: string; at: number }[] }) {
   const players = state.players;
   const theme = state.theme ?? 'dusk';
   const pal = THEME_PALETTE[theme];
@@ -202,6 +202,7 @@ export function ClimbScene({ state }: { state: ClimbState }) {
       {players.map((p, i) => (
         <Climber key={p.uid} p={p} side={i} h={shown[i]} throwing={throwing === i} winner={finished && state.winnerUid === p.uid} you={p.uid === state.you} />
       ))}
+      <ChatBubbles chat={chat} players={players} heights={shown} />
     </svg>
   );
 }
@@ -342,6 +343,37 @@ function ShieldFlash({ x, y, wasted }: { x: number; y: number; wasted?: boolean 
       <text x={x} y={y - 104} textAnchor="middle" fontSize="15" fontWeight="900" fill="#1899d6" className="climb-pop-text">
         {wasted ? 'Щитът изгоря напразно' : '🛡️ Отбито!'}
       </text>
+    </g>
+  );
+}
+
+/** Балончета с бързите съобщения над главите (2,6 с). */
+function ChatBubbles({ chat, players, heights }: { chat: { uid: string; key: string; at: number }[]; players: ClimbPlayer[]; heights: number[] }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 300);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <g>
+      {players.map((p, i) => {
+        const c = [...chat].reverse().find((m) => m.uid === p.uid && now - m.at < 2600);
+        if (!c) return null;
+        const text = CLIMB_CHAT.find((m) => m.key === c.key)?.text ?? '';
+        const w = Math.max(54, text.length * 9 + 22);
+        const x = TOWER_X[i] + (i === 0 ? 40 : -40);
+        const y = yOf(heights[i]) - 205;
+        return (
+          <g key={`${c.at}-${p.uid}`} className="climb-bubble" transform={`translate(${x} ${y})`}>
+            <rect x={-w / 2} y="-20" width={w} height="34" rx="17" fill="#fff" stroke={p.color} strokeWidth="2.5" />
+            <path d={i === 0 ? 'M-30 12 l-14 14 l26 -12z' : 'M30 12 l14 14 l-26 -12z'} fill="#fff" stroke={p.color} strokeWidth="2.5" strokeLinejoin="round" />
+            <rect x={-w / 2 + 3} y="-17" width={w - 6} height="28" rx="14" fill="#fff" />
+            <text x="0" y="3" textAnchor="middle" fontSize="15" fontWeight="800" fill="#1f1f1f">
+              {text}
+            </text>
+          </g>
+        );
+      })}
     </g>
   );
 }

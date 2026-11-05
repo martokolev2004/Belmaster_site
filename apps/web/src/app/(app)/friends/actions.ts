@@ -30,10 +30,7 @@ export async function addFriendAction(_: FormState, form: FormData): Promise<For
 async function accept(id: string, userId: string) {
   const f = await prisma.friendship.update({ where: { id }, data: { status: 'ACCEPTED' } });
   for (const uid of [f.requesterId, f.addresseeId]) {
-    const count = await prisma.friendship.count({
-      where: { status: 'ACCEPTED', OR: [{ requesterId: uid }, { addresseeId: uid }] },
-    });
-    if (count >= 3) await unlock(uid, ['friends_3']);
+    await unlock(uid);
   }
   void userId;
   revalidatePath('/friends');

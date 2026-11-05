@@ -1,5 +1,5 @@
-import { prisma, recordAnswers, type Grade } from '@belmaster/db';
-import { ACHIEVEMENTS, XP_MATCH_PLAY, XP_MATCH_WIN, currentSeason, nextLevel, sofiaDay } from '@belmaster/shared';
+import { addLeagueXp, prisma, recordAnswers, syncAchievements, type Grade } from '@belmaster/db';
+import { XP_MATCH_PLAY, XP_MATCH_WIN, currentSeason, nextLevel, sofiaDay } from '@belmaster/shared';
 import { eloDeltas } from './elo.js';
 import type { Room } from './room.js';
 
@@ -21,10 +21,9 @@ export async function awardXp(userId: string, xp: number, codes: string[]) {
     where: { id: userId },
     data: { xp: newXp, level, streak, bestStreak: Math.max(user.bestStreak, streak), lastActiveDay: today },
   });
-  const all = [...codes, ...(streak >= 7 ? ['streak_7'] : []), ...(level >= 5 ? ['level_5'] : [])].filter((c) =>
-    ACHIEVEMENTS.some((a) => a.code === c),
-  );
-  if (all.length) await prisma.userAchievement.createMany({ data: all.map((code) => ({ userId, code })), skipDuplicates: true });
+  // броячите (победи, игри, нива…) се проверяват сами; codes са специални събития
+  await addLeagueXp(prisma, userId, xp).catch((e) => console.error('[league]', e));
+  await syncAchievements(prisma, userId, codes);
 }
 
 /** Записва битката, рейтинга, XP и постиженията. */

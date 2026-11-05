@@ -22,7 +22,7 @@ export default async function TestPage({ params, searchParams }: { params: Promi
   if (!questions.length) {
     return (
       <EmptyState title={k === 'mistakes' ? 'Нямаш грешки за преговор 🎉' : 'Още няма въпроси тук'} icon={<span className="text-5xl">{k === 'mistakes' ? '✅' : '📚'}</span>}>
-        <p>{k === 'mistakes' ? 'Тук се събират въпросите, на които си сгрешил. Махат се, когато ги отговориш вярно 2 пъти подред.' : 'Въпросите от матурите за твоя клас скоро ще бъдат добавени.'}</p>
+        <p>{k === 'mistakes' ? 'Тук се събират въпросите, на които си сгрешил. След верен отговор въпросът се връща след 1 ден, после след 3 и после след 7 дни — така се запомня трайно. След 4 верни отговора подред изчезва.' : 'Въпросите от матурите за твоя клас скоро ще бъдат добавени.'}</p>
         <ButtonLink href="/tests" variant="outline" className="mt-5">
           Назад
         </ButtonLink>

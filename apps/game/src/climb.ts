@@ -2,7 +2,7 @@
 import type { Namespace, Socket } from 'socket.io';
 import { prisma, recordAnswers, type Grade } from '@belmaster/db';
 import {
-  CHAT_MESSAGES,
+  CLIMB_CHAT,
   CLIMB,
   XP_MATCH_PLAY,
   XP_MATCH_WIN,
@@ -35,6 +35,7 @@ const COLORS = ['#ff4b4b', '#1cb0f6'];
 const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 
 interface P extends Omit<ClimbPlayer, 'shieldArmed'> {
+  stats: { hits: number; falls: number; reflects: number; maxBehind: number };
   removed: Map<string, number[]>;
   shieldArmed: boolean;
   sockets: Set<string>;
@@ -85,7 +86,7 @@ export class ClimbRoom {
     public code: string,
     public grade: Grade,
     public hostUid: string,
-    private hooks: { emit: (room: ClimbRoom) => void; onFinished: (room: ClimbRoom) => void; onEmpty: (room: ClimbRoom) => void; onRemoved: (room: ClimbRoom, uid: string) => void },
+    private hooks: { chat: (room: ClimbRoom, uid: string, key: string) => void; emit: (room: ClimbRoom) => void; onFinished: (room: ClimbRoom) => void; onEmpty: (room: ClimbRoom) => void; onRemoved: (room: ClimbRoom, uid: string) => void },
   ) {}
 
   // ───────────── играчи ─────────────
@@ -115,6 +116,7 @@ export class ClimbRoom {
       answered: 0,
       ready: !!u.isBot,
       jokers: { fifty: true, time: true },
+      stats: { hits: 0, falls: 0, reflects: 0, maxBehind: 0 },
       removed: new Map(),
       sockets: new Set(),
       dropTimer: null,
@@ -212,6 +214,7 @@ export class ClimbRoom {
     this.deadline = now + q.timeMs;
     this.schedule(q.timeMs + 150, () => this.resolveQuestion());
     for (const p of this.players.values()) if (p.isBot) this.botAnswer(p.uid);
+    if (this.questionNo === 1) this.botSay(Math.random() < 0.5 ? 'hi' : 'gl', 0.7, 1200);
     this.emit();
   }
 
@@ -379,14 +382,22 @@ export class ClimbRoom {
     if (target.shieldArmed) {
       target.shieldArmed = false;
       out = { kind: 'reflect', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
+      if (actor.height > 0) actor.stats.falls++;
+      target.stats.reflects++;
       actor.height = Math.max(0, actor.height - 1);
       this.pushLog(`🛡️ ${target.name} отби удара! ${actor.name} пада на стъпало ${actor.height}.`);
+      if (actor.isBot) this.botSay('wow', 0.6, 2200);
     } else if (hit) {
       out = { kind: 'hit', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, targetAtGround: target.height === 0 };
+      if (target.height > 0) target.stats.falls++;
+      actor.stats.hits++;
       target.height = Math.max(0, target.height - 1);
       this.pushLog(`🎯 ${actor.name} уцели! ${target.name} пада на стъпало ${target.height}.`);
+      if (target.isBot) this.botSay(Math.random() < 0.5 ? 'oops' : 'wow', 0.6, 1600);
+      else if (actor.isBot) this.botSay('laugh', 0.35, 1600);
     } else {
       out = { kind: 'miss', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
+      if (actor.height > 0) actor.stats.falls++;
       actor.height = Math.max(0, actor.height - 1);
       this.pushLog(`💥 ${actor.name} не уцели и падна на стъпало ${actor.height}.`);
     }
@@ -394,6 +405,10 @@ export class ClimbRoom {
   }
 
   private resolveOutcome(outcomes: ClimbOutcome[]) {
+    for (const p of this.players.values()) {
+      const o = this.other(p.uid);
+      if (o) p.stats.maxBehind = Math.max(p.stats.maxBehind, o.height - p.height);
+    }
     this.phase = 'resolve';
     this.aim = null;
     this.outcomeId++;
@@ -428,6 +443,7 @@ export class ClimbRoom {
     this.q = null;
     this.aim = null;
     if (winnerUid) this.pushLog(`🏆 ${this.players.get(winnerUid)!.name} стигна до върха!`);
+    this.botSay(this.players.get(winnerUid ?? '')?.isBot ? 'gg' : 'bravo', 0.8, 1500);
     this.emit();
     this.hooks.onFinished(this);
   }
@@ -446,6 +462,12 @@ export class ClimbRoom {
   }
 
   // ───────────── бот ─────────────
+  private botSay(key: string, chance = 0.45, delay = 900) {
+    const bot = [...this.players.values()].find((p) => p.isBot);
+    if (!bot || Math.random() > chance) return;
+    setTimeout(() => this.hooks.chat(this, bot.uid, key), delay);
+  }
+
   private botAnswer(uid: string) {
     const aq = this.q!;
     const delay = 3500 + Math.random() * Math.min(aq.q.timeMs - 6000, 14_000);
@@ -462,6 +484,7 @@ export class ClimbRoom {
       const o = this.other(uid)!;
       // хвърля, ако другият е напред или близо до върха и не е на земята
       const throwIt = o.height > 0 && (o.height >= me.height || o.height >= CLIMB.STEPS - 3) && Math.random() < 0.75;
+      if (throwIt) this.botSay('target', 0.3, 0);
       this.choose(uid, throwIt ? 'throw' : 'climb');
     }, 1500 + Math.random() * 2000);
   }
@@ -642,7 +665,14 @@ async function persistClimb(room: ClimbRoom) {
     await recordAnswers(prisma, p.uid, items).catch((e) => console.error('[climb] answers', e));
     if (p.isGuest) continue;
     const xp = XP_MATCH_PLAY + (room.winnerUid === p.uid ? XP_MATCH_WIN : 0) + p.correct * 10;
-    await awardXp(p.uid, xp, ['first_battle', ...(room.winnerUid === p.uid ? ['first_win'] : [])]).catch((e) => console.error('[climb] xp', e));
+    const won = room.winnerUid === p.uid;
+    const events = [
+      ...(p.stats.reflects > 0 ? ['climb_reflect'] : []),
+      ...(p.stats.hits >= 3 ? ['climb_sniper'] : []),
+      ...(won && p.stats.falls === 0 ? ['climb_flawless'] : []),
+      ...(won && p.stats.maxBehind >= 3 ? ['climb_comeback'] : []),
+    ];
+    await awardXp(p.uid, xp, events).catch((e) => console.error('[climb] xp', e));
   }
 }
 
@@ -654,6 +684,9 @@ export function registerClimb(ns: NS, newCode: () => string) {
   let queue: { user: GameTokenClaims; since: number }[] = [];
 
   const hooks = {
+    chat(room: ClimbRoom, uid: string, key: string) {
+      for (const p of room.players.values()) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('chat', { uid, key, at: Date.now() });
+    },
     emit(room: ClimbRoom) {
       for (const p of room.players.values()) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('state', room.toState(p.uid));
     },
@@ -801,8 +834,8 @@ export function registerClimb(ns: NS, newCode: () => string) {
     socket.on('climb:joker', ({ kind }) => my()?.useJoker(user.uid, kind === 'time' ? 'time' : 'fifty'));
     socket.on('climb:chat', ({ key }) => {
       const room = my();
-      if (!room || !CHAT_MESSAGES.some((m) => m.key === key) || !room.chat(user.uid, key)) return;
-      for (const p of room.players.values()) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('chat', { uid: user.uid, key, at: Date.now() });
+      if (!room || !CLIMB_CHAT.some((m) => m.key === key) || !room.chat(user.uid, key)) return;
+      hooks.chat(room, user.uid, key);
     });
     socket.on('climb:rematch', async () => {
       const room = my();

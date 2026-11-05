@@ -37,6 +37,7 @@ model User {
   ownedItems     String[] // купени части на аватара ("част:стойност")
   announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
   announcedItems String[] // отключени части, за които вече е показана анимацията
+  mistakesCleared Int     @default(0) // изчистени грешки (за постижения)
   weapon         String   @default("stone") // оръжие в „Към върха“
   seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
 
@@ -56,6 +57,7 @@ model User {
   reports          QuestionReport[]
   ratings          PlayerRating[]
   climbRatings     ClimbRating[]
+  leagues          LeagueMember[]
   matchPlayers     MatchPlayer[]
   friendsRequested Friendship[]      @relation("requester")
   friendsReceived  Friendship[]      @relation("addressee")
@@ -91,6 +93,7 @@ model UserAchievement {
   userId     String
   code       String
   unlockedAt DateTime @default(now())
+  seen       Boolean  @default(true) // false = още не е показано в анимацията
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, code])
@@ -364,6 +367,7 @@ model UserMistake {
   userId     String
   questionId String
   streak     Int      @default(0) // поредни верни отговора след грешката
+  dueAt      DateTime @default(now()) // кога да се преговори пак (1, 3, 7 дни)
   wrongCount Int      @default(1)
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -508,4 +512,20 @@ model ClimbRating {
 
   @@id([userId, grade, season])
   @@index([grade, season, rating])
+}
+
+// Седмична лига: групи до 20 ученици от един клас и една лига; XP за седмицата
+model LeagueMember {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  week      String // понеделник на седмицата, YYYY-MM-DD (София)
+  grade     Grade
+  tier      Int // 0 = Бронз … 9 = Диамант
+  group     String
+  xp        Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, week])
+  @@index([group, xp])
 }

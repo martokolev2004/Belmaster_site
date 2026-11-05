@@ -38,16 +38,30 @@ export async function recordAnswers(prisma: PrismaClient, userId: string, items:
   );
   await prisma.$transaction(ops);
 
+  // „Моите грешки“ с повторение: след верен отговор въпросът се връща след 1, после 3, после 7 дни; след 4-ия верен — изчистен
+  const now = Date.now();
+  let cleared = 0;
   for (const it of items) {
     if (!byId.has(it.questionId)) continue;
     const where = { userId_questionId: { userId, questionId: it.questionId } };
     if (!it.correct) {
-      await prisma.userMistake.upsert({ where, update: { streak: 0, wrongCount: { increment: 1 } }, create: { userId, questionId: it.questionId } });
+      await prisma.userMistake.upsert({
+        where,
+        update: { streak: 0, wrongCount: { increment: 1 }, dueAt: new Date(now) },
+        create: { userId, questionId: it.questionId, dueAt: new Date(now) },
+      });
     } else {
       const m = await prisma.userMistake.findUnique({ where });
-      if (!m) continue;
-      if (m.streak + 1 >= 2) await prisma.userMistake.delete({ where });
-      else await prisma.userMistake.update({ where, data: { streak: { increment: 1 } } });
+      if (!m || m.dueAt.getTime() > now) continue; // още не е време — не се брои
+      const streak = m.streak + 1;
+      if (streak >= REVIEW_DAYS.length + 1) {
+        await prisma.userMistake.delete({ where });
+        cleared++;
+      } else await prisma.userMistake.update({ where, data: { streak, dueAt: new Date(now + REVIEW_DAYS[streak - 1] * 86_400_000) } });
     }
   }
+  if (cleared) await prisma.user.update({ where: { id: userId }, data: { mistakesCleared: { increment: cleared } } });
 }
+
+/** След колко дни се връща въпросът при 1-ви, 2-ри, 3-ти верен отговор. */
+export const REVIEW_DAYS = [1, 3, 7];
