@@ -23,6 +23,7 @@ import { play } from '@/lib/sound';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { buyWeaponAction, selectWeaponAction } from '@/app/(app)/climb/actions';
 import { ClimbScene } from './ClimbScene';
+import { ClimbDemo } from './ClimbDemo';
 import { useClimb, useLeft, type ClimbSocket } from './useClimb';
 
 export interface WeaponView {
@@ -72,7 +73,8 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
   const [code, setCode] = useState('');
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1cb0f6] to-[#58cc02] p-6 text-white md:p-8">
+      <div className="relative grid gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1cb0f6] to-[#58cc02] p-6 text-white md:p-8 lg:grid-cols-[1fr_380px] lg:items-center">
+        <div>
         <p className="text-sm font-extrabold uppercase tracking-wide text-white/80">Игра за двама</p>
         <h1 className="mt-1 text-3xl font-black text-white md:text-4xl">⛰️ Към върха</h1>
         <p className="mt-2 max-w-xl text-white/90">
@@ -102,6 +104,10 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             </button>
           </div>
         )}
+        </div>
+        <div className="overflow-hidden rounded-2xl border-4 border-white/30 shadow-xl" aria-label="Как изглежда играта">
+          <ClimbDemo />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
