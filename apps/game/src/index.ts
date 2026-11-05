@@ -11,9 +11,11 @@ import {
   type GameMode,
   type GameTokenClaims,
   type ServerToClient,
+  WEAPONS,
 } from '@belmaster/shared';
 import { Room, type RoomHooks } from './room.js';
 import { areFriends, persistMatch } from './persist.js';
+import { registerClimb } from './climb.js';
 
 const PORT = Number(process.env.GAME_PORT ?? process.env.PORT ?? 4000);
 const SECRET = new TextEncoder().encode(process.env.GAME_JWT_SECRET ?? 'dev-secret');
@@ -121,7 +123,7 @@ function emitOnline(socket: S, uids: string[]) {
   socket.emit('presence', { online: uids.filter((u) => userSockets.has(u)) });
 }
 
-io.use(async (socket, next) => {
+async function authenticate(socket: { handshake: { auth: Record<string, unknown> }; data: { user?: GameTokenClaims } }, next: (err?: Error) => void) {
   try {
     const token = socket.handshake.auth?.token;
     if (typeof token !== 'string') throw new Error('no token');
@@ -135,12 +137,19 @@ io.use(async (socket, next) => {
       isGuest: !!claims.isGuest,
       avatar: claims.avatar ? sanitizeAvatar(claims.avatar, null, claims.uid) : null,
       frame: ['none', 'bronze', 'silver', 'gold', 'legend'].includes(String(claims.frame)) ? claims.frame : 'none',
+      weapon: WEAPONS.some((w) => w.id === claims.weapon) ? claims.weapon : 'stone',
     };
     next();
   } catch {
     next(new Error('unauthorized'));
   }
-});
+}
+
+io.use(authenticate as never);
+// „Към върха“ — отделна игра на собствен канал
+const climbNs = io.of('/climb');
+climbNs.use(authenticate as never);
+registerClimb(climbNs as never, newCode);
 
 io.on('connection', (socket: S) => {
   const user = socket.data.user;

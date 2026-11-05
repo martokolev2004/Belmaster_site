@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, GraduationCap, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { BookOpen, GraduationCap, Mountain, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const ITEMS = [
   { href: '/', label: 'Начало', icon: Home },
   { href: '/tests', label: 'Тестове', icon: ListChecks },
   { href: '/play', label: 'Битка', icon: Swords },
+  { href: '/climb', label: 'Към върха', icon: Mountain },
   { href: '/library', label: 'Библиотека', icon: BookOpen },
   { href: '/leaderboard', label: 'Класация', icon: Trophy },
   { href: '/friends', label: 'Приятели', icon: Users },
@@ -49,7 +50,7 @@ export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher:
   );
 }
 
-const MOBILE = [ITEMS[0], ITEMS[1], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[5]];
+const MOBILE = ITEMS.slice(0, 6);
 
 export function BottomNav() {
   const path = usePathname();

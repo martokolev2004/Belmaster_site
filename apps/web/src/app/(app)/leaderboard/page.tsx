@@ -11,7 +11,7 @@ export const metadata = { title: 'Класация' };
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ tab?: string; season?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
-  const tab = sp.tab === 'xp' ? 'xp' : 'rating';
+  const tab = sp.tab === 'xp' ? 'xp' : sp.tab === 'climb' ? 'climb' : 'rating';
   const season = sp.season === 'all' ? 'all' : currentSeason();
   const grade = user.grade!;
 
@@ -24,6 +24,14 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       include: { user: true },
     });
     rows = ratings.map((r, i) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, frame: frameForRating(r.rating, season === 'all' && i < 10), value: String(r.rating), sub: `${r.wins} победи · ${r.games} битки` }));
+  } else if (tab === 'climb') {
+    const ratings = await prisma.climbRating.findMany({
+      where: { grade, season, games: { gt: 0 } },
+      orderBy: [{ rating: 'desc' }, { wins: 'desc' }],
+      take: 50,
+      include: { user: true },
+    });
+    rows = ratings.map((r) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, value: String(r.rating), sub: `${r.wins} победи · ${r.games} игри` }));
   } else {
     const users = await prisma.user.findMany({ where: { grade, isGuest: false, xp: { gt: 0 } }, orderBy: { xp: 'desc' }, take: 50 });
     rows = users.map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, avatar: u.avatar, value: `${u.xp} XP`, sub: `Ниво ${u.level}` }));
@@ -34,9 +42,10 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Класация" subtitle={gradeLabel(grade)} />
-      <div className="mb-4 grid grid-cols-2 rounded-2xl bg-surface-2 p-1">
+      <div className="mb-4 grid grid-cols-3 rounded-2xl bg-surface-2 p-1">
         {[
-          { t: 'rating', label: 'Рейтинг в битки' },
+          { t: 'rating', label: 'Битки' },
+          { t: 'climb', label: 'Към върха' },
           { t: 'xp', label: 'Опит (XP)' },
         ].map(({ t, label }) => (
           <Link key={t} href={tabLink(t)} className={cn('rounded-xl py-2.5 text-center text-sm font-extrabold uppercase', tab === t ? 'bg-surface text-secondary shadow-sm' : 'text-muted')}>
@@ -44,13 +53,13 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           </Link>
         ))}
       </div>
-      {tab === 'rating' && (
+      {tab !== 'xp' && (
         <div className="mb-4 flex gap-2">
           {[
             { s: undefined, label: seasonLabel(currentSeason()) },
             { s: 'all', label: seasonLabel('all') },
           ].map(({ s, label }) => (
-            <Link key={label} href={tabLink('rating', s)} className={cn('rounded-full border-2 px-3 py-1 text-sm font-extrabold', (s === 'all') === (season === 'all') ? 'border-secondary bg-secondary/10 text-secondary' : 'border-line text-muted')}>
+            <Link key={label} href={tabLink(tab, s)} className={cn('rounded-full border-2 px-3 py-1 text-sm font-extrabold', (s === 'all') === (season === 'all') ? 'border-secondary bg-secondary/10 text-secondary' : 'border-line text-muted')}>
               {label}
             </Link>
           ))}

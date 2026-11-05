@@ -222,4 +222,6 @@ export interface GameTokenClaims {
   isGuest: boolean;
   avatar?: AvatarConfig | null;
   frame?: FrameTier;
+  /** оръжие в „Към върха“ */
+  weapon?: string;
 }

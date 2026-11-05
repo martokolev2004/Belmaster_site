@@ -9,7 +9,7 @@ function previousDay(day: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function awardXp(userId: string, xp: number, codes: string[]) {
+export async function awardXp(userId: string, xp: number, codes: string[]) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return;
   const today = sofiaDay();

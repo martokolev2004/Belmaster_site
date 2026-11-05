@@ -203,3 +203,33 @@
 .unlock-shackle { animation: shackle-open .3s ease-out calc(var(--d, 0s) + .7s) forwards; transform-origin: 70% 100%; transform-box: fill-box; }
 .unlock-item { animation: item-reveal .7s ease-out calc(var(--d, 0s) + 1.05s) both; }
 .unlock-glow { animation: glow-burst .9s ease-out calc(var(--d, 0s) + 1s) both; }
+
+/* ── „Към върха“ ── */
+:root { --climb-sky-top: #bfe9ff; --climb-sky-bottom: #f2fbff; --climb-hills: #cde7d8; --climb-ground: #8bc34a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
+}
+:root[data-theme='dark'] { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
+.climb-climber { transition: transform .75s cubic-bezier(.34, 1.4, .64, 1); }
+.climb-arm { transform: rotate(0); transition: transform .2s; }
+.climb-arm-throw { animation: climb-throw .38s ease-out; }
+@keyframes climb-throw { 0% { transform: rotate(0); } 40% { transform: rotate(150deg); } 70% { transform: rotate(-40deg); } 100% { transform: rotate(0); } }
+.climb-block { animation: climb-block-in .35s ease-out; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes climb-block-in { from { transform: scaleY(.2); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+.climb-crumble { animation: climb-crumble .9s ease-in forwards; }
+@keyframes climb-crumble { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(0, 140px) rotate(var(--r, 90deg)); opacity: 0; } }
+.climb-boom { animation: climb-boom .45s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-boom { from { transform: scale(.3); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }
+.climb-dust { animation: climb-dust .9s ease-out forwards; }
+@keyframes climb-dust { from { opacity: .9; transform: translateY(0); } to { opacity: 0; transform: translateY(-14px); } }
+.climb-shield-flash { animation: climb-shield 1s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-shield { 0% { transform: scale(.6); opacity: 0; } 25% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.climb-shield-waste { animation: climb-shield-waste 1.2s ease-in forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-shield-waste { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.4); } }
+.climb-pop-text { animation: float-up 1.6s ease-out forwards; }
+.climb-shield-idle { animation: pulse-ring 1.6s ease-in-out infinite; }
+.climb-flag { animation: climb-flag 1.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 0 50%; }
+@keyframes climb-flag { from { transform: skewY(-6deg); } to { transform: skewY(6deg); } }
+.climb-cloud { animation: climb-cloud 30s linear infinite alternate; }
+@keyframes climb-cloud { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+.climb-crown { animation: pop .5s ease-out; }

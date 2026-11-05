@@ -123,7 +123,7 @@ export default async function ProfilePage() {
               <li key={m.id}>
                 <Link href={`/match/${m.matchId}`} className="flex items-center justify-between px-4 py-3 hover:bg-surface-2">
                   <span className="font-bold">
-                    {m.place === 1 ? '🏆 Победа' : `${m.place}. място`} · {m.territories} области · {m.correct}/{m.answered} верни
+                    {m.match.mode === 'CLIMB' ? '⛰️ ' : ''}{m.place === 1 ? '🏆 Победа' : `${m.place}. място`} · {m.match.mode === 'CLIMB' ? `стъпало ${m.territories}` : `${m.territories} области`} · {m.correct}/{m.answered} верни
                   </span>
                   <span className="text-sm text-muted">{m.match.endedAt.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia' })}</span>
                 </Link>

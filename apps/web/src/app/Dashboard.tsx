@@ -73,6 +73,17 @@ export async function Dashboard({ user }: { user: User }) {
       </section>
 
       <section>
+        <Link href="/climb" className="group flex items-center gap-4 rounded-3xl bg-gradient-to-r from-[#58cc02] to-[#1cb0f6] p-5 text-white shadow-[0_6px_0_#3f8f04] transition group-active:translate-y-1">
+          <span className="text-5xl">⛰️</span>
+          <span className="flex-1">
+            <span className="block text-xl font-black text-white">Към върха</span>
+            <span className="block text-sm text-white/90">Игра за двама: качвай се, хвърляй по стъпалата на другия и пази се с щит.</span>
+          </span>
+          <ChevronRight className="size-6" />
+        </Link>
+      </section>
+
+      <section>
         <h2 className="mb-3 text-xl font-black">Мини тестове</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <Tile href="/tests/language" icon={<Languages className="size-7" />} tone="primary" title="Език" text="Граматика, лексика, правопис, пунктуация" />

@@ -37,6 +37,7 @@ model User {
   ownedItems     String[] // купени части на аватара ("част:стойност")
   announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
   announcedItems String[] // отключени части, за които вече е показана анимацията
+  weapon         String   @default("stone") // оръжие в „Към върха“
   seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
 
   // учител
@@ -54,6 +55,7 @@ model User {
   attempts         QuizAttempt[]
   reports          QuestionReport[]
   ratings          PlayerRating[]
+  climbRatings     ClimbRating[]
   matchPlayers     MatchPlayer[]
   friendsRequested Friendship[]      @relation("requester")
   friendsReceived  Friendship[]      @relation("addressee")
@@ -301,6 +303,7 @@ model GameInvite {
 enum GameMode {
   CLASSIC // случайни въпроси
   WORKS // всяко поле е произведение
+  CLIMB // „Към върха“ (отделна игра)
 }
 
 model Match {
@@ -491,4 +494,18 @@ model Notification {
   createdAt DateTime  @default(now())
 
   @@index([userId, readAt])
+}
+
+// Рейтинг в „Към върха“ — отделна класация; season = "all" или "2026-11"
+model ClimbRating {
+  userId String
+  grade  Grade
+  season String
+  rating Int    @default(1000)
+  games  Int    @default(0)
+  wins   Int    @default(0)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, grade, season])
+  @@index([grade, season, rating])
 }
