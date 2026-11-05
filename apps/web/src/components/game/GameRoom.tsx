@@ -359,33 +359,74 @@ function RotateOverlay() {
 }
 
 /** Цял екран + заключване хоризонтално (Android/Chrome). На iPhone бутонът не се показва. */
+type FsDoc = Document & { webkitFullscreenElement?: Element; webkitFullscreenEnabled?: boolean };
+type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+
 function FullscreenButton({ big }: { big?: boolean }) {
-  const [supported, setSupported] = useState(false);
+  const [mode, setMode] = useState<'none' | 'api' | 'ios'>('none');
   const [active, setActive] = useState(false);
+  const [help, setHelp] = useState(false);
   useEffect(() => {
-    setSupported(typeof document !== 'undefined' && !!document.documentElement.requestFullscreen && window.matchMedia('(pointer: coarse)').matches);
-    const onChange = () => setActive(!!document.fullscreenElement);
+    const d = document as FsDoc;
+    const el = document.documentElement as FsEl;
+    const touch = window.matchMedia('(pointer: coarse)').matches;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone;
+    if (!touch || standalone) setMode('none');
+    else if (typeof el.requestFullscreen === 'function' || typeof el.webkitRequestFullscreen === 'function') setMode('api');
+    else if (/iPhone|iPod|iPad|Macintosh/.test(navigator.userAgent)) setMode('ios');
+    const onChange = () => setActive(!!(d.fullscreenElement || d.webkitFullscreenElement));
     document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange);
+    };
   }, []);
-  if (!supported || (active && !big)) return null;
+  if (mode === 'none' || (active && !big)) return null;
   const go = async () => {
+    if (mode === 'ios') return setHelp(true);
     try {
-      if (!document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+      const d = document as FsDoc;
+      const el = document.documentElement as FsEl;
+      if (!d.fullscreenElement && !d.webkitFullscreenElement) {
+        if (typeof el.requestFullscreen === 'function') await el.requestFullscreen({ navigationUI: 'hide' });
+        else await el.webkitRequestFullscreen?.();
+      }
       const o = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      await o.lock?.('landscape');
+      await o?.lock?.('landscape');
     } catch {
       /* браузърът не позволява — остава ръчното завъртане */
     }
   };
-  return big ? (
-    <Button variant="secondary" onClick={go}>
-      Цял екран
-    </Button>
-  ) : (
-    <button onClick={go} className="text-sm font-extrabold text-secondary phone-landscape:inline hidden">
-      Цял екран
-    </button>
+  return (
+    <>
+      {big ? (
+        <Button variant="secondary" onClick={go}>
+          Цял екран
+        </Button>
+      ) : (
+        <button onClick={go} className="hidden text-sm font-extrabold text-secondary phone-landscape:inline">
+          Цял екран
+        </button>
+      )}
+      {help && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3" onClick={() => setHelp(false)}>
+          <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-surface p-4 text-sm" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-black">Как да скриеш лентата на Safari</p>
+            <p className="mt-2">
+              <b>Бързо:</b> натисни <b>„aA“</b> вляво от адреса горе → <b>„Скрий лентата с инструменти“</b>. Връща се с докосване горе.
+            </p>
+            <p className="mt-2">
+              <b>Като приложение:</b> бутон <b>Сподели</b> → <b>„Добави към началния екран“</b>. Отваряш БЕЛ Мастер от иконата — без лентите на браузъра.
+            </p>
+            <p className="mt-2 text-xs text-muted">На iPhone Apple не позволява на сайтовете сами да влизат в цял екран.</p>
+            <Button block className="mt-3" onClick={() => setHelp(false)}>
+              Разбрах
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

@@ -5,6 +5,8 @@ import './globals.css';
 export const metadata: Metadata = {
   title: { default: 'БЕЛ Мастер', template: '%s · БЕЛ Мастер' },
   description: 'Подготовка за матурите по български език и литература — тестове, библиотека и мултиплейър битки.',
+  // добавен към началния екран на iPhone — отваря се без лентите на Safari
+  appleWebApp: { capable: true, title: 'БЕЛ Мастер', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {
