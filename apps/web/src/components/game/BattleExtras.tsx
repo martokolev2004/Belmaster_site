@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CHAT_MESSAGES, RULES, type GameMap, type GameState } from '@belmaster/shared';
 import { Castle, Swords, Volume2, VolumeX, WifiOff } from 'lucide-react';
 import { Avatar } from '@/components/ui';
@@ -232,8 +233,12 @@ export function Confetti() {
       })),
     [],
   );
-  return (
-    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden" aria-hidden>
+  // направо в <body> — иначе родител с transform/blur ограничава „fixed“ и конфетите не се виждат
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => setHost(document.body), []);
+  if (!host) return null;
+  return createPortal(
+    <div className="pointer-events-none fixed inset-0 z-[70] overflow-hidden" aria-hidden>
       {pieces.map((p, i) => (
         <span
           key={i}
@@ -243,11 +248,12 @@ export function Confetti() {
             width: p.w,
             height: p.w * 1.6,
             background: p.color,
-            animation: `confetti-fall ${p.dur}s ${p.delay}s ease-in forwards`,
+            animation: `confetti-fall ${p.dur}s ${p.delay}s ease-in both`,
             ['--dx' as string]: p.dx,
           }}
         />
       ))}
-    </div>
+    </div>,
+    host,
   );
 }

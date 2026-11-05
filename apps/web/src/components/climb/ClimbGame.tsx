@@ -274,6 +274,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
 
   return (
     <div className="phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-2 phone-landscape:py-1">
+      {state.phase === 'finished' && state.winnerUid === state.you && <Confetti />}
       <div className="mb-3 flex items-center justify-between gap-2 phone-landscape:mb-1">
         <span className="font-extrabold text-ink-strong phone-landscape:text-sm">
           ⛰️ Към върха · въпрос {Math.max(1, state.questionNo)}/{state.maxQuestions}
@@ -411,7 +412,14 @@ function DesktopLayout({
   const answered = state.phase === 'question' && !!q && q.answered.includes(state.you);
   const last = state.log[state.log.length - 1];
   // какво се показва върху сцената
-  const modal = (state.phase === 'question' && q && !answered) || state.phase === 'finished';
+  const modal = state.phase === 'question' && !!q && !answered;
+  // на финала първо се вижда как победителят стъпва на върха, после идва панелът
+  const [showEnd, setShowEnd] = useState(false);
+  useEffect(() => {
+    if (state.phase !== 'finished') return setShowEnd(false);
+    const t = setTimeout(() => setShowEnd(true), 1600);
+    return () => clearTimeout(t);
+  }, [state.phase]);
   const bottom = state.phase === 'choose' || state.phase === 'aim';
   const banner =
     state.phase === 'question' && answered
@@ -445,7 +453,13 @@ function DesktopLayout({
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 p-5 backdrop-blur-[2px]">
             <div className={cn('max-h-full w-full overflow-y-auto rounded-2xl animate-rise', state.phase === 'finished' ? 'max-w-sm' : q?.context ? 'max-w-4xl' : 'max-w-2xl')}>
               {state.phase === 'question' && q && <QuestionPanel key={q.id} socket={socket} state={state} wide />}
-              {state.phase === 'finished' && <FinishedPanel socket={socket} state={state} />}
+            </div>
+          </div>
+        )}
+        {state.phase === 'finished' && showEnd && (
+          <div className="absolute inset-x-0 bottom-4 flex justify-center px-4">
+            <div className="w-full max-w-sm animate-rise">
+              <FinishedPanel socket={socket} state={state} />
             </div>
           </div>
         )}
@@ -659,7 +673,6 @@ function FinishedPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
   useEffect(() => play(won ? 'win' : 'lose'), [won]);
   return (
     <div className="card3d rounded-2xl bg-surface p-5 text-center">
-      {won && <Confetti />}
       <p className="text-4xl">{won ? '🏆' : state.draw ? '🤝' : '⛰️'}</p>
       <p className="mt-1 text-2xl font-black">{won ? 'Ти стигна до върха!' : state.draw ? 'Равенство!' : `${winner?.name ?? 'Другият'} стигна до върха`}</p>
       {delta != null && (

@@ -10,7 +10,10 @@ import { play } from '@/lib/sound';
  * строят си стъпалата с чукче и се катерят към общата платформа на върха.
  * Координати: 1280×720 (фонът е 16:9).
  */
-const VB = { x: 40, y: 0, w: 1200, h: 720 };
+/** отгоре има още небе (огледано продължение на фона), за да се вижда победителят на върха */
+const VB = { x: 0, y: -120, w: 1280, h: 840 };
+/** цветът на небето в горния край на всеки фон — продължава нагоре без шев */
+const SKY: Record<ClimbTheme, string> = { dusk: '#9a7ecb', night: '#194169', canyon: '#68b8ef' };
 const SH = 50; // височина на стъпало
 const SW = 84; // ширина на стъпало
 const TOP1 = 650; // горният ръб на първото стъпало
@@ -63,9 +66,9 @@ function geometry(theme: ClimbTheme) {
   const stand = (side: number, h: number): [number, number] => {
     if (h <= 0) {
       const [x] = step(side, 1);
-      return [Math.min(1190, Math.max(90, x + (side === 0 ? -60 : 60))), TOP1 + SH];
+      return [Math.min(1170, Math.max(110, x + (side === 0 ? -60 : 60))), TOP1 + SH];
     }
-    if (h >= CLIMB.STEPS) return [640 + (side === 0 ? -38 : 38), g.plat + 4];
+    if (h >= CLIMB.STEPS) return [622, g.plat + 4];
     return step(side, h);
   };
   return { ...g, step, stand };
@@ -259,10 +262,16 @@ export function ClimbScene({ state, chat = [] }: { state: ClimbState; chat?: { u
           <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#1a1220" floodOpacity=".45" />
         </filter>
       </defs>
+      <linearGradient id="climb-skyfade" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor={SKY[theme]} />
+        <stop offset="1" stopColor={SKY[theme]} stopOpacity="0" />
+      </linearGradient>
+      <rect x="0" y="-130" width="1280" height="140" fill={SKY[theme]} />
       <image href={`/climb/${theme}.webp`} x="0" y="0" width="1280" height="720" preserveAspectRatio="none" />
+      <rect x="0" y="0" width="1280" height="40" fill="url(#climb-skyfade)" />
       {theme === 'dusk' && <circle cx="1030" cy="300" r="170" fill="url(#climb-sun)" />}
       {/* знамето на върха */}
-      <g transform={`translate(636 ${geo.plat - 100})`}>
+      <g transform={`translate(676 ${geo.plat - 100})`}>
         <rect x="0" y="0" width="5" height="100" fill="#5b3b2b" />
         <path d="M5 4 q36 9 70 0 q-9 16 0 32 q-34 9 -70 0 z" fill="#ff7a2f" stroke="#7a2e12" strokeWidth="2" className="climb-flag" />
       </g>
@@ -298,7 +307,7 @@ export function ClimbScene({ state, chat = [] }: { state: ClimbState; chat?: { u
       <ChatBubbles chat={chat} players={players} pos={players.map((_, i) => geo.stand(i, shown[i]))} />
       {players.map((p, i) => {
         return (
-          <g key={p.uid} transform={`translate(${i === 0 ? 92 : 1188} 692)`}>
+          <g key={p.uid} transform={`translate(${i === 0 ? 60 : 1220} -92)`}>
             <rect x="-34" y="-17" width="68" height="30" rx="15" fill="rgba(0,0,0,.45)" />
             <text x="0" y="5" textAnchor="middle" fontSize="18" fontWeight="900" fill="#fff">
               {shown[i]}/{CLIMB.STEPS}

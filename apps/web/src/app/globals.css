@@ -119,10 +119,6 @@
     80% { opacity: 1; }
     100% { opacity: 0; transform: translateY(-26px); }
   }
-  @keyframes confetti-fall {
-    0% { transform: translate3d(0, -10vh, 0) rotate(0); opacity: 1; }
-    100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: .9; }
-  }
   @keyframes pulse-ring {
     0%, 100% { opacity: 0.55; }
     50% { opacity: 1; }
@@ -164,6 +160,12 @@
 .card3d {
   border: 2px solid var(--line);
   border-bottom-width: 4px;
+}
+
+/* извън @theme — иначе Tailwind я маха, защото не е в --animate-* */
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
