@@ -210,7 +210,17 @@
   :root:not([data-theme='light']) { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
 }
 :root[data-theme='dark'] { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
-.climb-climber { transition: transform .75s cubic-bezier(.34, 1.4, .64, 1); }
+.climb-climber { transition: transform .48s cubic-bezier(.3, .9, .4, 1); }
+.climb-hop { animation: climb-hop .48s ease-out; }
+@keyframes climb-hop { 0% { transform: translateY(0) scale(1.08, .9); } 45% { transform: translateY(-34px) scale(.95, 1.06); } 85% { transform: translateY(0) scale(1.07, .92); } 100% { transform: translateY(0) scale(1); } }
+.climb-flinch { animation: climb-flinch .45s ease-in-out; }
+@keyframes climb-flinch { 0%, 100% { transform: translateX(0) rotate(0); } 20% { transform: translateX(-7px) rotate(-6deg); } 45% { transform: translateX(6px) rotate(5deg); } 70% { transform: translateX(-3px) rotate(-2deg); } }
+.climb-hammer { animation: climb-hammer .25s ease-in-out infinite alternate; }
+@keyframes climb-hammer { from { transform: rotate(-25deg); } to { transform: rotate(60deg); } }
+.climb-build { animation: climb-build .76s cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes climb-build { 0% { transform: scaleY(0); opacity: .3; } 30% { transform: scaleY(.33); opacity: .9; } 60% { transform: scaleY(.66); } 100% { transform: scaleY(1); opacity: 1; } }
+.climb-sparks { animation: climb-sparks .45s ease-out forwards; }
+@keyframes climb-sparks { 0% { transform: scale(.3); opacity: 1; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
 .climb-arm { transform: rotate(0); transition: transform .2s; }
 .climb-arm-throw { animation: climb-throw .38s ease-out; }
 @keyframes climb-throw { 0% { transform: rotate(0); } 40% { transform: rotate(150deg); } 70% { transform: rotate(-40deg); } 100% { transform: rotate(0); } }
