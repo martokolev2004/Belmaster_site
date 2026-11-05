@@ -11,14 +11,15 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: light)', color: '#131f24' },
     { media: '(prefers-color-scheme: dark)', color: '#131f24' },
   ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const theme = (await cookies()).get('bm_theme')?.value;
-  const dataTheme = theme === 'light' || theme === 'dark' ? theme : undefined;
+  // по подразбиране — тъмна; „Системна“ се пази като 'system'
+  const dataTheme = theme === 'light' ? 'light' : theme === 'system' ? undefined : 'dark';
   return (
     <html lang="bg" data-theme={dataTheme}>
       <body className="min-h-dvh">{children}</body>

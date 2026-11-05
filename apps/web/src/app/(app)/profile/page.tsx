@@ -104,7 +104,7 @@ export default async function ProfilePage() {
         <div className="space-y-6">
           <Card>
             <h2 className="mb-4 text-lg font-black">Тема</h2>
-            <ThemePicker current={theme === 'light' || theme === 'dark' ? theme : 'system'} />
+            <ThemePicker current={theme === 'light' || theme === 'system' ? theme : 'dark'} />
           </Card>
           {!user.isGuest && (
             <Card>

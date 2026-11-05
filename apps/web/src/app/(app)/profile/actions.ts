@@ -34,7 +34,6 @@ export async function changePasswordAction(_: FormState, form: FormData): Promis
 
 export async function setThemeAction(theme: 'light' | 'dark' | 'system') {
   const jar = await cookies();
-  if (theme === 'system') jar.delete('bm_theme');
-  else jar.set('bm_theme', theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  jar.set('bm_theme', theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
   revalidatePath('/', 'layout');
 }
