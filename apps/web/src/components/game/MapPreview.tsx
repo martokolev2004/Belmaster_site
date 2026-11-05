@@ -6,7 +6,7 @@ export function MapPreview({ map = CONTINENT_MAP, className }: { map?: GameMap; 
   return (
     <svg viewBox={`0 0 ${map.width} ${map.height}`} className={className} role="img" aria-label={map.name}>
       <rect width={map.width} height={map.height} rx="40" fill="var(--map-sea)" />
-      <path d={map.outline} fill="none" stroke="var(--map-sea-line)" strokeWidth="22" strokeLinejoin="round" />
+      <path d={map.outline} fillRule="evenodd" fill="none" stroke="var(--map-sea-line)" strokeWidth="22" strokeLinejoin="round" />
       {map.regions.map((r) => (
         <path key={r.id} d={r.path} fill={landColor.get(r.land)} fillOpacity={0.85} stroke="var(--bg)" strokeWidth="4" strokeLinejoin="round" />
       ))}

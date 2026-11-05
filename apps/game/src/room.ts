@@ -4,6 +4,7 @@ import {
   PLAYER_COLORS,
   RULES,
   mapForPlayers,
+  previewMapForPlayers,
   type GameMap,
   type GameMode,
   type GamePhase,
@@ -874,7 +875,7 @@ export class Room {
   // ───────────────────────── Публично състояние ─────────────────────────
 
   toState(): GameState {
-    const map = this.map ?? mapForPlayers(Math.max(2, this.players.size));
+    const map = this.map ?? previewMapForPlayers(Math.max(2, this.players.size));
     const players: PublicPlayer[] = this.order.map((uid) => {
       const p = this.players.get(uid)!;
       return {

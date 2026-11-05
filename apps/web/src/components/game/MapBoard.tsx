@@ -67,7 +67,7 @@ export function MapBoard({ map, state, selectable, onSelect, onBlocked, highligh
         </pattern>
       </defs>
       <rect width={map.width} height={map.height} rx="36" fill="var(--map-sea)" />
-      <path d={map.outline} fill="var(--line)" stroke="var(--map-sea-line)" strokeWidth="20" strokeLinejoin="round" />
+      <path d={map.outline} fillRule="evenodd" fill="var(--line)" stroke="var(--map-sea-line)" strokeWidth="20" strokeLinejoin="round" />
       {map.regions.map((r) => {
         const reg = state.regions[r.id];
         const owner = reg?.owner;
