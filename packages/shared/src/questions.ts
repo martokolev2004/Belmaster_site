@@ -213,7 +213,7 @@ function tokenize(text: string): string[] {
       const opening = /^[„(«]/.test(t) || (t.startsWith('"') && !quoteOpen);
       if (t.includes('"')) quoteOpen = !quoteOpen;
       if (opening || !out.length) carry += t;
-      else out[out.length - 1] += t;
+      else out[out.length - 1] += ` ${t}`; // „кое – измислица“: тирето остава с интервал
       continue;
     }
     for (const ch of t) if (ch === '"') quoteOpen = !quoteOpen;
@@ -226,7 +226,7 @@ function tokenize(text: string): string[] {
 
 /** Превръща „оригинал“ + „поправен текст“ в списък с липсващи знаци (за импорта). */
 export function punctuationFromTexts(original: string, corrected: string): PunctuationData {
-  const tokens = original.trim().split(/\s+/);
+  const tokens = tokenize(original);
   const fixed = tokenize(corrected);
   if (tokens.length !== fixed.length) {
     throw new Error(`Пунктуация: броят думи се различава (${tokens.length} срещу ${fixed.length}).`);

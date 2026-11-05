@@ -3,15 +3,19 @@ import { cn } from '@/lib/cn';
 /**
  * Текстът към задачата (изречение, откъс) — ясно отделен.
  *  - „дума (А)“ → думата е подчертана, както в матурата;
+ *  - ⟨А⟩ → позиция в текста (без подчертаване);
  *  - „(дума)“ в скоби (до 3 думи) → откроява се, защото с нея се работи.
  */
 export function ContextBox({ text, compact }: { text: string; compact?: boolean }) {
-  const parts = text.split(/(\S+\s\([А-Е]\)|\([\p{L}\s-]{1,40}\))/gu);
+  const parts = text.split(/(⟨[А-Е]⟩|\S+\s\([А-Е]\)|\([\p{L}\s-]{1,40}\))/gu);
   return (
     <div className={cn('rounded-xl border-l-4 border-secondary bg-secondary/8 dark:bg-secondary/12', compact ? 'mt-2 px-3 py-2' : 'mt-4 px-4 py-3')}>
       <p className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-secondary">Текст към задачата</p>
       <p className={cn('whitespace-pre-line font-semibold leading-relaxed text-ink-strong', compact ? 'text-[15px] phone-landscape:text-sm' : 'text-[17px]')}>
         {parts.map((p, i) => {
+          // ⟨А⟩ — позиция в текста (напр. за пропусната запетая)
+          const pos = p.match(/^⟨([А-Е])⟩$/u);
+          if (pos) return <span key={i} className="rounded bg-secondary/20 px-1 text-xs font-black text-secondary">({pos[1]})</span>;
           const marked = p.match(/^(\S+)\s\(([А-Е])\)$/u);
           // „щастливо, (А)“ — позиция след препинателен знак, не подчертана дума
           if (marked && /[,;:.!?–-]$/u.test(marked[1]))

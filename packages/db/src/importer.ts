@@ -92,7 +92,7 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
       for (const q of file.questions) {
         if (q.no == null) continue;
         await prisma.question.updateMany({
-          where: { examId: existing.id, sourceNo: q.no },
+          where: { examId: existing.id, sourceNo: q.no, prompt: q.prompt },
           data: { points: q.points ?? defaultPoints(file.grade, q.no) },
         });
       }
