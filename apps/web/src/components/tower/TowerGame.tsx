@@ -59,6 +59,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pending = useRef<Awaited<ReturnType<typeof dropTowerAction>> | null>(null);
+  const desktop = useDesktop();
 
   // кадри
   useEffect(() => {
@@ -202,6 +203,69 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
   if (screen === 'start' || screen === 'over' || !st)
     return <StartScreen screen={screen} finish={finish} runId={st?.runId ?? null} best={best} monthBest={monthBest} top={top} meId={meId} isGuest={isGuest} busy={busy} error={error} onStart={start} />;
 
+  if (desktop) {
+    const floorsShown = st.xs.length + (anim && anim.res.kind !== 'fall' ? 1 : 0);
+    return (
+      <div className="fixed inset-0 z-50 overflow-hidden bg-[#0b0f1a]">
+        <div className="absolute inset-0 scale-110 bg-cover bg-bottom opacity-45 blur-2xl" style={{ backgroundImage: `url(/tower/${st.theme}.webp)` }} />
+        <div className="relative flex h-full items-center justify-center gap-8 p-4">
+          {/* вляво: резултат */}
+          <aside className="w-60 shrink-0 space-y-4 text-white">
+            <button onClick={quit} className="inline-flex items-center gap-2 rounded-full bg-black/45 px-4 py-2 text-sm font-extrabold hover:bg-black/60">
+              <X className="size-4" /> Край на играта
+            </button>
+            <div className="rounded-3xl bg-black/40 p-5 backdrop-blur">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-white/70">Етажи</p>
+              <p className="text-7xl font-black tabular-nums leading-none">{floorsShown}</p>
+              <p className="mt-2 flex items-center gap-1.5 text-sm font-bold text-accent">
+                <Trophy className="size-4" /> Рекорд: {best}
+              </p>
+            </div>
+            <div className="rounded-3xl bg-black/40 p-5 backdrop-blur">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-white/70">Животи</p>
+              <div className="flex gap-1.5">
+                {Array.from({ length: TOWER.LIVES }, (_, i) => (
+                  <Heart key={i} className={cn('size-8', i < st.lives ? 'fill-[#ff4b4b] text-[#ff4b4b]' : 'text-white/30')} />
+                ))}
+              </div>
+              {st.streak > 0 && <p className="mt-3 text-sm font-black text-accent">⭐ {st.streak}/3 перфектни поред</p>}
+            </div>
+            <p className="px-1 text-xs text-white/60">Пускане: клик върху кулата или интервал. 3 перфектни пускания поред успокояват люлеенето.</p>
+          </aside>
+
+          {/* в средата: кулата */}
+          <div className="relative h-full shrink-0 overflow-hidden rounded-3xl shadow-2xl ring-2 ring-white/10" style={{ aspectRatio: '9 / 16' }}>
+            <Scene st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+            {toast && now - toast.at < 1400 && (
+              <div className="pointer-events-none absolute inset-x-0 top-[47%] flex justify-center">
+                <span className={cn('animate-pop rounded-2xl px-4 py-2 text-lg font-black text-white shadow-lg', toast.tone === 'good' ? 'bg-primary' : toast.tone === 'bad' ? 'bg-error' : 'bg-secondary')}>{toast.text}</span>
+              </div>
+            )}
+          </div>
+
+          {/* вдясно: въпросът или пускането */}
+          <section className="w-[min(480px,34vw)] shrink-0">
+            {st.phase === 'question' && question && !anim ? (
+              <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
+            ) : st.phase === 'drop' && !anim ? (
+              <div className="card3d animate-rise rounded-3xl bg-surface p-6 text-center">
+                <p className="text-4xl">🏗️</p>
+                <p className="mt-2 text-2xl font-black text-ink-strong">Пусни етажа!</p>
+                <p className="mt-1 text-muted">Кликни върху кулата или натисни интервал, когато етажът е точно над нея.</p>
+                <div className="mx-auto mt-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+                  <div className="h-full rounded-full bg-secondary" style={{ width: `${Math.max(0, 100 - ((now - dropStart) / TOWER.DROP_MS) * 100)}%` }} />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl bg-black/30 p-6 text-center text-white/70 backdrop-blur">…</div>
+            )}
+            {error && <p className="mt-3 rounded-xl bg-error p-2 text-center text-sm font-bold text-white">{error}</p>}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0f1a]">
       <div className="relative overflow-hidden" style={{ width: 'min(100vw, calc(100dvh * 9 / 16))', height: 'min(100dvh, calc(100vw * 16 / 9))' }}>
@@ -252,11 +316,24 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
   );
 }
 
-function QuestionSheet({ q, left, feedback, busy, onAnswer }: { q: ClientQuestion; left: number; feedback: { shown: number; correctIndex: number | null; ok: boolean } | null; busy: boolean; onAnswer: (i: number) => void }) {
+/** Компютър: широк екран с мишка → кулата в средата, въпросът отстрани. */
+function useDesktop() {
+  const [d, setD] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(min-width: 1024px) and (pointer: fine) and (orientation: landscape)');
+    const on = () => setD(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return d;
+}
+
+function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { q: ClientQuestion; left: number; feedback: { shown: number; correctIndex: number | null; ok: boolean } | null; busy: boolean; onAnswer: (i: number) => void; docked?: boolean }) {
   const pct = Math.max(0, Math.min(100, (left / TOWER.QUESTION_MS) * 100));
   return (
-    <div className="absolute inset-0 flex flex-col justify-end bg-black/25">
-      <div className="max-h-[66%] animate-rise overflow-y-auto rounded-t-3xl bg-surface p-4 shadow-2xl">
+    <div className={docked ? '' : 'absolute inset-0 flex flex-col justify-end bg-black/25'}>
+      <div className={docked ? 'card3d max-h-[85dvh] animate-rise overflow-y-auto rounded-3xl bg-surface p-5 shadow-2xl' : 'max-h-[66%] animate-rise overflow-y-auto rounded-t-3xl bg-surface p-4 shadow-2xl'}>
         <div className="mb-2 flex items-center gap-2">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div className={cn('h-full rounded-full', left < 5000 ? 'bg-error' : 'bg-secondary')} style={{ width: `${pct}%` }} />
@@ -267,7 +344,7 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer }: { q: ClientQuestio
           <Badge tone="blue">{q.label}</Badge>
           {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
         </div>
-        <p className="whitespace-pre-line text-base font-extrabold leading-snug text-ink-strong">{q.prompt}</p>
+        <p className={cn('whitespace-pre-line font-extrabold leading-snug text-ink-strong', docked ? 'text-xl' : 'text-base')}>{q.prompt}</p>
         {q.context && <ContextBox text={q.context} compact />}
         <div className="mt-3">
           <AnswerInput
