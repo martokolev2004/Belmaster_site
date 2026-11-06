@@ -260,6 +260,91 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   };
 
   const stage = state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
+  const overlay = useOverlayLayout();
+
+  const header = (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 phone-landscape:mb-1 phone-landscape:flex-nowrap">
+      <div className="flex min-w-0 items-center gap-2">
+        <Badge tone="purple" className="phone-landscape:hidden">{MODE_LABELS[state.mode].name}</Badge>
+        <span className="truncate font-extrabold text-ink-strong phone-landscape:text-sm">{stage}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <SoundToggle />
+        <FullscreenButton />
+        <button onClick={() => setConfirmLeave(true)} className="inline-flex items-center gap-1 text-sm font-extrabold text-muted hover:text-error">
+          <LogOut className="size-4" /> Напусни
+        </button>
+      </div>
+    </div>
+  );
+  const leaveDialog = confirmLeave && (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmLeave(false)}>
+      <div className="card3d w-full max-w-sm animate-pop rounded-3xl bg-surface p-6 text-center" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xl font-black">Да напуснеш битката?</p>
+        <p className="mt-1 text-muted">Областите ти стават неутрални и губиш битката.</p>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <Button variant="ghost" onClick={() => setConfirmLeave(false)}>
+            Остани
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              socket?.emit('lobby:leave');
+              router.push('/play');
+            }}
+          >
+            Напусни
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // компютър и хоризонтален телефон: голяма карта, въпросът изскача върху нея
+  if (overlay) {
+    return (
+      <div className="-mt-2 phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:m-0 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-[max(0.5rem,env(safe-area-inset-left))] phone-landscape:py-1">
+        <RotateOverlay />
+        {header}
+        <PlayersBar state={state} map={map} me={me} />
+        <div className="card3d relative mt-3 flex items-center justify-center overflow-hidden rounded-3xl bg-surface p-1.5 phone-landscape:mt-1 phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:rounded-2xl phone-landscape:p-0.5">
+          <MapBoard
+            map={map}
+            state={state}
+            selectable={selectable}
+            onSelect={onSelect}
+            onBlocked={onBlocked}
+            highlight={state.battle?.regionId ?? null}
+            attackColor={attackColor}
+            bubbles={bubbles}
+            className="phone-landscape:h-full phone-landscape:max-h-full phone-landscape:w-auto phone-landscape:max-w-full"
+          />
+          <MapOverlays state={state} me={me} meP={meP} />
+          {hint && (
+            <div className="pointer-events-none absolute inset-x-3 bottom-3 animate-pop rounded-xl bg-ink-strong/90 px-3 py-2 text-center text-sm font-bold text-bg">{hint}</div>
+          )}
+          <div className="absolute bottom-1.5 left-1.5 hidden max-w-[15rem] phone-landscape:block [&>div]:p-2">
+            <ChatBar state={state} />
+          </div>
+        </div>
+        <div className="mt-3 grid gap-4 lg:grid-cols-[1fr_340px] phone-landscape:hidden">
+          <BattlePanel state={state} map={map} me={me} />
+          <div className="space-y-3">
+            <ChatBar state={state} />
+            <details className="card3d rounded-2xl bg-surface p-3 text-sm">
+              <summary className="cursor-pointer font-extrabold">Дневник на битката</summary>
+              <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-muted">
+                {[...state.log].reverse().map((l, i) => (
+                  <li key={i}>{l}</li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        </div>
+        {leaveDialog}
+      </div>
+    );
+  }
 
   return (
     <div className="-mt-2 phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:m-0 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-[max(0.5rem,env(safe-area-inset-left))] phone-landscape:py-1.5">
@@ -485,6 +570,94 @@ function Reconnect({ until }: { until: number | null }) {
   );
 }
 
+/** Компютър (мишка, широк екран) или хоризонтален телефон → картата е голяма, панелите изскачат върху нея. */
+function useOverlayLayout() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const qs = ['(min-width: 1024px) and (pointer: fine)', '(orientation: landscape) and (pointer: coarse) and (max-height: 540px)'].map((q) => window.matchMedia(q));
+    const upd = () => setOn(qs.some((m) => m.matches));
+    upd();
+    qs.forEach((m) => m.addEventListener('change', upd));
+    return () => qs.forEach((m) => m.removeEventListener('change', upd));
+  }, []);
+  return on;
+}
+
+function TopBanner({ children, interactive = false }: { children: React.ReactNode; interactive?: boolean }) {
+  return (
+    <div className={cn('absolute inset-x-0 top-2 z-10 flex justify-center px-3', !interactive && 'pointer-events-none')}>
+      <div className="card3d w-full max-w-md animate-rise rounded-2xl bg-surface/95 p-3 backdrop-blur phone-landscape:max-w-xs phone-landscape:p-2 phone-landscape:text-xs phone-landscape:[&_p]:text-xs">{children}</div>
+    </div>
+  );
+}
+
+/** Какво се вижда върху картата според фазата. */
+function MapOverlays({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+  const map = MAPS[state.mapId!];
+  const regionName = (id: string) => {
+    const reg = state.regions[id];
+    return state.mode === 'WORKS' && reg?.workTitle ? `„${reg.workTitle}“` : map.regions.find((r) => r.id === id)?.name ?? id;
+  };
+  const q = state.question;
+  const reveal = state.reveal;
+  const qPhase = ['expansion_question', 'battle_question', 'expansion_reveal', 'battle_reveal'].includes(state.phase);
+
+  if (meP && (meP.eliminated || meP.left) && !q)
+    return (
+      <TopBanner>
+        <p className="font-black">Ти си елиминиран 😔</p>
+        <p className="text-sm text-muted">Можеш да гледаш до края на битката.</p>
+      </TopBanner>
+    );
+
+  if (qPhase && q) {
+    const participant = q.participants.includes(me);
+    const answered = state.answeredUids.includes(me);
+    const header =
+      state.battle && state.phase.startsWith('battle')
+        ? `${name(state, state.battle.attackerUid)} ⚔ ${state.battle.defenderUid ? name(state, state.battle.defenderUid) : 'неутрална'} · ${regionName(state.battle.regionId)}`
+        : 'Всички отговарят — най-бързите верни избират земя';
+    if (reveal)
+      return (
+        <div className="absolute inset-x-0 top-2 z-10 flex max-h-[calc(100%-1rem)] justify-center px-3">
+          <div className="card3d w-full max-w-md animate-rise overflow-y-auto rounded-2xl bg-surface/95 p-3 backdrop-blur phone-landscape:p-2">
+            <p className="text-xs font-extrabold uppercase text-muted">{header}</p>
+            <RevealBox state={state} me={me} className="mt-2" />
+          </div>
+        </div>
+      );
+    if (participant && !answered)
+      return (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[2px] phone-landscape:p-1.5">
+          <div className={cn('max-h-full w-full overflow-y-auto rounded-2xl', q.context ? 'max-w-3xl' : 'max-w-2xl')}>
+            <QuestionPanel state={state} me={me} meP={meP} regionName={regionName} />
+          </div>
+        </div>
+      );
+    const done = state.answeredUids.filter((u) => q.participants.includes(u)).length;
+    return (
+      <TopBanner>
+        <p className="text-xs font-extrabold uppercase text-muted">{header}</p>
+        <div className="mt-2">
+          <TimerBar deadline={q.deadline} total={q.timeMs} />
+        </div>
+        <p className="mt-2 text-sm font-bold">
+          {participant ? 'Отговорът е изпратен — изчакване…' : 'Гледаш този въпрос…'}
+          {q.participants.length > 1 && <span className="ml-1 text-muted">Отговорили: {done}/{q.participants.length}</span>}
+        </p>
+      </TopBanner>
+    );
+  }
+
+  if ((state.phase === 'expansion_pick' && state.pick) || state.phase === 'battle_choose')
+    return (
+      <TopBanner>
+        <ActionPanel state={state} me={me} meP={meP} bare />
+      </TopBanner>
+    );
+  return null;
+}
+
 function TimerBar({ deadline, total }: { deadline: number | null; total: number }) {
   const left = useCountdown(deadline);
   const pct = Math.min(100, (left / total) * 100);
@@ -503,7 +676,8 @@ function name(state: GameState, uid: string | null | undefined) {
   return state.players.find((p) => p.uid === uid)?.name ?? '—';
 }
 
-function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+function ActionPanel({ state, me, meP, bare = false }: { state: GameState; me: string; meP?: PublicPlayer; bare?: boolean }) {
+  const Box = bare ? BareBox : Panel;
   const map = MAPS[state.mapId!];
   const regionName = (id: string) => {
     const reg = state.regions[id];
@@ -512,10 +686,10 @@ function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: P
 
   if (meP && (meP.eliminated || meP.left) && !state.question) {
     return (
-      <Panel>
+      <Box>
         <p className="text-lg font-black">Ти си елиминиран 😔</p>
         <p className="text-muted">Можеш да гледаш до края на битката.</p>
-      </Panel>
+      </Box>
     );
   }
 
@@ -526,25 +700,25 @@ function ActionPanel({ state, me, meP }: { state: GameState; me: string; meP?: P
   if (state.phase === 'expansion_pick' && state.pick) {
     const mine = state.pick.uid === me;
     return (
-      <Panel>
+      <Box>
         <TimerBar deadline={state.deadline} total={RULES.EXPANSION_PICK_MS} />
         <p className="mt-3 text-lg font-black">{mine ? 'Избери свободна област на картата!' : `${name(state, state.pick.uid)} избира област…`}</p>
         {mine && <p className="text-sm text-muted">Мигащите области са свободни и съседни на твоите. Ако не избереш — получаваш случайна.</p>}
         <p className="mt-2 text-xs font-bold text-muted">Първо се разпределят свободните земи. Атаките по чужди области започват след това.</p>
         {state.pick.queue.length > 1 && <p className="mt-2 text-sm text-muted">След това: {state.pick.queue.slice(1).map((u) => name(state, u)).join(', ')}</p>}
-      </Panel>
+      </Box>
     );
   }
 
   if (state.phase === 'battle_choose') {
     const mine = state.turnUid === me;
     return (
-      <Panel>
+      <Box>
         <TimerBar deadline={state.deadline} total={RULES.ATTACK_CHOOSE_MS} />
         <p className="mt-3 text-lg font-black">{mine ? 'Твой ход! Избери съседна област за атака.' : `${name(state, state.turnUid)} избира атака…`}</p>
         {mine && state.attacksLeft > 1 && <Badge tone="yellow" className="mt-2">★ Бонус за земя: {state.attacksLeft} атаки този ход</Badge>}
         {mine && <p className="mt-1 text-sm text-muted">Мигащите области можеш да нападнеш. Печелиш, ако отговориш вярно и по-бързо от защитника. Столица (🏰) пада след 3 победи — и взимаш всичките му области.</p>}
-      </Panel>
+      </Box>
     );
   }
 
@@ -641,8 +815,19 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
         </p>
       )}
 
-      {reveal && (
-        <div className="mt-4 animate-rise rounded-xl bg-surface-2 p-3">
+      {reveal && <RevealBox state={state} me={me} />}
+    </Panel>
+  );
+}
+
+
+/** Резултатът след въпроса — кой позна, верният отговор, времената. */
+function RevealBox({ state, me, className }: { state: GameState; me: string; className?: string }) {
+  const q = state.question!;
+  const reveal = state.reveal!;
+  const myResult = reveal.results.find((r) => r.uid === me);
+  return (
+        <div className={cn('mt-4 animate-rise rounded-xl bg-surface-2 p-3', className)}>
           {myResult && (
             <p className={cn('mb-2 rounded-lg px-3 py-2 text-sm font-black text-white', myResult.correct ? 'bg-primary' : myResult.score > 0 ? 'bg-orange' : 'bg-error')}>
               {myResult.correct
@@ -677,9 +862,11 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
             ))}
           </ul>
         </div>
-      )}
-    </Panel>
   );
+}
+
+function BareBox({ children }: { children: React.ReactNode; className?: string }) {
+  return <div>{children}</div>;
 }
 
 function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
