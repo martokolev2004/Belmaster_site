@@ -48,15 +48,16 @@ export type AchievementMetric =
   | 'tests' | 'correct' | 'exams' | 'mistakesCleared' | 'bestStreak' | 'level' | 'friends'
   | 'battleGames' | 'battleWins' | 'climbGames' | 'climbWins'
   | 'xp' | 'langCorrect' | 'litCorrect' | 'readCorrect' | 'spellingCorrect' | 'punctCorrect' | 'worksTouched'
-  | 'perfectTests' | 'examsDistinct' | 'items' | 'leagueWeeks' | 'leagueTierMax' | 'assignments' | 'classJoined' | 'survivalBest';
+  | 'perfectTests' | 'examsDistinct' | 'items' | 'leagueWeeks' | 'leagueTierMax' | 'assignments' | 'classJoined' | 'survivalBest' | 'towerBest' | 'towerGames';
 
-export type AchievementCategory = 'learn' | 'topics' | 'streak' | 'battle' | 'climb' | 'league' | 'collect' | 'class' | 'social';
+export type AchievementCategory = 'learn' | 'topics' | 'streak' | 'battle' | 'climb' | 'tower' | 'league' | 'collect' | 'class' | 'social';
 export const ACHIEVEMENT_CATEGORIES: Record<AchievementCategory, string> = {
   learn: 'Учене',
   topics: 'Теми и произведения',
   streak: 'Серии, нива и опит',
   battle: 'Битка за картата',
   climb: 'Към върха',
+  tower: 'Кула на Словото',
   league: 'Седмична лига',
   collect: 'Колекция',
   class: 'Моят клас',
@@ -128,6 +129,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   A('exam_all', 'Всички матури', 'Реши 8 различни матури', 'scroll', 'learn', 'examsDistinct', 8),
   A('night_owl', 'Нощна птица', 'Реши тест между 23:00 и 4:00', 'star', 'learn'),
   A('early_bird', 'Ранобудник', 'Реши тест между 5:00 и 7:30', 'star', 'learn'),
+  A('tower_first', 'Първи етаж', 'Изиграй „Кула на Словото“', 'castle', 'tower', 'towerGames', 1),
+  A('tower_10', 'Десететажна', 'Построй кула от 10 етажа', 'castle', 'tower', 'towerBest', 10),
+  A('tower_25', 'Небостъргач', 'Построй кула от 25 етажа', 'castle', 'tower', 'towerBest', 25),
+  A('tower_50', 'До облаците', 'Построй кула от 50 етажа', 'crown', 'tower', 'towerBest', 50),
+  A('tower_perfect10', 'Точен като часовник', '10 перфектни пускания в една игра', 'target', 'tower'),
   A('survival_10', 'Без грешка 10', '10 поредни верни в „До първа грешка“', 'flame', 'learn', 'survivalBest', 10),
   A('survival_25', 'Без грешка 25', '25 поредни верни в „До първа грешка“', 'flame', 'learn', 'survivalBest', 25),
   A('survival_50', 'Без грешка 50', '50 поредни верни в „До първа грешка“', 'gem', 'learn', 'survivalBest', 50),

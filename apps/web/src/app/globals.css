@@ -168,6 +168,11 @@
   100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: 0; }
 }
 
+/* „Кула на Словото“ */
+.tower-shake { animation: tower-shake .6s ease-in-out; }
+@keyframes tower-shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-2.2deg); } 45% { transform: rotate(1.8deg); } 70% { transform: rotate(-1deg); } }
+.tower-flag { animation: climb-flag 1.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 0 50%; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

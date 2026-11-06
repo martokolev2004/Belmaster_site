@@ -11,7 +11,7 @@ export const metadata = { title: 'Класация' };
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ tab?: string; season?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
-  const tab = sp.tab === 'xp' ? 'xp' : sp.tab === 'climb' ? 'climb' : 'rating';
+  const tab = sp.tab === 'xp' ? 'xp' : sp.tab === 'climb' ? 'climb' : sp.tab === 'tower' ? 'tower' : 'rating';
   const season = sp.season === 'all' ? 'all' : currentSeason();
   const grade = user.grade!;
 
@@ -32,6 +32,14 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       include: { user: true },
     });
     rows = ratings.map((r) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, value: String(r.rating), sub: `${r.wins} победи · ${r.games} игри` }));
+  } else if (tab === 'tower') {
+    const bests = await prisma.towerBest.findMany({
+      where: { grade, season, best: { gt: 0 }, user: { isGuest: false } },
+      orderBy: [{ best: 'desc' }, { updatedAt: 'asc' }],
+      take: 50,
+      include: { user: true },
+    });
+    rows = bests.map((r) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, value: `${r.best} ет.`, sub: 'Кула на Словото' }));
   } else {
     const users = await prisma.user.findMany({ where: { grade, isGuest: false, xp: { gt: 0 } }, orderBy: { xp: 'desc' }, take: 50 });
     rows = users.map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, avatar: u.avatar, value: `${u.xp} XP`, sub: `Ниво ${u.level}` }));
@@ -49,13 +57,14 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           <span className="block text-sm text-muted">Състезавай се с XP срещу 20 ученици — първите 5 се качват.</span>
         </span>
       </Link>
-      <div className="mb-4 grid grid-cols-3 rounded-2xl bg-surface-2 p-1">
+      <div className="mb-4 grid grid-cols-4 rounded-2xl bg-surface-2 p-1">
         {[
           { t: 'rating', label: 'Битки' },
           { t: 'climb', label: 'Към върха' },
+          { t: 'tower', label: 'Кула' },
           { t: 'xp', label: 'Опит (XP)' },
         ].map(({ t, label }) => (
-          <Link key={t} href={tabLink(t)} className={cn('rounded-xl py-2.5 text-center text-sm font-extrabold uppercase', tab === t ? 'bg-surface text-secondary shadow-sm' : 'text-muted')}>
+          <Link key={t} href={tabLink(t)} className={cn('rounded-xl px-1 py-2.5 text-center text-xs font-extrabold uppercase sm:text-sm', tab === t ? 'bg-surface text-secondary shadow-sm' : 'text-muted')}>
             {label}
           </Link>
         ))}
@@ -75,7 +84,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
       {user.isGuest && <p className="mb-4 rounded-2xl bg-accent/15 p-3 text-sm font-bold">Гостите не влизат в класацията. <Link className="text-secondary underline" href="/login?tab=register">Направи профил</Link>, за да се състезаваш.</p>}
       {rows.length === 0 ? (
         <EmptyState title="Още няма класирани" icon={<Trophy className="size-12" />}>
-          {tab === 'rating' ? 'Изиграй битка с рейтинг, за да се появиш тук.' : 'Реши тест, за да се появиш тук.'}
+          {tab === 'tower' ? 'Построй кула, за да се появиш тук.' : tab === 'rating' ? 'Изиграй битка с рейтинг, за да се появиш тук.' : 'Реши тест, за да се появиш тук.'}
         </EmptyState>
       ) : (
         <ol className="card3d divide-y-2 divide-line overflow-hidden rounded-2xl bg-surface">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, GraduationCap, Mountain, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { BookOpen, Castle, GraduationCap, Mountain, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const ITEMS = [
@@ -10,6 +10,7 @@ const ITEMS = [
   { href: '/tests', label: 'Тестове', icon: ListChecks },
   { href: '/play', label: 'Битка', icon: Swords },
   { href: '/climb', label: 'Към върха', icon: Mountain },
+  { href: '/tower', label: 'Кула', icon: Castle },
   { href: '/library', label: 'Библиотека', icon: BookOpen },
   { href: '/leaderboard', label: 'Класация', icon: Trophy },
   { href: '/friends', label: 'Приятели', icon: Users },

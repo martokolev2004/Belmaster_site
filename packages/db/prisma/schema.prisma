@@ -70,6 +70,8 @@ model User {
   teacherTests     TeacherTest[]
   submissions      Submission[]
   notifications    Notification[]
+  towerRuns        TowerRun[]
+  towerBests       TowerBest[]
 }
 
 enum TeacherStatus {
@@ -201,6 +203,8 @@ model Question {
   answerCount     Int            @default(1) // SHORT_ANSWER: колко отговора се искат (напр. „запишете ДВЕ“)
   explanation     String?
   status          QuestionStatus @default(ACTIVE)
+  answeredCount   Int            @default(0) // общо отговори (за трудността)
+  correctCount    Int            @default(0)
   inMultiplayer   Boolean        @default(true) // участва ли в битките
 
   // Етикети
@@ -528,4 +532,51 @@ model LeagueMember {
 
   @@unique([userId, week])
   @@index([group, xp])
+}
+
+// ─────────────────────────── „Кула на Словото“ ───────────────────────────
+
+// Една игра. Сървърът пази цялото състояние — клиентът само показва.
+model TowerRun {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grade      Grade
+  season     String // месецът на началото, YYYY-MM
+  theme      String
+  seed       Float
+  status     String    @default("ACTIVE") // ACTIVE | DONE
+  phase      String    @default("question") // question | drop | over
+  phaseAt    DateTime  @default(now()) // кога е започнала текущата фаза (за таймерите)
+  questionId String?
+  perm       Int[] // разбъркване на отговорите: показан индекс → истински
+  seen       String[] // зададени въпроси
+  xs         Float[] // x на етажите
+  lean       Float     @default(0)
+  streak     Int       @default(0)
+  lives      Int       @default(3)
+  correct    Int       @default(0)
+  wrong      Int       @default(0)
+  perfects   Int       @default(0)
+  xpAnswers  Int       @default(0) // колко верни са донесли XP (дневен лимит)
+  xpEarned   Int       @default(0)
+  log        Json      @default("[]") // за разбора: въпрос, отговор, верен ли е
+  endReason  String?
+  createdAt  DateTime  @default(now())
+  endedAt    DateTime?
+
+  @@index([userId, createdAt])
+}
+
+// Най-добър резултат по сезон (месец) и „all“ — за класацията.
+model TowerBest {
+  userId    String
+  grade     Grade
+  season    String
+  best      Int
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, grade, season])
+  @@index([grade, season, best])
 }

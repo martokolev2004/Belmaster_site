@@ -3,6 +3,8 @@ import { ACHIEVEMENTS, levelForXp, type AchievementMetric } from '@belmaster/sha
 
 /** Всички броячи за постиженията на един потребител. */
 export async function achievementMetrics(prisma: PrismaClient, userId: string): Promise<Record<AchievementMetric, number>> {
+  const towerB = await prisma.towerBest.aggregate({ where: { userId, season: 'all' }, _max: { best: true } });
+  const towerG = await prisma.towerRun.count({ where: { userId, status: 'DONE' } });
   const survival = await prisma.quizAttempt.aggregate({ where: { userId, kind: 'SURVIVAL' }, _max: { score: true } });
   const [user, tests, exams, topic, battleGames, battleWins, climbGames, climbWins, friends, stats, attempts, examGroups, leagues, assignments, member] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { xp: true, level: true, bestStreak: true, mistakesCleared: true, ownedItems: true } }),
@@ -49,6 +51,8 @@ export async function achievementMetrics(prisma: PrismaClient, userId: string): 
     assignments,
     classJoined: member ? 1 : 0,
     survivalBest: Math.round(survival._max.score ?? 0),
+    towerBest: towerB._max.best ?? 0,
+    towerGames: towerG,
   };
 }
 

@@ -38,6 +38,12 @@ export async function recordAnswers(prisma: PrismaClient, userId: string, items:
   );
   await prisma.$transaction(ops);
 
+  // обща статистика на въпроса — от нея се смята трудността
+  for (const it of items) {
+    if (!byId.has(it.questionId)) continue;
+    await prisma.question.update({ where: { id: it.questionId }, data: { answeredCount: { increment: 1 }, ...(it.correct ? { correctCount: { increment: 1 } } : {}) } });
+  }
+
   // „Моите грешки“ с повторение: след верен отговор въпросът се връща след 1, после 3, после 7 дни; след 4-ия верен — изчистен
   const now = Date.now();
   let cleared = 0;
