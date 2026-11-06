@@ -24,6 +24,10 @@ const HANG_Y = 172; // горният ръб на висящия етаж (на 
 const BASE: Record<TowerTheme, number> = { town: 742, mountain: 742, library: 722 };
 /** цветът на небето в горния край на фона — продължава нагоре */
 const SKY: Record<TowerTheme, string> = { town: '#659fe1', mountain: '#4075b8', library: '#332d5e' };
+const SKY_WIDE: Record<TowerTheme, string> = { town: '#8ebbe4', mountain: '#407ecf', library: '#856ece' };
+/** широката сцена (компютър): 16:9, кулата остава в средата */
+const WIDE_W = (VH * 16) / 9;
+const WIDE_X = CX - WIDE_W / 2;
 
 // стабилни „звезди“ високо в небето
 const STARS = Array.from({ length: 140 }, (_, i) => {
@@ -207,21 +211,26 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     const floorsShown = st.xs.length + (anim && anim.res.kind !== 'fall' ? 1 : 0);
     return (
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#0b0f1a]">
-        <div className="absolute inset-0 scale-110 bg-cover bg-bottom opacity-45 blur-2xl" style={{ backgroundImage: `url(/tower/${st.theme}.webp)` }} />
-        <div className="relative flex h-full items-center justify-center gap-8 p-4">
+        <Scene wide st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+        {toast && now - toast.at < 1400 && (
+          <div className="pointer-events-none absolute inset-x-0 top-[44%] flex justify-center">
+            <span className={cn('animate-pop rounded-2xl px-5 py-2.5 text-xl font-black text-white shadow-lg', toast.tone === 'good' ? 'bg-primary' : toast.tone === 'bad' ? 'bg-error' : 'bg-secondary')}>{toast.text}</span>
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-between gap-6 p-6">
           {/* вляво: резултат */}
-          <aside className="w-60 shrink-0 space-y-4 text-white">
-            <button onClick={quit} className="inline-flex items-center gap-2 rounded-full bg-black/45 px-4 py-2 text-sm font-extrabold hover:bg-black/60">
+          <aside className="pointer-events-auto w-60 shrink-0 space-y-4 text-white">
+            <button onClick={quit} className="inline-flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-sm font-extrabold hover:bg-black/65">
               <X className="size-4" /> Край на играта
             </button>
-            <div className="rounded-3xl bg-black/40 p-5 backdrop-blur">
+            <div className="rounded-3xl bg-black/45 p-5 backdrop-blur">
               <p className="text-xs font-extrabold uppercase tracking-wider text-white/70">Етажи</p>
               <p className="text-7xl font-black tabular-nums leading-none">{floorsShown}</p>
               <p className="mt-2 flex items-center gap-1.5 text-sm font-bold text-accent">
                 <Trophy className="size-4" /> Рекорд: {best}
               </p>
             </div>
-            <div className="rounded-3xl bg-black/40 p-5 backdrop-blur">
+            <div className="rounded-3xl bg-black/45 p-5 backdrop-blur">
               <p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-white/70">Животи</p>
               <div className="flex gap-1.5">
                 {Array.from({ length: TOWER.LIVES }, (_, i) => (
@@ -230,21 +239,11 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
               </div>
               {st.streak > 0 && <p className="mt-3 text-sm font-black text-accent">⭐ {st.streak}/3 перфектни поред</p>}
             </div>
-            <p className="px-1 text-xs text-white/60">Пускане: клик върху кулата или интервал. 3 перфектни пускания поред успокояват люлеенето.</p>
+            <p className="rounded-2xl bg-black/35 px-3 py-2 text-xs text-white/80 backdrop-blur">Пускане: клик върху кулата или интервал. 3 перфектни пускания поред успокояват люлеенето.</p>
           </aside>
 
-          {/* в средата: кулата */}
-          <div className="relative h-full shrink-0 overflow-hidden rounded-3xl shadow-2xl ring-2 ring-white/10" style={{ aspectRatio: '9 / 16' }}>
-            <Scene st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
-            {toast && now - toast.at < 1400 && (
-              <div className="pointer-events-none absolute inset-x-0 top-[47%] flex justify-center">
-                <span className={cn('animate-pop rounded-2xl px-4 py-2 text-lg font-black text-white shadow-lg', toast.tone === 'good' ? 'bg-primary' : toast.tone === 'bad' ? 'bg-error' : 'bg-secondary')}>{toast.text}</span>
-              </div>
-            )}
-          </div>
-
           {/* вдясно: въпросът или пускането */}
-          <section className="w-[min(480px,34vw)] shrink-0">
+          <section className="pointer-events-auto w-[min(480px,32vw)] shrink-0">
             {st.phase === 'question' && question && !anim ? (
               <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
             ) : st.phase === 'drop' && !anim ? (
@@ -361,7 +360,9 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { 
   );
 }
 
-function Scene({ st, now, dropStart, anim, shake, best, onTap }: { st: TowerState; now: number; dropStart: number; anim: Anim | null; shake: number; best: number; onTap: () => void }) {
+function Scene({ st, now, dropStart, anim, shake, best, onTap, wide = false }: { st: TowerState; now: number; dropStart: number; anim: Anim | null; shake: number; best: number; onTap: () => void; wide?: boolean }) {
+  const vx = wide ? WIDE_X : 0;
+  const vw = wide ? WIDE_W : VW;
   const style = TOWER_STYLE[st.theme];
   const base = BASE[st.theme];
   const n = st.xs.length;
@@ -415,10 +416,10 @@ function Scene({ st, now, dropStart, anim, shake, best, onTap }: { st: TowerStat
   const cx = craneX(t, n, st.seed);
 
   return (
-    <svg viewBox={`0 0 ${VW} ${VH}`} className="absolute inset-0 h-full w-full touch-none select-none" onPointerDown={onTap} role="img" aria-label="Кулата">
+    <svg viewBox={`${vx} 0 ${vw} ${VH}`} preserveAspectRatio={wide ? 'xMidYMax slice' : 'xMidYMid meet'} className="absolute inset-0 h-full w-full touch-none select-none" onPointerDown={onTap} role="img" aria-label="Кулата">
       <defs>
         <linearGradient id="tw-sky" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor={SKY[st.theme]} />
+          <stop offset="0" stopColor={(wide ? SKY_WIDE : SKY)[st.theme]} />
           <stop offset=".35" stopColor={st.theme === 'library' ? '#1f1a40' : '#2c4f8f'} />
           <stop offset=".7" stopColor="#141a3c" />
           <stop offset="1" stopColor="#05060f" />
@@ -429,19 +430,19 @@ function Scene({ st, now, dropStart, anim, shake, best, onTap }: { st: TowerStat
       </defs>
       <g style={{ transform: `translateY(${cam}px)`, transition: 'transform .6s ease-out' }}>
         {/* небето продължава нагоре */}
-        <rect x="0" y="-9000" width={VW} height="9004" fill="url(#tw-sky)" />
+        <rect x={vx} y="-9000" width={vw} height="9004" fill="url(#tw-sky)" />
         {STARS.map((s, i) => (
-          <circle key={i} cx={s.x} cy={s.y} r={s.s} fill="#fff" opacity=".8" />
+          <circle key={i} cx={vx + (s.x / VW) * vw} cy={s.y} r={s.s} fill="#fff" opacity=".8" />
         ))}
-        <image href={`/tower/${st.theme}.webp`} x="0" y="0" width={VW} height={VH} preserveAspectRatio="none" />
+        <image href={wide ? `/tower/wide-${st.theme}.webp` : `/tower/${st.theme}.webp`} x={vx} y="0" width={vw} height={VH} preserveAspectRatio="none" />
         {/* основата */}
         <rect x={CX - TOWER_BASE_W / 2} y={base} width={TOWER_BASE_W} height="13" rx="4" fill="#8d8173" stroke="#4a4036" strokeWidth="2" />
         {/* линия на рекорда */}
         {best > 0 && (
           <g opacity=".85">
-            <line x1="0" x2={VW} y1={base - best * FH} y2={base - best * FH} stroke="#ffd84a" strokeWidth="2.5" strokeDasharray="10 8" />
-            <rect x={VW - 96} y={base - best * FH - 26} width="88" height="22" rx="11" fill="#ffd84a" />
-            <text x={VW - 52} y={base - best * FH - 10} textAnchor="middle" fontSize="12" fontWeight="900" fill="#3a2a00">
+            <line x1={CX - 210} x2={CX + 210} y1={base - best * FH} y2={base - best * FH} stroke="#ffd84a" strokeWidth="2.5" strokeDasharray="10 8" />
+            <rect x={CX + 122} y={base - best * FH - 26} width="88" height="22" rx="11" fill="#ffd84a" />
+            <text x={CX + 166} y={base - best * FH - 10} textAnchor="middle" fontSize="12" fontWeight="900" fill="#3a2a00">
               Рекорд {best}
             </text>
           </g>
@@ -459,8 +460,8 @@ function Scene({ st, now, dropStart, anim, shake, best, onTap }: { st: TowerStat
       </g>
 
       {/* кранът — на екрана, не в света */}
-      <line x1="0" y1="114" x2={VW} y2="114" stroke="#2b2b2b" strokeWidth="6" />
-      <line x1="0" y1="124" x2={VW} y2="124" stroke="#2b2b2b" strokeWidth="2" strokeDasharray="8 6" />
+      <line x1={vx} y1="114" x2={vx + vw} y2="114" stroke="#2b2b2b" strokeWidth="6" />
+      <line x1={vx} y1="124" x2={vx + vw} y2="124" stroke="#2b2b2b" strokeWidth="2" strokeDasharray="8 6" />
       <g transform={`translate(${CX + (hanging ? cx : anim ? anim.res.craneX : cx)} 0)`}>
         <rect x="-22" y="104" width="44" height="22" rx="4" fill="#f5b800" stroke="#2b2b2b" strokeWidth="2.5" />
         <line x1="0" y1="126" x2="0" y2={hanging ? HANG_Y - 14 : 150} stroke="#2b2b2b" strokeWidth="2.5" />
