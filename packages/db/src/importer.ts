@@ -234,15 +234,33 @@ export async function importQuestions(prisma: PrismaClient, input: unknown, opts
 
 export interface WorksFile {
   grade: Grade;
-  works: { title: string; author: string; period?: string; studiedIn?: string; year?: string; genre?: string }[];
+  works: {
+    title: string;
+    author: string;
+    period?: string;
+    studiedIn?: string;
+    year?: string;
+    genre?: string;
+    summary?: string;
+    themes?: string;
+    characters?: string;
+    authorInfo?: string;
+    quotes?: string;
+  }[];
 }
+
+/** Полетата с описание — от файла се попълват само ако в базата са празни (за да не се изтрие редакция от админ панела). */
+const WORK_TEXT_FIELDS = ['genre', 'summary', 'themes', 'characters', 'authorInfo', 'quotes'] as const;
 
 export async function importWorks(prisma: PrismaClient, file: WorksFile): Promise<number> {
   let n = 0;
   for (const [i, w] of file.works.entries()) {
+    const existing = await prisma.work.findUnique({ where: { grade_title_author: { grade: file.grade, title: w.title, author: w.author } } });
+    const fill: Record<string, string> = {};
+    for (const k of WORK_TEXT_FIELDS) if (w[k] && !existing?.[k]?.trim()) fill[k] = w[k]!;
     await prisma.work.upsert({
       where: { grade_title_author: { grade: file.grade, title: w.title, author: w.author } },
-      update: { period: w.period ?? undefined, sortOrder: i },
+      update: { period: w.period ?? undefined, sortOrder: i, ...fill },
       create: {
         grade: file.grade,
         title: w.title,
@@ -250,6 +268,11 @@ export async function importWorks(prisma: PrismaClient, file: WorksFile): Promis
         period: w.period ?? null,
         genre: w.genre ?? null,
         year: w.year ?? null,
+        summary: w.summary ?? null,
+        themes: w.themes ?? null,
+        characters: w.characters ?? null,
+        authorInfo: w.authorInfo ?? null,
+        quotes: w.quotes ?? null,
         extra: w.studiedIn ? `Изучава се в ${w.studiedIn}.` : null,
         sortOrder: i,
       },
