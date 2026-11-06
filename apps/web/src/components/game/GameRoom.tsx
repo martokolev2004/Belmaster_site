@@ -303,7 +303,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   // компютър и хоризонтален телефон: голяма карта, въпросът изскача върху нея
   if (overlay) {
     return (
-      <div className="-mt-2 phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:m-0 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-[max(0.5rem,env(safe-area-inset-left))] phone-landscape:py-1">
+      <div data-wide className="mx-auto -mt-2 w-full lg:max-w-[calc((100dvh-255px)*1.5625)] phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:m-0 phone-landscape:flex phone-landscape:max-w-none phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-[max(0.5rem,env(safe-area-inset-left))] phone-landscape:py-1">
         <RotateOverlay />
         {header}
         <PlayersBar state={state} map={map} me={me} />

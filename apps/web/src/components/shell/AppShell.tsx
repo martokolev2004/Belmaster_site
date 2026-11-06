@@ -79,7 +79,7 @@ export async function AppShell({ user, children }: { user: User; children: React
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
+        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12 has-[[data-wide]]:max-w-none has-[[data-wide]]:lg:px-8">{children}</main>
         <BottomNav />
         <InviteToasts />
         <UnlockCelebration avatar={user.avatar} seed={user.id} />

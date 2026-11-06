@@ -428,7 +428,7 @@ function DesktopLayout({
         ? last
         : null;
   return (
-    <div className="space-y-3">
+    <div data-wide className="mx-auto w-full space-y-3" style={{ maxWidth: 'calc((100dvh - 250px) * 1280 / 840)' }}>
       {state.phase !== 'finished' && state.deadline && (
         <div className="flex items-center gap-2">
           <ProgressBar value={state.phase === 'question' && q ? (left / q.timeMs) * 100 : Math.min(100, left / 120)} color={left < 5000 ? 'bg-error' : 'bg-secondary'} />
