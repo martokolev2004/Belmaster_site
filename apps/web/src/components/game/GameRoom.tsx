@@ -307,7 +307,8 @@ function Battle({ state, me }: { state: GameState; me: string }) {
         <RotateOverlay />
         {header}
         <PlayersBar state={state} map={map} me={me} />
-        <div className="card3d relative mt-3 flex items-center justify-center overflow-hidden rounded-3xl bg-surface p-1.5 phone-landscape:mt-1 phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:rounded-2xl phone-landscape:p-0.5">
+        <StatusStrip state={state} me={me} meP={meP} />
+        <div className="card3d relative mt-2 flex items-center justify-center overflow-hidden rounded-3xl bg-surface p-1.5 phone-landscape:mt-1 phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:rounded-2xl phone-landscape:p-0.5">
           <MapBoard
             map={map}
             state={state}
@@ -602,14 +603,6 @@ function MapOverlays({ state, me, meP }: { state: GameState; me: string; meP?: P
   const reveal = state.reveal;
   const qPhase = ['expansion_question', 'battle_question', 'expansion_reveal', 'battle_reveal'].includes(state.phase);
 
-  if (meP && (meP.eliminated || meP.left) && !q)
-    return (
-      <TopBanner>
-        <p className="font-black">Ти си елиминиран 😔</p>
-        <p className="text-sm text-muted">Можеш да гледаш до края на битката.</p>
-      </TopBanner>
-    );
-
   if (qPhase && q) {
     const participant = q.participants.includes(me);
     const answered = state.answeredUids.includes(me);
@@ -634,28 +627,62 @@ function MapOverlays({ state, me, meP }: { state: GameState; me: string; meP?: P
           </div>
         </div>
       );
-    const done = state.answeredUids.filter((u) => q.participants.includes(u)).length;
-    return (
-      <TopBanner>
-        <p className="text-xs font-extrabold uppercase text-muted">{header}</p>
-        <div className="mt-2">
-          <TimerBar deadline={q.deadline} total={q.timeMs} />
-        </div>
-        <p className="mt-2 text-sm font-bold">
-          {participant ? 'Отговорът е изпратен — изчакване…' : 'Гледаш този въпрос…'}
-          {q.participants.length > 1 && <span className="ml-1 text-muted">Отговорили: {done}/{q.participants.length}</span>}
-        </p>
-      </TopBanner>
-    );
+    return null;
   }
 
-  if ((state.phase === 'expansion_pick' && state.pick) || state.phase === 'battle_choose')
-    return (
-      <TopBanner>
-        <ActionPanel state={state} me={me} meP={meP} bare />
-      </TopBanner>
-    );
   return null;
+}
+
+/** Тънка лента над картата: чий е ходът и какво да се прави — не закрива полетата. */
+function StatusStrip({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+  const q = state.question;
+  let text: string | null = null;
+  let sub: string | null = null;
+  let deadline: number | null = null;
+  let total = 1;
+  let mine = false;
+  if (meP && (meP.eliminated || meP.left) && !q) {
+    text = 'Ти си елиминиран 😔 Можеш да гледаш до края.';
+  } else if (q && !state.reveal) {
+    const participant = q.participants.includes(me);
+    const answered = state.answeredUids.includes(me);
+    if (!participant || answered) {
+      const done = state.answeredUids.filter((u) => q.participants.includes(u)).length;
+      text = participant ? 'Отговорът е изпратен — изчакване…' : 'Гледаш този въпрос…';
+      sub = q.participants.length > 1 ? `Отговорили: ${done}/${q.participants.length}` : null;
+      deadline = q.deadline;
+      total = q.timeMs;
+    }
+  } else if (state.phase === 'expansion_pick' && state.pick) {
+    mine = state.pick.uid === me;
+    text = mine ? 'Избери свободна област на картата!' : `${name(state, state.pick.uid)} избира област…`;
+    sub = mine ? 'Мигащите са свободни и съседни на твоите. Ако не избереш — получаваш случайна.' : null;
+    deadline = state.deadline;
+    total = RULES.EXPANSION_PICK_MS;
+  } else if (state.phase === 'battle_choose') {
+    mine = state.turnUid === me;
+    text = mine ? `Твой ход! Избери съседна област за атака.${state.attacksLeft > 1 ? ` (★ ${state.attacksLeft} атаки)` : ''}` : `${name(state, state.turnUid)} избира атака…`;
+    sub = mine ? 'Мигащите можеш да нападнеш. Печелиш, ако отговориш вярно и по-бързо от защитника.' : null;
+    deadline = state.deadline;
+    total = RULES.ATTACK_CHOOSE_MS;
+  }
+  return (
+    <div className="mt-2 flex min-h-12 items-center phone-landscape:mt-1 phone-landscape:min-h-8">
+      {text && (
+        <div className={cn('card3d flex w-full animate-rise items-center gap-3 rounded-2xl px-3 py-2 phone-landscape:rounded-xl phone-landscape:px-2 phone-landscape:py-1', mine ? 'border-secondary! bg-secondary/10' : 'bg-surface')}>
+          <div className="min-w-0 flex-1">
+            <p className={cn('truncate font-black phone-landscape:text-xs', mine && 'text-secondary-dark')}>{text}</p>
+            {sub && <p className="truncate text-xs text-muted phone-landscape:hidden">{sub}</p>}
+          </div>
+          {deadline && (
+            <div className="w-40 shrink-0 phone-landscape:w-28">
+              <TimerBar deadline={deadline} total={total} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function TimerBar({ deadline, total }: { deadline: number | null; total: number }) {
