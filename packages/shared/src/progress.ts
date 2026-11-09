@@ -157,7 +157,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   A('lightning', 'Светкавица', 'Верен отговор за под 3 секунди в игра', 'zap', 'battle'),
   // още за „Към върха“
   A('climb_high_sniper', 'Орлово око', 'Уцели от 8-о стъпало нагоре', 'target', 'climb'),
-  A('climb_shield_wasted', 'Напразно', 'Вдигни щит, а другият да се качи', 'shield', 'climb'),
+  A('climb_shield_wasted', 'Напразно', 'Вдигни щит и смени стъпалото, без да е отбил удар', 'shield', 'climb'),
   A('climb_rocket_win', 'Ракетна победа', 'Спечели с ракетата', 'rocket', 'climb'),
   // лига
   A('league_join', 'В лигата', 'Влез в седмичната лига', 'trophy', 'league', 'leagueWeeks', 1),

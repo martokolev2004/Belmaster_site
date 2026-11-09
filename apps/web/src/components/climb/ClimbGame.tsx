@@ -132,7 +132,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <li>🎯 <b>Хвърли</b> — натисни, когато маркерът е в зеленото. Уцелиш ли, другият пада стъпало. Не уцелиш ли — пада твоето.</li>
             <li>🃏 <b>Жокери</b> — 50/50 и +5 секунди, по веднъж за игра.</li>
             <li>⛳ Ако другият е на земята, няма какво да целиш — направо се качваш.</li>
-            <li>🛡️ <b>Щит</b> — веднъж за игра. Вдигни го, ако мислиш, че другият ще те цели — ударът се връща към него.</li>
+            <li>🛡️ <b>Щит</b> — веднъж за игра. Пази стъпалото, на което си, и другият не го вижда: ако те цели, ударът се връща към него. Щом смениш стъпалото, щитът изчезва.</li>
             <li>🧗 Колкото по-високо си, толкова по-тясна е зелената зона.</li>
             <li>🏁 Пръв до 10 стъпала, или по-високият след {CLIMB.MAX_QUESTIONS} въпроса.</li>
           </ul>
@@ -266,7 +266,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
   const left = useLeft(state.phase === 'question' && state.question ? state.question.myDeadline : state.deadline, offset);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const desktop = useDesktop();
-  const canShield = !me.shieldUsed && ['question', 'reveal', 'choose'].includes(state.phase) && !(state.phase === 'choose' && state.actorUid === me.uid);
+  const canShield = !me.shieldUsed && me.height > 0 && (['question', 'reveal', 'choose'].includes(state.phase) || state.actorUid === me.uid);
 
   useEffect(() => {
     if (state.phase === 'finished') notifyProgress(4500);
@@ -509,7 +509,7 @@ function ClimbIntro({ state, offset }: { state: ClimbState; offset: number }) {
       <ul className="mx-auto mt-4 max-w-md space-y-1.5 text-left text-sm text-ink phone-landscape:mt-2 phone-landscape:text-xs">
         <li>❓ Двамата отговаряте на един въпрос — <b>най-бързият верен избира</b>.</li>
         <li>⬆️ <b>Качи се</b> с едно стъпало или 🎯 <b>хвърли</b> {me ? weaponById(me.weapon).emoji : ''} по стъпалото на другия (натисни в зеленото).</li>
-        <li>🛡️ <b>Щит</b> — веднъж за игра: ако те целят, ударът се връща. Жокери: 50/50 и +5 с.</li>
+        <li>🛡️ <b>Щит</b> — веднъж за игра, скрит, пази само текущото стъпало: ако те целят, ударът се връща. Жокери: 50/50 и +5 с.</li>
         <li>🏁 Пръв до {CLIMB.STEPS}-ото стъпало печели.</li>
       </ul>
       <div className="mt-5 flex items-center justify-center gap-3 phone-landscape:mt-2">
@@ -524,7 +524,7 @@ function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boole
   if (armed)
     return (
       <div className="flex items-center gap-2 rounded-2xl border-2 border-secondary bg-secondary/10 px-4 py-2.5 text-sm font-extrabold text-secondary-dark">
-        <Shield className="size-5" /> Щитът е вдигнат — ако те целят, ударът се връща.
+        <Shield className="size-5" /> Щитът пази това стъпало — ако те целят, ударът се връща. Изчезва, щом смениш стъпалото.
       </div>
     );
   if (used) return <p className="text-xs font-bold text-muted">🛡️ Щитът е използван.</p>;
@@ -532,7 +532,7 @@ function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boole
     <button
       disabled={!can}
       onClick={() => {
-        if (window.confirm('Щитът е само веднъж за игра. Да го вдигна ли сега?')) onShield();
+        if (window.confirm('Щитът е само веднъж за игра и пази само това стъпало — другият не го вижда. Да го вдигна ли?')) onShield();
       }}
       className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-secondary px-4 py-2.5 text-sm font-extrabold text-secondary disabled:opacity-40"
     >

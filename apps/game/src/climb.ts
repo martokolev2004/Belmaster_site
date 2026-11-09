@@ -326,6 +326,7 @@ export class ClimbRoom {
     if (target && target.height === 0) {
       const p = this.players.get(uid)!;
       this.actorUid = uid;
+      this.leaveStep(p);
       p.height = Math.min(CLIMB.STEPS, p.height + 1);
       this.pushLog(`${p.name} се качи на стъпало ${p.height} (${target.name} е на земята).`);
       return this.resolveOutcome([{ kind: 'climb', actorUid: uid }]);
@@ -343,13 +344,15 @@ export class ClimbRoom {
     this.emit();
   }
 
-  /** Щитът: веднъж за игра; важи до следващото решение на другия. */
+  /**
+   * Щитът: веднъж за игра, скрит от другия. Пази стъпалото, на което си:
+   * отбива един удар, а щом слезеш или се качиш на друго стъпало — изчезва.
+   */
   shield(uid: string) {
     const p = this.players.get(uid);
-    if (!p || p.shieldUsed || this.phase === 'lobby' || this.phase === 'finished') return;
-    // не може след като другият вече е избрал
+    if (!p || p.shieldUsed || p.height === 0 || this.phase === 'lobby' || this.phase === 'finished') return;
+    // не може, след като другият вече се цели
     if ((this.phase === 'aim' || this.phase === 'resolve') && this.actorUid !== uid) return;
-    if (this.phase === 'choose' && this.actorUid === uid) return;
     p.shieldUsed = true;
     p.shieldArmed = true;
     this.emit();
@@ -360,12 +363,8 @@ export class ClimbRoom {
     const target = this.other(uid)!;
     if (action === 'climb') {
       const outcomes: ClimbOutcome[] = [{ kind: 'climb', actorUid: uid }];
-      if (target.shieldArmed) {
-        target.shieldArmed = false;
-        target.stats.shieldWasted = true;
-        outcomes.push({ kind: 'shield_wasted', actorUid: uid, targetUid: target.uid });
-      }
       const p = this.players.get(uid)!;
+      this.leaveStep(p);
       p.height = Math.min(CLIMB.STEPS, p.height + 1);
       this.pushLog(`${p.name} ${auto ? '(времето изтече) ' : ''}се качи на стъпало ${p.height}.`);
       return this.resolveOutcome(outcomes);
@@ -402,6 +401,7 @@ export class ClimbRoom {
       out = { kind: 'reflect', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
       if (actor.height > 0) actor.stats.falls++;
       target.stats.reflects++;
+      this.leaveStep(actor);
       actor.height = Math.max(0, actor.height - 1);
       this.pushLog(`🛡️ ${target.name} отби удара! ${actor.name} пада на стъпало ${actor.height}.`);
       if (actor.isBot) this.botSay('wow', 0.6, 2200);
@@ -417,10 +417,18 @@ export class ClimbRoom {
     } else {
       out = { kind: 'miss', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
       if (actor.height > 0) actor.stats.falls++;
+      this.leaveStep(actor);
       actor.height = Math.max(0, actor.height - 1);
       this.pushLog(`💥 ${actor.name} не уцели и падна на стъпало ${actor.height}.`);
     }
     this.resolveOutcome([out]);
+  }
+
+  /** Тръгваш от стъпалото — щитът остава там (тихо, другият не разбира). */
+  private leaveStep(p: P) {
+    if (!p.shieldArmed) return;
+    p.shieldArmed = false;
+    p.stats.shieldWasted = true;
   }
 
   private resolveOutcome(outcomes: ClimbOutcome[]) {
