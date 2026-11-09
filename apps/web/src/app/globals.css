@@ -76,6 +76,9 @@
   --animate-shake: shake 0.4s ease-in-out;
   --animate-pulse-ring: pulse-ring 1.4s ease-in-out infinite;
   --animate-spin-phone: spin-phone 2.2s ease-in-out infinite;
+  --animate-capture: capture 1.2s ease-out;
+  --animate-capital-hit: capital-hit .8s ease-in-out;
+  --animate-float-up: float-up 2.6s ease-out forwards;
 
   @keyframes pop {
     0% { transform: scale(0.8); opacity: 0; }
@@ -95,6 +98,26 @@
     0%, 20% { transform: rotate(0deg); }
     50%, 80% { transform: rotate(-90deg); }
     100% { transform: rotate(0deg); }
+  }
+  @keyframes capture {
+    0% { filter: brightness(2.2) saturate(.4); }
+    35% { filter: brightness(1.4); }
+    100% { filter: none; }
+  }
+  @keyframes capital-hit {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    15% { transform: translate(-6px, 0) rotate(-8deg); }
+    30% { transform: translate(6px, 0) rotate(8deg); }
+    45% { transform: translate(-5px, 0) rotate(-5deg); }
+    60% { transform: translate(4px, 0) rotate(4deg); }
+    80% { transform: translate(-2px, 0) rotate(-2deg); }
+  }
+  @keyframes float-up {
+    0% { opacity: 0; transform: translateY(14px) scale(.7); }
+    15% { opacity: 1; transform: translateY(0) scale(1.05); }
+    25% { transform: translateY(0) scale(1); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-26px); }
   }
   @keyframes pulse-ring {
     0%, 100% { opacity: 0.55; }
@@ -139,9 +162,94 @@
   border-bottom-width: 4px;
 }
 
+/* извън @theme — иначе Tailwind я маха, защото не е в --animate-* */
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--dx, 0), 105vh, 0) rotate(720deg); opacity: 0; }
+}
+
+/* „Кула на Словото“ */
+.tower-shake { animation: tower-shake .6s ease-in-out; }
+@keyframes tower-shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-2.2deg); } 45% { transform: rotate(1.8deg); } 70% { transform: rotate(-1deg); } }
+.tower-flag { animation: climb-flag 1.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 0 50%; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Отключване: катинарът се отваря и пада ── */
+@keyframes lock-shake {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+@keyframes shackle-open {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-7px) rotate(-18deg); }
+}
+@keyframes lock-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(70px) rotate(35deg); opacity: 0; }
+}
+@keyframes item-reveal {
+  0% { filter: grayscale(1) blur(2px); opacity: .35; transform: scale(.9); }
+  70% { filter: none; opacity: 1; transform: scale(1.08); }
+  100% { filter: none; opacity: 1; transform: scale(1); }
+}
+@keyframes glow-burst {
+  0% { opacity: 0; transform: scale(.4); }
+  40% { opacity: .9; }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.unlock-lock { animation: lock-shake .6s ease-in-out var(--d, 0s) both, lock-fall .6s ease-in calc(var(--d, 0s) + 1.05s) forwards; transform-origin: 50% 30%; }
+.unlock-shackle { animation: shackle-open .3s ease-out calc(var(--d, 0s) + .7s) forwards; transform-origin: 70% 100%; transform-box: fill-box; }
+.unlock-item { animation: item-reveal .7s ease-out calc(var(--d, 0s) + 1.05s) both; }
+.unlock-glow { animation: glow-burst .9s ease-out calc(var(--d, 0s) + 1s) both; }
+
+/* ── „Към върха“ ── */
+:root { --climb-sky-top: #bfe9ff; --climb-sky-bottom: #f2fbff; --climb-hills: #cde7d8; --climb-ground: #8bc34a; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
+}
+:root[data-theme='dark'] { --climb-sky-top: #0d2233; --climb-sky-bottom: #1b3446; --climb-hills: #1f3d33; --climb-ground: #3d6b27; }
+.climb-climber { transition: transform .48s cubic-bezier(.3, .9, .4, 1); }
+.climb-hop { animation: climb-hop .48s ease-out; }
+@keyframes climb-hop { 0% { transform: translateY(0) scale(1.08, .9); } 45% { transform: translateY(-34px) scale(.95, 1.06); } 85% { transform: translateY(0) scale(1.07, .92); } 100% { transform: translateY(0) scale(1); } }
+.climb-flinch { animation: climb-flinch .45s ease-in-out; }
+@keyframes climb-flinch { 0%, 100% { transform: translateX(0) rotate(0); } 20% { transform: translateX(-7px) rotate(-6deg); } 45% { transform: translateX(6px) rotate(5deg); } 70% { transform: translateX(-3px) rotate(-2deg); } }
+.climb-hammer { animation: climb-hammer .25s ease-in-out infinite alternate; }
+@keyframes climb-hammer { from { transform: rotate(-25deg); } to { transform: rotate(60deg); } }
+.climb-build { animation: climb-build .76s cubic-bezier(.3, 1.3, .5, 1) both; }
+@keyframes climb-build { 0% { transform: scaleY(0); opacity: .3; } 30% { transform: scaleY(.33); opacity: .9; } 60% { transform: scaleY(.66); } 100% { transform: scaleY(1); opacity: 1; } }
+.climb-sparks { animation: climb-sparks .45s ease-out forwards; }
+@keyframes climb-sparks { 0% { transform: scale(.3); opacity: 1; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1.3); opacity: 0; } }
+.climb-arm { transform: rotate(0); transition: transform .2s; }
+.climb-arm-throw { animation: climb-throw .38s ease-out; }
+@keyframes climb-throw { 0% { transform: rotate(0); } 40% { transform: rotate(150deg); } 70% { transform: rotate(-40deg); } 100% { transform: rotate(0); } }
+.climb-block { animation: climb-block-in .35s ease-out; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes climb-block-in { from { transform: scaleY(.2); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+.climb-crumble { animation: climb-crumble .9s ease-in forwards; }
+@keyframes climb-crumble { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 100% { transform: translate(0, 140px) rotate(var(--r, 90deg)); opacity: 0; } }
+.climb-boom { animation: climb-boom .45s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-boom { from { transform: scale(.3); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }
+.climb-dust { animation: climb-dust .9s ease-out forwards; }
+@keyframes climb-dust { from { opacity: .9; transform: translateY(0); } to { opacity: 0; transform: translateY(-14px); } }
+.climb-shield-flash { animation: climb-shield 1s ease-out forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-shield { 0% { transform: scale(.6); opacity: 0; } 25% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.climb-shield-waste { animation: climb-shield-waste 1.2s ease-in forwards; transform-box: fill-box; transform-origin: center; }
+@keyframes climb-shield-waste { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.4); } }
+.climb-pop-text { animation: float-up 1.6s ease-out forwards; }
+.climb-shield-idle { animation: pulse-ring 1.6s ease-in-out infinite; }
+.climb-flag { animation: climb-flag 1.2s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 0 50%; }
+@keyframes climb-flag { from { transform: skewY(-6deg); } to { transform: skewY(6deg); } }
+.climb-cloud { animation: climb-cloud 30s linear infinite alternate; }
+@keyframes climb-cloud { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+.climb-crown { animation: pop .5s ease-out; }
+.climb-twinkle { animation: pulse-ring 2.4s ease-in-out infinite; }
+.climb-bubble { animation: climb-bubble 2.6s ease-out forwards; }
+@keyframes climb-bubble { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }

@@ -4,6 +4,7 @@ import {
   PLAYER_COLORS,
   RULES,
   mapForPlayers,
+  previewMapForPlayers,
   type GameMap,
   type GameMode,
   type GamePhase,
@@ -14,12 +15,14 @@ import {
   type Standing,
 } from '@belmaster/shared';
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
-import type { AnyAnswer } from '@belmaster/shared';
+import { BOT_AVATAR, GAME_INTRO_MS, type AnyAnswer, type AvatarConfig, type FrameTier } from '@belmaster/shared';
 
 export interface PlayerInternal {
   uid: string;
   name: string;
   color: string;
+  avatar: AvatarConfig | null;
+  frame: FrameTier;
   isGuest: boolean;
   isBot: boolean;
   ready: boolean;
@@ -54,6 +57,7 @@ interface ActiveQuestion {
 }
 
 export interface ReviewItem {
+  questionId: string;
   prompt: string;
   type: PoolQuestion['type'];
   options: string[];
@@ -61,7 +65,7 @@ export interface ReviewItem {
   correctText: string | null;
   explanation: string | null;
   workTitle: string | null;
-  results: { uid: string; name: string; correct: boolean; timeMs: number | null; answer: string | null }[];
+  results: { uid: string; name: string; correct: boolean; score: number; timeMs: number | null; answer: string | null }[];
 }
 
 export interface RoomHooks {
@@ -118,7 +122,10 @@ export class Room {
 
   // ───────────────────────── Лоби ─────────────────────────
 
-  addPlayer(p: { uid: string; name: string; isGuest: boolean; isBot?: boolean }, socketId?: string): string | null {
+  addPlayer(
+    p: { uid: string; name: string; isGuest: boolean; isBot?: boolean; avatar?: AvatarConfig | null; frame?: FrameTier },
+    socketId?: string,
+  ): string | null {
     const existing = this.players.get(p.uid);
     if (existing) {
       if (socketId) this.attachSocket(p.uid, socketId);
@@ -132,6 +139,8 @@ export class Room {
       uid: p.uid,
       name: p.name,
       color,
+      avatar: p.isBot ? BOT_AVATAR : p.avatar ?? null,
+      frame: p.frame ?? 'none',
       isGuest: p.isGuest,
       isBot: !!p.isBot,
       ready: !!p.isBot,
@@ -296,9 +305,17 @@ export class Room {
       });
 
       this.startedAt = Date.now();
-      this.phase = 'expansion_question';
+      // подготовка: всички виждат картата, столиците и правилата, после идва първият въпрос
+      this.phase = 'intro';
+      this.deadline = this.startedAt + GAME_INTRO_MS;
       this.pushLog('Битката започва! Първо — разпределяне на земите.');
-      this.nextExpansionQuestion();
+      this.schedule(GAME_INTRO_MS, () => {
+        this.phase = 'expansion_question';
+        this.deadline = null;
+        this.nextExpansionQuestion();
+        this.emit();
+      });
+      this.emit();
       return null;
     } finally {
       this.starting = false;
@@ -584,6 +601,7 @@ export class Room {
       };
     });
     this.review.push({
+      questionId: aq.q.id,
       prompt: aq.q.prompt,
       type: aq.q.type,
       options: aq.q.options,
@@ -595,6 +613,7 @@ export class Room {
         uid: r.uid,
         name: this.players.get(r.uid)!.name,
         correct: r.correct,
+        score: r.score,
         timeMs: r.score > 0 ? r.timeMs : null,
         answer:
           r.index != null
@@ -864,13 +883,15 @@ export class Room {
   // ───────────────────────── Публично състояние ─────────────────────────
 
   toState(): GameState {
-    const map = this.map ?? mapForPlayers(Math.max(2, this.players.size));
+    const map = this.map ?? previewMapForPlayers(Math.max(2, this.players.size));
     const players: PublicPlayer[] = this.order.map((uid) => {
       const p = this.players.get(uid)!;
       return {
         uid: p.uid,
         name: p.name,
         color: p.color,
+        avatar: p.avatar,
+        frame: p.frame,
         isGuest: p.isGuest,
         isBot: p.isBot,
         ready: p.ready,

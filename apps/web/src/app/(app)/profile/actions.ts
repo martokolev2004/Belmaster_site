@@ -6,13 +6,16 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { AVATAR_COLORS, getCurrentUser } from '@/lib/auth';
 import type { FormState } from '@/app/(auth)/actions';
+import { redirect } from 'next/navigation';
+import { checkDisplayName } from '@/lib/names';
 
 export async function updateProfileAction(_: FormState, form: FormData): Promise<FormState> {
   const user = await getCurrentUser();
   if (!user) return { error: 'Не си влязъл.' };
   const displayName = String(form.get('displayName') ?? '').trim();
   const color = String(form.get('avatarColor') ?? '');
-  if (displayName.length < 2 || displayName.length > 30) return { error: 'Името трябва да е между 2 и 30 знака.' };
+  const nameErr = checkDisplayName(displayName);
+  if (nameErr) return { error: nameErr };
   await prisma.user.update({
     where: { id: user.id },
     data: { displayName, avatarColor: AVATAR_COLORS.includes(color) ? color : user.avatarColor },
@@ -34,7 +37,20 @@ export async function changePasswordAction(_: FormState, form: FormData): Promis
 
 export async function setThemeAction(theme: 'light' | 'dark' | 'system') {
   const jar = await cookies();
-  if (theme === 'system') jar.delete('bm_theme');
-  else jar.set('bm_theme', theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
+  jar.set('bm_theme', theme, { path: '/', maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' });
   revalidatePath('/', 'layout');
+}
+
+/** Изтрива профила и всичко свързано с него (право „да бъдеш забравен“). */
+export async function deleteAccountAction(_: FormState, form: FormData): Promise<FormState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: 'Не си влязъл.' };
+  if (String(form.get('confirm') ?? '').trim().toUpperCase() !== 'ИЗТРИЙ') return { error: 'Напиши ИЗТРИЙ, за да потвърдиш.' };
+  if (user.passwordHash) {
+    const ok = await bcrypt.compare(String(form.get('password') ?? ''), user.passwordHash);
+    if (!ok) return { error: 'Грешна парола.' };
+  }
+  await prisma.user.delete({ where: { id: user.id } });
+  (await cookies()).delete('bm_session');
+  redirect('/?deleted=1');
 }

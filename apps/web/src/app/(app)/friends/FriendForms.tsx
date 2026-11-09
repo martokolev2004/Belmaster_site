@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ReportUserButton } from '@/components/report/ReportUserButton';
 import { Check, Copy, Swords } from 'lucide-react';
 import { Alert, Avatar, Button, Input } from '@/components/ui';
 import { useGame } from '@/components/game/GameSocketProvider';
@@ -45,6 +46,7 @@ export interface FriendRow {
   id: string;
   name: string;
   color: string;
+  avatar?: unknown;
   grade: string | null;
   sameGrade: boolean;
 }
@@ -66,7 +68,7 @@ export function FriendList({ friends }: { friends: FriendRow[] }) {
         return (
           <li key={f.id} className="flex items-center gap-3 px-4 py-3">
             <span className="relative">
-              <Avatar name={f.name} color={f.color} size={40} />
+              <Avatar name={f.name} avatar={f.avatar} seed={f.id} size={40} />
               <span className={cn('absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full border-2 border-surface', on ? 'bg-primary' : 'bg-line')} />
             </span>
             <span className="min-w-0 flex-1">
@@ -75,6 +77,7 @@ export function FriendList({ friends }: { friends: FriendRow[] }) {
                 {on ? 'на линия' : 'офлайн'} · {f.grade}
               </span>
             </span>
+            <ReportUserButton userId={f.id} name={f.name} />
             {f.sameGrade ? (
               <Link
                 href={`/play?invite=${f.id}`}

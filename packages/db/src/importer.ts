@@ -1,5 +1,6 @@
 import type { Grade, LanguageTopic, PrismaClient, QuestionType, Section } from '@prisma/client';
-import { defaultInMultiplayer, punctuationFromTexts } from '@belmaster/shared';
+import { createHash } from 'node:crypto';
+import { defaultInMultiplayer, defaultPoints, punctuationFromTexts } from '@belmaster/shared';
 
 /**
  * Формат на файл за импорт (виж data/questions/README.md).
@@ -8,7 +9,7 @@ export interface ImportFile {
   grade: Grade;
   demo?: boolean;
   sourceNote?: string;
-  exam?: { year: number; session: string; title?: string };
+  exam?: { year: number; session: string; title?: string; listed?: boolean };
   passages?: { key: string; title?: string; text: string }[];
   questions: ImportQuestion[];
   /** произведения, които да се махнат (напр. създадени погрешка при стар импорт) */
@@ -17,6 +18,7 @@ export interface ImportFile {
 
 export interface ImportQuestion {
   no?: number;
+  points?: number; // точки по ключа; без него — стандартните за матурата
   section: Section;
   topic?: LanguageTopic | null;
   type?: QuestionType;
@@ -41,8 +43,12 @@ export interface ImportQuestion {
   status?: 'ACTIVE' | 'DRAFT' | 'HIDDEN';
 }
 
+export const IMPORT_VERSION = 2;
+
 export interface ImportReport {
   examTitle: string | null;
+  /** true — файлът не е променян от последния импорт и нищо не е пипнато */
+  skipped?: boolean;
   created: number;
   replaced: number;
   worksCreated: string[];
@@ -70,9 +76,29 @@ export function validateImport(data: unknown): ImportFile {
   return f;
 }
 
-export async function importQuestions(prisma: PrismaClient, input: unknown): Promise<ImportReport> {
+export async function importQuestions(prisma: PrismaClient, input: unknown, opts: { force?: boolean } = {}): Promise<ImportReport> {
   const file = validateImport(input);
   const report: ImportReport = { examTitle: null, created: 0, replaced: 0, worksCreated: [], warnings: [] };
+  // IMPORT_VERSION се вдига, когато се сменят правилата (напр. кое влиза в битките) — тогава всичко се импортира наново
+  const hash = createHash('sha256').update(`${IMPORT_VERSION}:${JSON.stringify(file)}`).digest('hex');
+
+  // същата матура, същият файл → не пипаме нищо (пазят се докладите, статистиката и редакциите от админа)
+  if (file.exam && !opts.force) {
+    const existing = await prisma.exam.findUnique({
+      where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
+    });
+    if (existing?.sourceHash === hash) {
+      // точките се синхронизират и без пълен импорт (не трием докладите и статистиката)
+      for (const q of file.questions) {
+        if (q.no == null) continue;
+        await prisma.question.updateMany({
+          where: { examId: existing.id, sourceNo: q.no, prompt: q.prompt },
+          data: { points: q.points ?? defaultPoints(file.grade, q.no) },
+        });
+      }
+      return { ...report, examTitle: existing.title, skipped: true };
+    }
+  }
 
   return prisma.$transaction(
     async (tx) => {
@@ -83,8 +109,8 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
           `${file.grade === 'G12' ? 'ДЗИ' : 'НВО'} по БЕЛ — ${file.exam.session} ${file.exam.year}`;
         const exam = await tx.exam.upsert({
           where: { grade_year_session: { grade: file.grade, year: file.exam.year, session: file.exam.session } },
-          update: { title },
-          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title },
+          update: { title, sourceHash: hash, listed: file.exam.listed ?? true },
+          create: { grade: file.grade, year: file.exam.year, session: file.exam.session, title, sourceHash: hash, listed: file.exam.listed ?? true },
         });
         examId = exam.id;
         report.examTitle = title;
@@ -184,8 +210,11 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
             acceptedAnswers: q.acceptedAnswers ?? [],
             matching: q.matching ?? undefined,
             data,
+            points: q.points ?? defaultPoints(file.grade, q.no),
             answerCount: q.answerCount ?? 1,
-            inMultiplayer: q.multiplayer ?? defaultInMultiplayer(type, q.section, q.answerCount ?? 1),
+            inMultiplayer:
+              q.multiplayer ??
+              defaultInMultiplayer(type, q.section, q.answerCount ?? 1, { prompt: q.prompt, context: q.context, options }),
             explanation: q.explanation ?? null,
             status,
             workId,
@@ -205,15 +234,33 @@ export async function importQuestions(prisma: PrismaClient, input: unknown): Pro
 
 export interface WorksFile {
   grade: Grade;
-  works: { title: string; author: string; period?: string; studiedIn?: string; year?: string; genre?: string }[];
+  works: {
+    title: string;
+    author: string;
+    period?: string;
+    studiedIn?: string;
+    year?: string;
+    genre?: string;
+    summary?: string;
+    themes?: string;
+    characters?: string;
+    authorInfo?: string;
+    quotes?: string;
+  }[];
 }
+
+/** Полетата с описание — от файла се попълват само ако в базата са празни (за да не се изтрие редакция от админ панела). */
+const WORK_TEXT_FIELDS = ['genre', 'summary', 'themes', 'characters', 'authorInfo', 'quotes'] as const;
 
 export async function importWorks(prisma: PrismaClient, file: WorksFile): Promise<number> {
   let n = 0;
   for (const [i, w] of file.works.entries()) {
+    const existing = await prisma.work.findUnique({ where: { grade_title_author: { grade: file.grade, title: w.title, author: w.author } } });
+    const fill: Record<string, string> = {};
+    for (const k of WORK_TEXT_FIELDS) if (w[k] && !existing?.[k]?.trim()) fill[k] = w[k]!;
     await prisma.work.upsert({
       where: { grade_title_author: { grade: file.grade, title: w.title, author: w.author } },
-      update: { period: w.period ?? undefined, sortOrder: i },
+      update: { period: w.period ?? undefined, sortOrder: i, ...fill },
       create: {
         grade: file.grade,
         title: w.title,
@@ -221,6 +268,11 @@ export async function importWorks(prisma: PrismaClient, file: WorksFile): Promis
         period: w.period ?? null,
         genre: w.genre ?? null,
         year: w.year ?? null,
+        summary: w.summary ?? null,
+        themes: w.themes ?? null,
+        characters: w.characters ?? null,
+        authorInfo: w.authorInfo ?? null,
+        quotes: w.quotes ?? null,
         extra: w.studiedIn ? `Изучава се в ${w.studiedIn}.` : null,
         sortOrder: i,
       },

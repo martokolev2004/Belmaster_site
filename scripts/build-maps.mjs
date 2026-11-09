@@ -52,6 +52,11 @@ function ringToPath(ring) {
   return 'M' + ring.slice(0, -1).map(([x, y]) => `${x},${y}`).join('L') + 'Z';
 }
 
+/** MultiPolygon (с дупки или няколко части) или един пръстен */
+function isMulti(shape) {
+  return Array.isArray(shape[0][0][0]);
+}
+
 function sharesEdge(a, b) {
   // два полигона са съседи, ако имат поне 2 общи (почти) върха
   let shared = 0;
@@ -73,7 +78,7 @@ function build({ id, name, shape, regions, lands, capitalCounts }) {
   const vor = delaunay.voronoi([0, 0, W, H]);
   const cells = regions.map((r, i) => {
     const cell = vor.cellPolygon(i);
-    const clipped = polygonClipping.intersection([cell], [shape]);
+    const clipped = polygonClipping.intersection([cell], isMulti(shape) ? shape : [shape]);
     // взимаме най-голямото парче
     let best = null;
     for (const poly of clipped) {
@@ -159,11 +164,12 @@ function build({ id, name, shape, regions, lands, capitalCounts }) {
     name,
     width: W,
     height: H,
-    outline: ringToPath(shape),
+    outline: isMulti(shape) ? shape.map((poly) => poly.map(ringToPath).join('')).join('') : ringToPath(shape),
     lands,
     regions: regions.map((r, i) => ({
       id: r.id,
       name: r.name,
+      ...(r.sub ? { sub: r.sub } : {}),
       land: r.land,
       path: ringToPath(cells[i]),
       center: centroid(cells[i]),
@@ -247,6 +253,97 @@ const small = build({
   capitalCounts: [2],
 });
 
+// ── Езерото и Реката (допълнителни карти, избират се на случаен принцип) ──
+const ell = (cx, cy, rx, ry, waves = [[0.05, 3, 0.5], [0.03, 7, 1.2]], steps = 120) => outline(cx, cy, rx, ry, waves, steps);
+const rect = (x1, y1, x2, y2, w) => {
+  // тясна ивица (мост) между две точки
+  const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), nx = (-dy / L) * w / 2, ny = (dx / L) * w / 2;
+  const r = [[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]].map(([x, y]) => [round(x), round(y)]);
+  r.push(r[0]);
+  return r;
+};
+const union = (...polys) => polygonClipping.union(...polys.map((p) => [p]));
+const ring = (n, cx, cy, rx, ry, offset = 0) => Array.from({ length: n }, (_, i) => { const a = offset + (i / n) * Math.PI * 2; return [round(cx + Math.cos(a) * rx), round(cy + Math.sin(a) * ry)]; });
+
+// ── A: Езерото ──
+function lake(big) {
+  const outer = ell(500, 320, 450, 285, [[0.05, 4, 0.3], [0.03, 9, 1.1]], 160);
+  const inner = ell(500, 320, big ? 200 : 185, big ? 120 : 110, [[0.08, 3, 0.9], [0.04, 7, 2]], 100);
+  const shape = polygonClipping.difference([outer], [inner]);
+  const names = big
+    ? ['Бряг', 'Тръстика', 'Лодка', 'Мрежа', 'Кей', 'Рибар', 'Чайка', 'Вълнолом', 'Пясък', 'Мида', 'Котва', 'Залез', 'Изгрев', 'Остров', 'Фенер', 'Платно', 'Весло', 'Шамандура', 'Ехо', 'Мъгла']
+    : ['Бряг', 'Тръстика', 'Лодка', 'Кей', 'Рибар', 'Чайка', 'Пясък', 'Мида', 'Котва', 'Фенер', 'Весло', 'Мъгла'];
+  const pts = big ? [...ring(12, 500, 320, 395, 248, 0.26), ...ring(8, 500, 320, 290, 180, 0.6)] : ring(12, 500, 320, 330, 205, 0.26);
+  const nLands = big ? 4 : 3;
+  const lands = [
+    { id: 'sever', name: 'Северният бряг', color: '#1cb0f6' },
+    { id: 'iztok', name: 'Източният бряг', color: '#58cc02' },
+    { id: 'yug', name: 'Южният бряг', color: '#ff9600' },
+    { id: 'zapad', name: 'Западният бряг', color: '#ce82ff' },
+  ].slice(0, nLands);
+  const landOf = ([x, y]) => {
+    const a = (Math.atan2(y - 320, x - 500) + Math.PI * 2 + Math.PI / 2) % (Math.PI * 2);
+    return lands[Math.floor((a / (Math.PI * 2)) * nLands)].id;
+  };
+  return build({ id: big ? 'lake' : 'lake-s', name: 'Езерото', shape, lands, regions: pts.map((at, i) => ({ id: `${big ? 'E' : 'e'}${i + 1}`, name: names[i], land: landOf(at), at })), capitalCounts: big ? [2, 3, 4] : [2] });
+}
+
+// ── C: Реката ──
+function river(big) {
+  const land = ell(500, 320, 455, 285, [[0.06, 3, 1.4], [0.04, 5, 0.3], [0.02, 11, 1]], 160);
+  const ry = (x) => 320 + Math.sin(x / 150) * 60;
+  const half = 20;
+  // гладка река: горен и долен бряг като една фигура
+  const top = [], bot = [];
+  for (let x = -20; x <= 1020; x += 10) {
+    top.push([x, round(ry(x) - half)]);
+    bot.push([x, round(ry(x) + half)]);
+  }
+  const water = [...top, ...bot.reverse()];
+  water.push(water[0]);
+  const bridgesAt = big ? [250, 500, 750] : [330, 670];
+  const bridges = bridgesAt.map((x) => { const y = ry(x); const r = [[x - 18, y - 40], [x + 18, y - 40], [x + 18, y + 40], [x - 18, y + 40]].map(([a, b]) => [round(a), round(b)]); r.push(r[0]); return [r]; });
+  const riverWithGaps = polygonClipping.difference([water], ...bridges);
+  const shape = polygonClipping.difference([land], riverWithGaps);
+  const lands = big
+    ? [
+        { id: 'nw', name: 'Северозапад', color: '#1cb0f6' },
+        { id: 'ne', name: 'Североизток', color: '#ce82ff' },
+        { id: 'sw', name: 'Югозапад', color: '#58cc02' },
+        { id: 'se', name: 'Югоизток', color: '#ff9600' },
+      ]
+    : [
+        { id: 'n', name: 'Северният бряг', color: '#1cb0f6' },
+        { id: 'm', name: 'Средната долина', color: '#58cc02' },
+        { id: 's', name: 'Южният бряг', color: '#ff9600' },
+      ];
+  // „Литературна България“ — родните места на писателите от програмата (и места от творбите им)
+  const places = [
+    ['Калофер', 'Ботев'], ['Сопот', 'Вазов'], ['Свищов', 'Алеко'], ['Чирпан', 'Яворов'], ['Байлово', 'Елин Пелин'], ['Жеравна', 'Йовков'],
+    ['Копривщица', 'Дебелянов'], ['Кукуш', 'Смирненски'], ['Банско', 'Вапцаров'], ['Прилеп', 'Талев'], ['Трявна', 'П. Славейков'], ['Солун', 'Далчев'],
+    ['Бургас', 'Дубарова'], ['Калиманица', 'Радичков'], ['Търново', 'Ем. Станев'], ['Батошево', 'Б. Христов'], ['Шипка', 'Вазов'], ['Сливница', 'Вазов'], ['Карлово', 'Левски'], ['Рила', 'Вазов'],
+  ];
+  const names = places.map((p) => p[0]);
+  const regions = [];
+  const add = (x, d, landId) => regions.push({ id: `${big ? 'R' : 'r'}${regions.length + 1}`, name: names[regions.length], sub: places[regions.length][1], land: landId, at: [x, round(ry(x) + d)] });
+  if (big) {
+    for (const [x, d] of [[150, -110], [290, -95], [420, -100], [200, -215], [360, -205]]) add(x, d, 'nw');
+    for (const [x, d] of [[580, -100], [710, -95], [850, -100], [640, -205], [800, -200]]) add(x, d, 'ne');
+    for (const [x, d] of [[150, 100], [290, 95], [420, 100], [200, 200], [360, 205]]) add(x, d, 'sw');
+    for (const [x, d] of [[580, 100], [710, 95], [850, 100], [640, 200], [800, 195]]) add(x, d, 'se');
+  } else {
+    for (const [x, d] of [[180, -110], [400, -120], [620, -120], [830, -100]]) add(x, d, 'n');
+    for (const [x, d] of [[180, 110], [400, 120], [620, 120], [830, 100]]) add(x, d, 's');
+    for (const [x, d] of [[290, -230], [710, -220], [290, 220], [710, 210]]) add(x, d, d < 0 ? 'n' : 's');
+  }
+  return build({ id: big ? 'river' : 'river-s', name: 'Реката', shape, lands: big ? lands : lands.filter((l) => l.id !== 'm'), regions, capitalCounts: big ? [2, 3, 4] : [2] });
+}
+
+const lakeSmall = lake(false);
+const lakeLarge = lake(true);
+const riverSmall = river(false);
+const riverLarge = river(true);
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, '..', 'packages', 'shared', 'src', 'maps.generated.ts');
 writeFileSync(
@@ -254,9 +351,13 @@ writeFileSync(
   `// АВТОМАТИЧНО ГЕНЕРИРАН ФАЙЛ — не редактирай ръчно. Виж scripts/build-maps.mjs\n` +
     `import type { GameMap } from './maps';\n\n` +
     `export const CONTINENT_MAP: GameMap = ${JSON.stringify(large, null, 2)};\n\n` +
-    `export const ISLAND_MAP: GameMap = ${JSON.stringify(small, null, 2)};\n`,
+    `export const ISLAND_MAP: GameMap = ${JSON.stringify(small, null, 2)};\n\n` +
+    `export const LAKE_SMALL_MAP: GameMap = ${JSON.stringify(lakeSmall, null, 2)};\n\n` +
+    `export const LAKE_MAP: GameMap = ${JSON.stringify(lakeLarge, null, 2)};\n\n` +
+    `export const RIVER_SMALL_MAP: GameMap = ${JSON.stringify(riverSmall, null, 2)};\n\n` +
+    `export const RIVER_MAP: GameMap = ${JSON.stringify(riverLarge, null, 2)};\n`,
 );
-for (const m of [large, small]) {
+for (const m of [large, small, lakeSmall, lakeLarge, riverSmall, riverLarge]) {
   console.log(m.id, m.regions.length, 'regions; capitals', JSON.stringify(m.capitals));
   for (const r of m.regions) console.log(' ', r.id, r.name, '->', r.neighbors.join(','));
 }

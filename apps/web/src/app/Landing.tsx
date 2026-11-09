@@ -3,6 +3,16 @@ import { BookOpen, Castle, ListChecks, Swords, Trophy, Users } from 'lucide-reac
 import { Logo } from '@/components/Logo';
 import { ButtonLink } from '@/components/ui';
 import { MapPreview } from '@/components/game/MapPreview';
+import { prisma } from '@/lib/db';
+import { slugify } from '@/lib/slug';
+
+const FAQ = [
+  { q: 'Какво е БЕЛ Мастер?', a: 'Безплатен сайт за подготовка за матурата (ДЗИ) по български език и литература за 12. клас. Решаваш въпроси от истински матури на МОН, учиш произведенията от програмата и играеш образователни игри срещу съученици или бот.' },
+  { q: 'Откъде са въпросите?', a: 'От официалните държавни зрелостни изпити по БЕЛ (2017–2026), с верните отговори от ключовете на МОН: правопис, граматика, пунктуация, лексика, литература и четене с разбиране.' },
+  { q: 'Безплатно ли е?', a: 'Да, напълно. Можеш да пробваш и като гост, без регистрация. С профил прогресът ти се пази и влизаш в класациите.' },
+  { q: 'Кои произведения има в библиотеката?', a: 'Всички творби от програмата по литература за матурата — от Ботев, Вазов, Алеко Константинов, Яворов, Елин Пелин, Йовков, Смирненски, Вапцаров, Далчев, Багряна, Талев, Радичков и други — с резюме, герои, теми и идеи.' },
+  { q: 'Как помагат игрите за матурата?', a: 'Във всяка игра напредваш само с верни отговори на въпроси от матури. Така преговаряш повече, без да ти доскучае, а сайтът запомня грешките ти и ти ги дава отново за преговор.' },
+];
 
 const FEATURES = [
   { icon: ListChecks, color: 'text-primary bg-primary/15', title: 'Мини тестове', text: 'Език, литература и четене с разбиране — с въпроси от истинските матури.' },
@@ -13,9 +23,16 @@ const FEATURES = [
   { icon: Trophy, color: 'text-[#8a6500] bg-accent/20', title: 'Класации', text: 'Рейтинг за всеки клас, месечни сезони и класация по опит.' },
 ];
 
-export function Landing() {
+export async function Landing() {
+  const works = await prisma.work.findMany({ where: { published: true, grade: 'G12' }, orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }], select: { title: true, author: true } });
+  const base = process.env.APP_URL ?? 'https://belmaster.eu';
+  const ld = [
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'БЕЛ Мастер', url: base, inLanguage: 'bg', description: 'Подготовка за матурата по български език и литература — тестове от минали матури, анализи на произведенията и образователни игри.' },
+    { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+  ];
   return (
     <div className="min-h-dvh">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Logo />
         <div className="flex items-center gap-2">
@@ -68,7 +85,42 @@ export function Landing() {
         </div>
       </section>
 
-      <footer className="py-8 text-center text-sm text-muted">© {new Date().getFullYear()} БЕЛ Мастер</footer>
+      <section className="py-16">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="mb-2 text-center text-3xl font-black">Произведенията за матурата</h2>
+          <p className="mb-8 text-center text-muted">Резюме, герои, теми и идеи за всяка творба от програмата за 12. клас.</p>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {works.map((w) => (
+              <li key={w.title}>
+                <Link href={`/library/${slugify(w.title)}`} className="block rounded-xl px-3 py-2 hover:bg-surface-2">
+                  <span className="font-extrabold text-ink-strong">„{w.title.replace(/\.\.\.$/, '…')}“</span> <span className="text-muted">— {w.author}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="border-t-2 border-line bg-surface-2/60 py-16">
+        <div className="mx-auto max-w-3xl px-4">
+          <h2 className="mb-6 text-center text-3xl font-black">Често задавани въпроси</h2>
+          <div className="space-y-3">
+            {FAQ.map((f) => (
+              <details key={f.q} className="card3d rounded-2xl bg-surface p-4">
+                <summary className="cursor-pointer font-extrabold">{f.q}</summary>
+                <p className="mt-2 text-muted">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer className="flex flex-wrap justify-center gap-x-4 gap-y-1 py-8 text-center text-sm text-muted">
+        <span>© {new Date().getFullYear()} БЕЛ Мастер</span>
+        <Link href="/privacy" className="hover:underline">Поверителност</Link>
+        <Link href="/terms" className="hover:underline">Общи условия</Link>
+        <Link href="/contact" className="hover:underline">Контакти</Link>
+      </footer>
     </div>
   );
 }

@@ -131,7 +131,7 @@ export function QuestionForm({
               </Select>
             </Field>
           )}
-          <Field label="В мултиплейъра" hint="„Автоматично“: според типа (пунктуацията и четенето — не).">
+          <Field label="В мултиплейъра" hint="„Автоматично“: според типа и дължината (пунктуацията, четенето и много дългите въпроси — не).">
             <Select name="inMultiplayer" defaultValue={question ? (question.inMultiplayer ? 'yes' : 'no') : 'auto'}>
               <option value="auto">Автоматично</option>
               <option value="yes">Да</option>

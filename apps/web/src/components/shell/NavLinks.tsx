@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Home, ListChecks, Shield, Swords, Trophy, User, Users } from 'lucide-react';
+import { BookOpen, Castle, GraduationCap, Mountain, Home, ListChecks, School, Shield, Swords, Trophy, User, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 const ITEMS = [
   { href: '/', label: 'Начало', icon: Home },
   { href: '/tests', label: 'Тестове', icon: ListChecks },
   { href: '/play', label: 'Битка', icon: Swords },
+  { href: '/climb', label: 'Към върха', icon: Mountain },
+  { href: '/tower', label: 'Кула', icon: Castle },
   { href: '/library', label: 'Библиотека', icon: BookOpen },
   { href: '/leaderboard', label: 'Класация', icon: Trophy },
   { href: '/friends', label: 'Приятели', icon: Users },
@@ -19,9 +21,14 @@ function isActive(path: string, href: string) {
   return href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
 }
 
-export function NavLinks({ admin }: { admin: boolean }) {
+export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher: boolean; inClass: boolean }) {
   const path = usePathname();
-  const items = admin ? [...ITEMS, { href: '/admin', label: 'Админ', icon: Shield }] : ITEMS;
+  const items = [
+    ...ITEMS,
+    ...(inClass || !teacher ? [{ href: '/class', label: 'Моят клас', icon: School }] : []),
+    ...(teacher ? [{ href: '/teacher', label: 'Учител', icon: GraduationCap }] : []),
+    ...(admin ? [{ href: '/admin', label: 'Админ', icon: Shield }] : []),
+  ];
   return (
     <nav className="flex flex-col gap-1">
       {items.map(({ href, label, icon: Icon }) => {
@@ -44,7 +51,7 @@ export function NavLinks({ admin }: { admin: boolean }) {
   );
 }
 
-const MOBILE = [ITEMS[0], ITEMS[1], ITEMS[2], ITEMS[3], ITEMS[4], ITEMS[5]];
+const MOBILE = ITEMS.slice(0, 6);
 
 export function BottomNav() {
   const path = usePathname();

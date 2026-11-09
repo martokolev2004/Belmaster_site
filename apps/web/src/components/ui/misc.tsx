@@ -1,5 +1,7 @@
 import { cn } from '@/lib/cn';
 import type { ComponentProps, ReactNode } from 'react';
+import type { FrameTier } from '@belmaster/shared';
+import { UserAvatar } from '@/components/avatar/UserAvatar';
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
   return (
@@ -70,14 +72,27 @@ export function Select({ className, ...rest }: ComponentProps<'select'>) {
   return <select className={cn(inputBase, 'appearance-auto', className)} {...rest} />;
 }
 
-export function Avatar({ name, color, size = 40, className }: { name: string; color: string; size?: number; className?: string }) {
+/** Аватар на потребител (Adventurer). `color` — цветна рамка (напр. цветът на играча в битка). */
+export function Avatar({
+  name,
+  color,
+  size = 40,
+  className,
+  avatar,
+  seed,
+  frame,
+}: {
+  name: string;
+  color?: string;
+  size?: number;
+  className?: string;
+  avatar?: unknown;
+  seed?: string;
+  frame?: FrameTier;
+}) {
   return (
-    <span
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-black text-white', className)}
-      style={{ background: color, width: size, height: size, fontSize: size * 0.42 }}
-      aria-hidden
-    >
-      {(name.trim()[0] ?? '?').toUpperCase()}
+    <span className={cn('inline-flex shrink-0 rounded-[24%]', className)} style={color ? { boxShadow: `0 0 0 3px ${color}` } : undefined}>
+      <UserAvatar avatar={avatar} name={seed ?? name} size={size} frame={frame} />
     </span>
   );
 }

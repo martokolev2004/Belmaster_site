@@ -24,6 +24,7 @@ model User {
   googleId      String?   @unique
   displayName   String
   avatarColor   String    @default("#58cc02")
+  avatar        Json? // AvatarConfig (виж packages/shared/src/avatar.ts)
   friendCode    String    @unique
   isGuest       Boolean   @default(false)
   grade         Grade?
@@ -32,6 +33,32 @@ model User {
   streak        Int       @default(0)
   bestStreak    Int       @default(0)
   lastActiveDay String? // YYYY-MM-DD (Europe/Sofia), за серията
+  diamondsSpent  Int      @default(0) // диаманти = floor(xp/1000) − похарчени
+  ownedItems     String[] // купени части на аватара ("част:стойност")
+  announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
+  announcedItems String[] // отключени части, за които вече е показана анимацията
+  mistakesCleared Int     @default(0) // изчистени грешки (за постижения)
+  weapon         String   @default("stone") // оръжие в „Към върха“
+  seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
+
+  // поверителност и възраст
+  birthDate        DateTime? // дата на раждане (само за профили, не за гости)
+  termsAcceptedAt  DateTime? // приел общите условия и политиката
+  emailVerifiedAt  DateTime?
+  parentEmail      String? // за деца под 14 г.
+  parentConsentAt  DateTime? // родителят е потвърдил
+  blockedAt        DateTime? // блокиран от админа
+  blockReason      String?
+  reportsMade      UserReport[] @relation("reportsMade")
+  reportsAbout     UserReport[] @relation("reportsAbout")
+
+  // учител
+  teacherStatus  TeacherStatus @default(NONE)
+  teacherSchool  String?
+  teacherSubject String?
+  teacherEmail   String? // служебен имейл (по желание)
+  teacherNote    String?
+  teacherAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -40,11 +67,30 @@ model User {
   attempts         QuizAttempt[]
   reports          QuestionReport[]
   ratings          PlayerRating[]
+  climbRatings     ClimbRating[]
+  leagues          LeagueMember[]
   matchPlayers     MatchPlayer[]
   friendsRequested Friendship[]      @relation("requester")
   friendsReceived  Friendship[]      @relation("addressee")
   invitesSent      GameInvite[]      @relation("inviteFrom")
+  mistakes         UserMistake[]
+  topicStats       UserTopicStat[]
   invitesReceived  GameInvite[]      @relation("inviteTo")
+  classesTaught    SchoolClass[]
+  membership       ClassMember?
+  teacherTests     TeacherTest[]
+  submissions      Submission[]
+  notifications    Notification[]
+  towerRuns        TowerRun[]
+  towerBests       TowerBest[]
+  emailTokens      EmailToken[]
+}
+
+enum TeacherStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model Session {
@@ -61,6 +107,7 @@ model UserAchievement {
   userId     String
   code       String
   unlockedAt DateTime @default(now())
+  seen       Boolean  @default(true) // false = още не е показано в анимацията
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, code])
@@ -101,6 +148,8 @@ model Exam {
   year      Int
   session   String // напр. "май", "август"
   title     String // напр. "ДЗИ по БЕЛ — май 2023"
+  sourceHash String? // отпечатък на импортирания JSON — при същия файл импортът се пропуска
+  listed    Boolean  @default(true) // false = въпросите са в банката, но матурата не се показва като цяла
   createdAt DateTime @default(now())
 
   questions Question[]
@@ -162,9 +211,12 @@ model Question {
   acceptedAnswers String[] // за SHORT_ANSWER — всички допустими отговори
   matching        Json? // за MATCHING: { left: string[], right: string[], pairs: number[] }
   data            Json? // FILL_BLANKS: { blanks: {text, blanks[]} } · PUNCTUATION: { punctuation: {tokens, marks[]} }
+  points          Int            @default(1) // точки в матурата (по ключа)
   answerCount     Int            @default(1) // SHORT_ANSWER: колко отговора се искат (напр. „запишете ДВЕ“)
   explanation     String?
   status          QuestionStatus @default(ACTIVE)
+  answeredCount   Int            @default(0) // общо отговори (за трудността)
+  correctCount    Int            @default(0)
   inMultiplayer   Boolean        @default(true) // участва ли в битките
 
   // Етикети
@@ -184,7 +236,8 @@ model Question {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  reports QuestionReport[]
+  reports  QuestionReport[]
+  mistakes UserMistake[]
 
   @@index([grade, section, status])
   @@index([grade, inMultiplayer, status])
@@ -210,6 +263,35 @@ model QuestionReport {
   createdAt  DateTime     @default(now())
 
   @@index([status])
+}
+
+/** Доклад за потребител (име, поведение). */
+model UserReport {
+  id         String       @id @default(cuid())
+  reporterId String?
+  reporter   User?        @relation("reportsMade", fields: [reporterId], references: [id], onDelete: SetNull)
+  targetId   String
+  target     User         @relation("reportsAbout", fields: [targetId], references: [id], onDelete: Cascade)
+  reason     String
+  message    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+
+  @@index([status])
+}
+
+/** Съобщение от формата „Контакти“. */
+model ContactMessage {
+  id        String    @id @default(cuid())
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
 }
 
 // ─────────────────────────── Мини тестове ───────────────────────────
@@ -269,6 +351,7 @@ model GameInvite {
 enum GameMode {
   CLASSIC // случайни въпроси
   WORKS // всяко поле е произведение
+  CLIMB // „Към върха“ (отделна игра)
 }
 
 model Match {
@@ -320,4 +403,248 @@ model PlayerRating {
 
   @@id([userId, grade, season])
   @@index([grade, season, rating])
+}
+
+// ─────────────────────────── Учене: грешки и статистика ───────────────────────────
+
+// Въпрос, на който ученикът е сгрешил. Маха се след 2 поредни верни отговора.
+model UserMistake {
+  userId     String
+  questionId String
+  streak     Int      @default(0) // поредни верни отговора след грешката
+  dueAt      DateTime @default(now()) // кога да се преговори пак (1, 3, 7 дни)
+  wrongCount Int      @default(1)
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+}
+
+// Натрупана статистика по тема. key: "S:LANGUAGE", "T:SPELLING", "W:<workId>"
+model UserTopicStat {
+  userId    String
+  key       String
+  answered  Int      @default(0)
+  score     Float    @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+}
+
+// ─────────────────────────── Учителски режим ───────────────────────────
+
+model SchoolClass {
+  id        String   @id @default(cuid())
+  teacherId String
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  name      String // напр. „12Б“
+  grade     Grade
+  code      String   @unique
+  capacity  Int
+  createdAt DateTime @default(now())
+
+  members     ClassMember[]
+  assignments Assignment[]
+
+  @@index([teacherId])
+}
+
+enum MemberStatus {
+  PENDING
+  APPROVED
+}
+
+// Ученик в клас (един ученик — един клас)
+model ClassMember {
+  id        String       @id @default(cuid())
+  classId   String
+  class     SchoolClass  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId    String       @unique
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  realName  String
+  status    MemberStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  @@index([classId, status])
+}
+
+// Тест в библиотеката на учителя
+model TeacherTest {
+  id          String   @id @default(cuid())
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  grade       Grade
+  description String?
+  questions   Json // TeacherQuestion[] (packages/shared/src/teacher.ts)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments Assignment[]
+
+  @@index([teacherId])
+}
+
+// Тест, даден на клас (с копие на въпросите към момента на даване)
+model Assignment {
+  id           String      @id @default(cuid())
+  classId      String
+  class        SchoolClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  testId       String?
+  test         TeacherTest? @relation(fields: [testId], references: [id], onDelete: SetNull)
+  title        String
+  questions    Json
+  opensAt      DateTime
+  closesAt     DateTime
+  timeLimitMin Int? // null = без таймер
+  showResult   Boolean // true = ученикът вижда резултата веднага
+  releasedAt   DateTime? // кога учителят е пуснал резултатите (при showResult = false)
+  createdAt    DateTime    @default(now())
+
+  submissions Submission[]
+
+  @@index([classId, opensAt])
+}
+
+enum SubmissionStatus {
+  STARTED
+  SUBMITTED
+}
+
+// Опит на ученик (само един)
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       SubmissionStatus @default(STARTED)
+  answers      Json             @default("{}")
+  autoScores   Json             @default("{}") // { questionId: точки }
+  manualScores Json             @default("{}") // { questionId: точки } — свободен текст, или промяна от учителя
+  score        Float            @default(0)
+  maxScore     Float            @default(0)
+  startedAt    DateTime         @default(now())
+  submittedAt  DateTime?
+
+  @@unique([assignmentId, userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+// Рейтинг в „Към върха“ — отделна класация; season = "all" или "2026-11"
+model ClimbRating {
+  userId String
+  grade  Grade
+  season String
+  rating Int    @default(1000)
+  games  Int    @default(0)
+  wins   Int    @default(0)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, grade, season])
+  @@index([grade, season, rating])
+}
+
+// Седмична лига: групи до 20 ученици от един клас и една лига; XP за седмицата
+model LeagueMember {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  week      String // понеделник на седмицата, YYYY-MM-DD (София)
+  grade     Grade
+  tier      Int // 0 = Бронз … 9 = Диамант
+  group     String
+  xp        Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, week])
+  @@index([group, xp])
+}
+
+// ─────────────────────────── „Кула на Словото“ ───────────────────────────
+
+// Една игра. Сървърът пази цялото състояние — клиентът само показва.
+model TowerRun {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grade      Grade
+  season     String // месецът на началото, YYYY-MM
+  theme      String
+  seed       Float
+  status     String    @default("ACTIVE") // ACTIVE | DONE
+  phase      String    @default("question") // question | drop | over
+  phaseAt    DateTime  @default(now()) // кога е започнала текущата фаза (за таймерите)
+  questionId String?
+  perm       Int[] // разбъркване на отговорите: показан индекс → истински
+  seen       String[] // зададени въпроси
+  xs         Float[] // x на етажите
+  lean       Float     @default(0)
+  streak     Int       @default(0)
+  lives      Int       @default(3)
+  correct    Int       @default(0)
+  wrong      Int       @default(0)
+  perfects   Int       @default(0)
+  xpAnswers  Int       @default(0) // колко верни са донесли XP (дневен лимит)
+  xpEarned   Int       @default(0)
+  log        Json      @default("[]") // за разбора: въпрос, отговор, верен ли е
+  endReason  String?
+  createdAt  DateTime  @default(now())
+  endedAt    DateTime?
+
+  @@index([userId, createdAt])
+}
+
+// Най-добър резултат по сезон (месец) и „all“ — за класацията.
+model TowerBest {
+  userId    String
+  grade     Grade
+  season    String
+  best      Int
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, grade, season])
+  @@index([grade, season, best])
+}
+
+// Еднократни линкове по имейл: потвърждение, нова парола, родителско съгласие
+model EmailToken {
+  id        String    @id // sha256 на токена
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // verify | reset | parent
+  email     String // на кой адрес е пратен
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
+}
+
+// Изпратени имейли — за проверка от админа (и докато пощата не е настроена)
+model MailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  link      String?
+  status    String // sent | skipped | error
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

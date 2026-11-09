@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Check, X } from 'lucide-react';
-import { MODE_LABELS } from '@belmaster/shared';
+import { BOT_AVATAR, MODE_LABELS } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { Avatar, Badge, Card } from '@/components/ui';
@@ -22,18 +22,19 @@ const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е'];
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireUser();
-  const match = await prisma.match.findUnique({ where: { id }, include: { players: { orderBy: { place: 'asc' } } } });
+  const match = await prisma.match.findUnique({ where: { id }, include: { players: { orderBy: { place: 'asc' }, include: { user: { select: { avatar: true } } } } } });
   if (!match) notFound();
   const review = (match.review ?? []) as unknown as ReviewItem[];
+  const climb = match.mode === 'CLIMB';
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/play" className="mb-4 inline-flex items-center gap-1 font-bold text-secondary">
-        <ArrowLeft className="size-4" /> Битки
+      <Link href={climb ? '/climb' : '/play'} className="mb-4 inline-flex items-center gap-1 font-bold text-secondary">
+        <ArrowLeft className="size-4" /> {climb ? 'Към върха' : 'Битки'}
       </Link>
-      <h1 className="text-3xl font-black">Разбор на битката</h1>
+      <h1 className="text-3xl font-black">{climb ? 'Разбор на играта' : 'Разбор на битката'}</h1>
       <p className="mt-1 text-muted">
-        {MODE_LABELS[match.mode].name} · {match.endedAt.toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}
+        {match.mode === 'CLIMB' ? '⛰️ Към върха' : MODE_LABELS[match.mode].name} · {match.endedAt.toLocaleString('bg-BG', { timeZone: 'Europe/Sofia' })}
         {match.rated ? ' · с рейтинг' : ''}
       </p>
       <Card className="mt-5">
@@ -41,12 +42,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {match.players.map((p) => (
             <li key={p.id} className="flex items-center gap-3">
               <span className="w-6 text-center font-black text-muted">{p.place}</span>
-              <Avatar name={p.name} color={p.color} size={34} />
+              <Avatar name={p.name} color={p.color} avatar={p.isBot ? BOT_AVATAR : p.user?.avatar} seed={p.userId ?? p.name} size={34} />
               <span className="flex-1 font-extrabold text-ink-strong">
                 {p.name} {p.isBot && <Badge>бот</Badge>}
               </span>
               <span className="text-sm text-muted">
-                {p.territories} обл. · {p.correct}/{p.answered} верни
+                {climb ? `стъпало ${p.territories}` : `${p.territories} обл.`} · {p.correct}/{p.answered} верни
               </span>
               {p.ratingDelta != null && <span className={cn('w-12 text-right font-black', p.ratingDelta >= 0 ? 'text-primary' : 'text-error')}>{p.ratingDelta >= 0 ? '+' : ''}{p.ratingDelta}</span>}
             </li>

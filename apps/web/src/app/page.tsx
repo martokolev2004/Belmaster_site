@@ -7,6 +7,7 @@ import { Landing } from './Landing';
 export default async function Home() {
   const user = await getCurrentUser();
   if (!user) return <Landing />;
+  if (!user.isGuest && (!user.birthDate || !user.termsAcceptedAt)) redirect('/welcome');
   if (!user.grade) redirect('/grade');
   return (
     <AppShell user={user}>

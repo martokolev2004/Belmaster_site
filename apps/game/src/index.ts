@@ -6,13 +6,17 @@ import {
   CHAT_MESSAGES,
   RULES,
   isGrade,
+  sanitizeAvatar,
   type ClientToServer,
   type GameMode,
   type GameTokenClaims,
   type ServerToClient,
+  WEAPONS,
 } from '@belmaster/shared';
 import { Room, type RoomHooks } from './room.js';
 import { areFriends, persistMatch } from './persist.js';
+import { registerClimb } from './climb.js';
+import { ADMIN_UIDS } from './admins.js';
 
 const PORT = Number(process.env.GAME_PORT ?? process.env.PORT ?? 4000);
 const SECRET = new TextEncoder().encode(process.env.GAME_JWT_SECRET ?? 'dev-secret');
@@ -39,7 +43,7 @@ const io = new Server<ClientToServer, ServerToClient, Record<string, never>, { u
 const rooms = new Map<string, Room>();
 const userRoom = new Map<string, string>();
 const userSockets = new Map<string, Set<string>>();
-const quickQueue = new Map<string, { uid: string; name: string; isGuest: boolean; since: number }[]>();
+const quickQueue = new Map<string, { uid: string; name: string; isGuest: boolean; since: number; avatar: GameTokenClaims['avatar']; frame: GameTokenClaims['frame'] }[]>();
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 function newCode(): string {
@@ -53,6 +57,11 @@ function newCode(): string {
 const hooks: RoomHooks = {
   broadcast(room) {
     io.to(`room:${room.code}`).emit('state', room.toState());
+    const aq = room.question;
+    if (aq && aq.q.type === 'SINGLE_CHOICE' && aq.q.correctIndex != null) {
+      for (const uid of room.players.keys())
+        if (ADMIN_UIDS.has(uid)) for (const sid of userSockets.get(uid) ?? []) io.to(sid).emit('admin:hint', { questionId: aq.q.id, index: aq.q.correctIndex });
+    }
   },
   sendFifty(uid, questionId, removed) {
     for (const sid of userSockets.get(uid) ?? []) io.to(sid).emit('joker:fifty', { questionId, removed });
@@ -98,7 +107,7 @@ function enterRoom(room: Room, user: GameTokenClaims): string | null {
     }
     old?.dropPlayer(user.uid, 'leave');
   }
-  const err = room.addPlayer({ uid: user.uid, name: user.name, isGuest: user.isGuest });
+  const err = room.addPlayer({ uid: user.uid, name: user.name, isGuest: user.isGuest, avatar: user.avatar ?? null, frame: user.frame ?? 'none' });
   if (err) return err;
   userRoom.set(user.uid, room.code);
   for (const sid of userSockets.get(user.uid) ?? []) {
@@ -120,19 +129,49 @@ function emitOnline(socket: S, uids: string[]) {
   socket.emit('presence', { online: uids.filter((u) => userSockets.has(u)) });
 }
 
-io.use(async (socket, next) => {
+/** Събития, които събират с други хора — забранени за деца без съгласие на родител. */
+const PEER_EVENTS = new Set(['lobby:create', 'lobby:join', 'quick:join', 'invite:send', 'climb:create', 'climb:join', 'climb:quick']);
+
+async function authenticate(
+  socket: { handshake: { auth: Record<string, unknown> }; data: { user?: GameTokenClaims }; use: (fn: (ev: unknown[], next: (err?: Error) => void) => void) => void; emit: (ev: string, data: unknown) => void },
+  next: (err?: Error) => void,
+) {
   try {
     const token = socket.handshake.auth?.token;
     if (typeof token !== 'string') throw new Error('no token');
     const { payload } = await jwtVerify(token, SECRET);
     const claims = payload as unknown as GameTokenClaims;
     if (!claims.uid || !isGrade(claims.grade)) throw new Error('bad token');
-    socket.data.user = { uid: claims.uid, name: String(claims.name).slice(0, 30), grade: claims.grade, isGuest: !!claims.isGuest };
+    socket.data.user = {
+      uid: claims.uid,
+      name: String(claims.name).slice(0, 30),
+      grade: claims.grade,
+      isGuest: !!claims.isGuest,
+      avatar: claims.avatar ? sanitizeAvatar(claims.avatar, null, claims.uid) : null,
+      frame: ['none', 'bronze', 'silver', 'gold', 'legend'].includes(String(claims.frame)) ? claims.frame : 'none',
+      weapon: WEAPONS.some((w) => w.id === claims.weapon) ? claims.weapon : 'stone',
+    };
+    if (claims.admin === true) ADMIN_UIDS.add(claims.uid);
+    if (claims.restricted === true) {
+      socket.use((ev, nxt) => {
+        if (PEER_EVENTS.has(String(ev[0]))) {
+          socket.emit('error', { message: 'Докато родител не потвърди профила ти, можеш да играеш само срещу бот.' });
+          return;
+        }
+        nxt();
+      });
+    }
     next();
   } catch {
     next(new Error('unauthorized'));
   }
-});
+}
+
+io.use(authenticate as never);
+// „Към върха“ — отделна игра на собствен канал
+const climbNs = io.of('/climb');
+climbNs.use(authenticate as never);
+registerClimb(climbNs as never, newCode);
 
 io.on('connection', (socket: S) => {
   const user = socket.data.user;
@@ -198,7 +237,7 @@ io.on('connection', (socket: S) => {
       quickQueue.set(key, list.filter((e) => e.uid !== opponent.uid));
       const room = createRoom(user.grade, m, opponent.uid);
       room.isQuick = true;
-      const opClaims: GameTokenClaims = { uid: opponent.uid, name: opponent.name, grade: user.grade, isGuest: opponent.isGuest };
+      const opClaims: GameTokenClaims = { uid: opponent.uid, name: opponent.name, grade: user.grade, isGuest: opponent.isGuest, avatar: opponent.avatar, frame: opponent.frame };
       const e1 = enterRoom(room, opClaims);
       const e2 = enterRoom(room, user);
       if (e1 || e2) {
@@ -216,12 +255,14 @@ io.on('connection', (socket: S) => {
       return;
     }
     const since = Date.now();
-    list.push({ uid: user.uid, name: user.name, isGuest: user.isGuest, since });
+    list.push({ uid: user.uid, name: user.name, isGuest: user.isGuest, since, avatar: user.avatar, frame: user.frame });
     quickQueue.set(key, list);
     socket.emit('quick:status', { searching: true, since, offerBot: false });
+    // никой не се е появил — спираме търсенето и казваме, че в момента няма свободни (с предложение за бот)
     setTimeout(() => {
       if ((quickQueue.get(key) ?? []).some((e) => e.uid === user.uid && e.since === since)) {
-        for (const sid of userSockets.get(user.uid) ?? []) io.to(sid).emit('quick:status', { searching: true, since, offerBot: true });
+        leaveQuick(user.uid);
+        for (const sid of userSockets.get(user.uid) ?? []) io.to(sid).emit('quick:status', { searching: false, since: null, offerBot: true });
       }
     }, RULES.QUICK_MATCH_BOT_OFFER_MS);
   });

@@ -1,7 +1,7 @@
 import type { AnyAnswer, PunctMark } from '@belmaster/shared';
 import type { InputQuestion } from '@/components/quiz/inputs';
 
-export type TestKind = 'LANGUAGE' | 'LITERATURE' | 'READING' | 'EXAM';
+export type TestKind = 'LANGUAGE' | 'LITERATURE' | 'READING' | 'EXAM' | 'MISTAKES' | 'SURVIVAL';
 
 export interface ClientQuestion extends InputQuestion {
   prompt: string;
@@ -10,6 +10,7 @@ export interface ClientQuestion extends InputQuestion {
   workTitle: string | null;
   label: string;
   sourceNo: number | null;
+  points: number;
 }
 
 export interface ClientPassage {
@@ -44,4 +45,7 @@ export interface FinishResult {
   streak: number;
   unlocked: string[];
   results: QuestionResult[];
+  mistakesCount: number;
+  /** само за матура: точки по ключа */
+  exam?: { points: number; maxPoints: number; grade: number; timeUsedSec: number | null; timedOut: boolean };
 }

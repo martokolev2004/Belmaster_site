@@ -4,3 +4,7 @@ export * from './progress';
 export * from './game';
 export * from './maps';
 export * from './questions';
+export * from './avatar';
+export * from './teacher';
+export * from './climb';
+export * from './tower';

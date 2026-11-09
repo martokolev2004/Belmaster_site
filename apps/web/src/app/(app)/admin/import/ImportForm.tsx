@@ -15,6 +15,9 @@ export function ImportForm() {
         <Field label="…или постави JSON тук">
           <Textarea name="json" className="min-h-64 font-mono text-xs" placeholder='{ "grade": "G12", "exam": { "year": 2023, "session": "май" }, "questions": [ … ] }' />
         </Field>
+        <label className="flex items-center gap-2 text-sm font-bold">
+          <input type="checkbox" name="force" className="size-4 accent-primary" /> Импортирай наново, дори файлът да е същият (заменя въпросите на матурата)
+        </label>
         <Button type="submit" disabled={pending}>
           {pending ? 'Импортиране…' : 'Импортирай'}
         </Button>
@@ -22,9 +25,13 @@ export function ImportForm() {
       {state.error && <Alert>{state.error}</Alert>}
       {state.report && (
         <Card>
+          {state.report.skipped ? (
+            <p className="font-extrabold text-muted">{state.report.examTitle}: файлът е същият като последния път — нищо не е променено.</p>
+          ) : (
           <p className="font-extrabold text-primary-dark">
             ✓ {state.report.examTitle ?? 'Готово'}: добавени {state.report.created} въпроса{state.report.replaced ? `, заменени ${state.report.replaced}` : ''}.
           </p>
+          )}
           {state.report.worksCreated.length > 0 && <p className="mt-2 text-sm">Нови произведения: {state.report.worksCreated.join('; ')}</p>}
           {state.report.warnings.length > 0 && (
             <ul className="mt-2 list-disc pl-5 text-sm text-error-dark">

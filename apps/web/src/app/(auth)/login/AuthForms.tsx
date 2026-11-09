@@ -3,12 +3,15 @@
 import { useActionState, useState } from 'react';
 import { GRADES } from '@belmaster/shared';
 import { Alert, Button, Field, Input } from '@/components/ui';
+import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import { BirthFields } from '@/components/auth/BirthFields';
 import { guestAction, loginAction, registerAction, type FormState } from '../actions';
 
 const GOOGLE_ERRORS: Record<string, string> = {
   google: 'Входът с Google не успя. Опитай пак.',
   google_email: 'Този имейл вече е регистриран с парола. Влез с паролата си.',
+  blocked: 'Профилът е блокиран заради нарушение на Общите условия. Ако смяташ, че е грешка, пиши ни от страницата „Контакти“.',
 };
 
 export function AuthForms({
@@ -72,6 +75,9 @@ export function AuthForms({
             <Input name="password" type="password" autoComplete="current-password" required />
           </Field>
           {loginState.error && <Alert>{loginState.error}</Alert>}
+          <p className="text-right text-sm">
+            <Link href="/forgot" className="font-bold text-secondary">Забравена парола?</Link>
+          </p>
           <Button type="submit" block size="lg" disabled={loggingIn}>
             {loggingIn ? 'Влизане…' : 'Влез'}
           </Button>
@@ -87,6 +93,7 @@ export function AuthForms({
           <Field label="Парола" hint="Поне 8 знака.">
             <Input name="password" type="password" autoComplete="new-password" required minLength={8} />
           </Field>
+          <BirthFields />
           {regState.error && <Alert>{regState.error}</Alert>}
           <Button type="submit" block size="lg" disabled={registering}>
             {registering ? 'Създаване…' : isGuest ? 'Запази профила' : 'Създай профил'}
@@ -126,6 +133,9 @@ export function AuthForms({
             <Button type="submit" variant="outline" block>
               Влез като гост
             </Button>
+            <p className="mt-2 text-center text-xs text-muted">
+              С влизането приемаш <Link href="/terms" className="underline">Общите условия</Link> и <Link href="/privacy" className="underline">Политиката за поверителност</Link>.
+            </p>
           </form>
         </>
       )}

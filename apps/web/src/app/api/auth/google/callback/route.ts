@@ -35,24 +35,26 @@ export async function GET(req: NextRequest) {
     const byEmail = await prisma.user.findUnique({ where: { email } });
     if (byEmail) {
       // свързваме Google с вече съществуващ профил със същия потвърден имейл
-      user = await prisma.user.update({ where: { id: byEmail.id }, data: { googleId: info.sub } });
+      user = await prisma.user.update({ where: { id: byEmail.id }, data: { googleId: info.sub, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date() } });
     }
   }
   if (!user) {
     const current = await getCurrentUser();
-    const displayName = (info.name ?? email?.split('@')[0] ?? 'Играч').slice(0, 30);
+    // само малкото име — пълното име не трябва да се вижда публично в класациите
+    const displayName = (info.name?.split(' ')[0] ?? 'Играч').slice(0, 30);
     if (current?.isGuest) {
       user = await prisma.user.update({
         where: { id: current.id },
-        data: { googleId: info.sub, email, displayName, isGuest: false },
+        data: { googleId: info.sub, email, displayName, isGuest: false, emailVerifiedAt: email ? new Date() : null },
       });
     } else {
       user = await prisma.user.create({
-        data: { googleId: info.sub, email, displayName, friendCode: await newFriendCode(), avatarColor: randomAvatarColor() },
+        data: { googleId: info.sub, email, displayName, emailVerifiedAt: email ? new Date() : null, friendCode: await newFriendCode(), avatarColor: randomAvatarColor() },
       });
     }
   }
 
+  if (user.blockedAt) return NextResponse.redirect(new URL('/login?error=blocked', appUrl));
   await createSession(user.id);
   const next = req.cookies.get('bm_oauth_next')?.value ?? '/';
   const res = NextResponse.redirect(new URL(user.grade ? next : '/grade', appUrl));

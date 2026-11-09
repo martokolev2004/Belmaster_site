@@ -1,11 +1,12 @@
 import type { GradeCode } from './grades';
 import type { AnyAnswer, PunctMark, QType } from './questions';
+import type { AvatarConfig, FrameTier } from './avatar';
 
 // ───────────── Правила ─────────────
 export const RULES = {
   MIN_PLAYERS: 2,
   MAX_PLAYERS: 4,
-  QUESTION_MS: 20_000,
+  QUESTION_MS: 40_000,
   JOKER_TIME_BONUS_MS: 5_000,
   EXPANSION_PICK_MS: 10_000,
   ATTACK_CHOOSE_MS: 15_000,
@@ -23,6 +24,9 @@ export const RULES = {
 export const PLAYER_COLORS = ['#ff4b4b', '#1cb0f6', '#ffc800', '#58cc02'] as const;
 
 export type GameMode = 'CLASSIC' | 'WORKS';
+
+/** Подготовка преди първия въпрос (карта, играчи, правила). */
+export const GAME_INTRO_MS = 9_000;
 
 export const MODE_LABELS: Record<GameMode, { name: string; description: string }> = {
   CLASSIC: { name: 'Класическа битка', description: 'Случайни въпроси по език и литература.' },
@@ -48,6 +52,7 @@ export const CHAT_MESSAGES: { key: string; text: string }[] = [
 // ───────────── Състояние (изпраща се към клиентите) ─────────────
 export type GamePhase =
   | 'lobby'
+  | 'intro'
   | 'expansion_question'
   | 'expansion_reveal'
   | 'expansion_pick'
@@ -60,6 +65,8 @@ export interface PublicPlayer {
   uid: string;
   name: string;
   color: string;
+  avatar: AvatarConfig | null;
+  frame: FrameTier;
   isGuest: boolean;
   isBot: boolean;
   ready: boolean;
@@ -206,6 +213,8 @@ export interface ServerToClient {
   error: (p: { message: string }) => void;
   chat: (c: ChatEvent) => void;
   'joker:fifty': (p: { questionId: string; removed: number[] }) => void;
+  /** само към администратора: верният отговор на въпроса с избор */
+  'admin:hint': (p: { questionId: string; index: number }) => void;
   'quick:status': (p: { searching: boolean; since: number | null; offerBot: boolean }) => void;
   invite: (i: InviteEvent) => void;
   presence: (p: { online: string[] }) => void;
@@ -217,4 +226,12 @@ export interface GameTokenClaims {
   name: string;
   grade: GradeCode;
   isGuest: boolean;
+  avatar?: AvatarConfig | null;
+  frame?: FrameTier;
+  /** оръжие в „Към върха“ */
+  weapon?: string;
+  /** администраторът вижда зелена точка на верния отговор */
+  admin?: boolean;
+  /** под 14 г. без съгласие на родител — само игри с бот */
+  restricted?: boolean;
 }

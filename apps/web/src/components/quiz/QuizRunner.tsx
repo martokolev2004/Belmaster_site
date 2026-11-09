@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, useTransition } from 'react';
-import { ACHIEVEMENTS } from '@belmaster/shared';
-import { Check, ChevronLeft, ChevronRight, Flag, Flame, Gem, Trophy, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { ACHIEVEMENTS, gradeWord } from '@belmaster/shared';
+import { Check, ChevronLeft, ChevronRight, Clock, Flag, Flame, Star, Timer, Trophy, X } from 'lucide-react';
 import { Badge, Button, ButtonLink, Input, ProgressBar, Select, Textarea } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { Answer, ClientPassage, ClientQuestion, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
+import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app/(app)/tests/actions';
 
 import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
 import { PassageText } from './PassageText';
+import { ContextBox } from './ContextBox';
 export { LETTERS };
 
 interface Props {
@@ -22,13 +24,20 @@ interface Props {
   passages: ClientPassage[];
   backHref: string;
   againHref: string;
+  /** матура: минути за таймера (по избор на ученика) */
+  timeLimitMin?: number;
 }
 
 function hasAnswer(q: ClientQuestion, a: Answer | undefined) {
   return hasAnswerBase(q, a);
 }
 
-export function QuizRunner({ kind, examId = null, mode, title, questions, passages, backHref, againHref }: Props) {
+export function QuizRunner({ kind, examId = null, mode, title, questions, passages, backHref, againHref, timeLimitMin }: Props) {
+  // матура: начален екран, таймер
+  const [started, setStarted] = useState(mode !== 'exam');
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [checked, setChecked] = useState<Record<string, QuestionResult>>({});
@@ -48,16 +57,18 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
     setAnswers((prev) => ({ ...prev, [q.id]: { ...prev[q.id], ...a } }));
   };
 
-  const finish = () =>
+  const finish = (timedOut = false) =>
     start(async () => {
       const res = await finishTestAction(
         kind,
         examId,
         questions.map((qq) => ({ id: qq.id, answer: answers[qq.id] ?? {} })),
+        { timeUsedSec: startedAt ? Math.round((Date.now() - startedAt) / 1000) : null, timedOut },
       );
       if ('error' in res) return;
       setFinished(res);
       window.scrollTo({ top: 0 });
+      notifyProgress(1800);
     });
 
   const check = () =>
@@ -72,6 +83,34 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
       setIdx(idx + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else finish();
+  };
+
+  // таймер на матурата
+  useEffect(() => {
+    if (!deadline || finished) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [deadline, finished]);
+  const left = deadline ? Math.max(0, deadline - now) : null;
+  const firedTimeout = useRef(false);
+  useEffect(() => {
+    if (left === 0 && !finished && !firedTimeout.current) {
+      firedTimeout.current = true;
+      finish(true);
+    }
+  });
+  // предупреждение при затваряне по време на матура
+  useEffect(() => {
+    if (mode !== 'exam' || !started || finished) return;
+    const onLeave = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener('beforeunload', onLeave);
+    return () => window.removeEventListener('beforeunload', onLeave);
+  }, [mode, started, finished]);
+
+  const submit = () => {
+    const missing = questions.length - answeredCount;
+    if (missing > 0 && !window.confirm(`Имаш ${missing} задачи без отговор. Да предам ли матурата?`)) return;
+    finish();
   };
 
   // клавиши 1–6 за избор, Enter за проверка/напред
@@ -97,6 +136,44 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
   });
 
   if (!questions.length) return null;
+  if (!started) {
+    const maxPoints = questions.reduce((s, qq) => s + qq.points, 0);
+    const begin = (timed: boolean) => {
+      const t = Date.now();
+      setStartedAt(t);
+      if (timed && timeLimitMin) setDeadline(t + timeLimitMin * 60_000);
+      setStarted(true);
+    };
+    return (
+      <div className="mx-auto max-w-xl">
+        <div className="card3d rounded-3xl bg-surface p-6 text-center">
+          <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-purple/20 text-purple-dark">
+            <Timer className="size-9" />
+          </span>
+          <h2 className="mt-3 text-2xl font-black">Пробна матура</h2>
+          <p className="mt-1 text-muted">{title}</p>
+          <ul className="mt-5 space-y-1.5 text-left text-sm">
+            <li>📝 {questions.length} задачи · <b>{maxPoints} точки</b> (по ключа, с частични точки)</li>
+            <li>✂️ Без есето и задачите със свободен текст — те не могат да се проверят автоматично.</li>
+            <li>🔒 Отговорите се виждат чак след като предадеш.</li>
+            <li>🎓 Накрая — точки, процент и ориентировъчна оценка.</li>
+          </ul>
+          <div className="mt-6 grid gap-2">
+            {timeLimitMin ? (
+              <Button block size="lg" onClick={() => begin(true)} icon={<Clock className="size-5" />}>
+                Започни с таймер ({timeLimitMin} мин)
+              </Button>
+            ) : null}
+            <Button block variant="outline" onClick={() => begin(false)}>
+              Без таймер
+            </Button>
+          </div>
+          {timeLimitMin ? <p className="mt-3 text-xs text-muted">Времето е пропорционално на матурата (240 мин за 100 точки). Като изтече — матурата се предава сама.</p> : null}
+        </div>
+      </div>
+    );
+  }
+
   if (finished) return <ResultScreen result={finished} questions={questions} answers={answers} againHref={againHref} backHref={backHref} onReport={setReportFor} reportFor={reportFor} />;
 
   const progress = mode === 'practice' ? ((idx + (result ? 1 : 0)) / questions.length) * 100 : (answeredCount / questions.length) * 100;
@@ -112,6 +189,12 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
         <span className="shrink-0 text-sm font-extrabold text-muted">
           {idx + 1}/{questions.length}
         </span>
+        {left != null && (
+          <span className={cn('flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1 font-mono text-sm font-black tabular-nums', left < 5 * 60_000 ? 'animate-pulse bg-error/15 text-error' : 'bg-surface-2 text-ink-strong')}>
+            <Clock className="size-4" />
+            {fmtTime(left)}
+          </span>
+        )}
       </div>
 
       <div className={cn('grid gap-6', passage && 'lg:grid-cols-2')}>
@@ -133,10 +216,10 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
           <div className="mb-3 flex flex-wrap gap-2">
             <Badge tone="blue">{q.label}</Badge>
             {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
-            {mode === 'exam' && q.sourceNo && <Badge>Задача {q.sourceNo}</Badge>}
+            {mode === 'exam' && q.sourceNo && <Badge>Задача {q.sourceNo} · {q.points} {q.points === 1 ? 'точка' : 'точки'}</Badge>}
           </div>
           <h2 className="whitespace-pre-line text-xl font-extrabold leading-snug md:text-2xl">{q.prompt}</h2>
-          {q.context && <div className="mt-4 whitespace-pre-line rounded-2xl border-2 border-dashed border-line px-4 py-3 italic">{q.context}</div>}
+          {q.context && <ContextBox text={q.context} />}
 
           <div className="mt-6">
             <QuestionInput q={q} answer={answer} result={mode === 'practice' ? result : undefined} onAnswer={setAnswer} />
@@ -152,7 +235,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
                   Напред <ChevronRight className="size-5" />
                 </Button>
               ) : (
-                <Button onClick={finish} disabled={pending}>
+                <Button onClick={submit} disabled={pending}>
                   {pending ? 'Проверка…' : 'Предай'}
                 </Button>
               )}
@@ -172,6 +255,9 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
                   {i + 1}
                 </button>
               ))}
+              <button onClick={submit} disabled={pending} className="ml-auto rounded-xl border-2 border-primary px-3 text-sm font-extrabold text-primary-dark hover:bg-primary/10">
+                Предай сега
+              </button>
             </div>
           )}
         </section>
@@ -228,7 +314,7 @@ export function correctAnswerText(q: ClientQuestion, r: QuestionResult): string 
   return '';
 }
 
-function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuestion; answer?: Answer; result?: QuestionResult; onAnswer: (a: Answer) => void }) {
+export function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuestion; answer?: Answer; result?: QuestionResult; onAnswer: (a: Answer) => void }) {
   return (
     <AnswerInput
       q={q}
@@ -258,7 +344,8 @@ function ResultScreen({
   onReport: (id: string | null) => void;
   reportFor: string | null;
 }) {
-  const pct = result.total ? Math.round((result.score / result.total) * 100) : 0;
+  const ex = result.exam;
+  const pct = ex ? Math.round((ex.points / Math.max(1, ex.maxPoints)) * 100) : result.total ? Math.round((result.score / result.total) * 100) : 0;
   const byId = new Map(result.results.map((r) => [r.id, r]));
   return (
     <div className="mx-auto max-w-3xl">
@@ -267,12 +354,37 @@ function ResultScreen({
           <Trophy className="size-12" />
         </div>
         <h1 className="text-3xl font-black">{pct >= 80 ? 'Страхотно!' : pct >= 50 ? 'Добра работа!' : 'Продължавай да учиш!'}</h1>
-        <p className="mt-1 text-muted">
-          {Number.isInteger(result.score) ? result.score : result.score.toFixed(1)} от {result.total} точки ({pct}%)
-        </p>
+        {ex ? (
+          <>
+            {ex.timedOut && <p className="mt-1 font-bold text-error">Времето изтече — матурата беше предадена автоматично.</p>}
+            <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3">
+              <div className="card3d rounded-2xl bg-surface p-4">
+                <p className="text-xs font-extrabold uppercase text-muted">Точки</p>
+                <p className="text-3xl font-black text-ink-strong">
+                  {ex.points}
+                  <span className="text-lg text-muted">/{ex.maxPoints}</span>
+                </p>
+                <p className="text-sm font-bold text-muted">{pct}%</p>
+              </div>
+              <div className="card3d rounded-2xl bg-surface p-4">
+                <p className="text-xs font-extrabold uppercase text-muted">Ориентировъчно</p>
+                <p className="text-3xl font-black text-ink-strong">{ex.grade.toFixed(2)}</p>
+                <p className="text-sm font-bold text-muted">{gradeWord(ex.grade)}</p>
+              </div>
+            </div>
+            <p className="mx-auto mt-3 max-w-md text-xs text-muted">
+              Оценката е само ориентир: смятана е от процента точки без есето и задачите със свободен текст ({100 - ex.maxPoints} от 100 точки на истинската матура).
+              {ex.timeUsedSec != null && ` Време: ${fmtTime(ex.timeUsedSec * 1000)}.`}
+            </p>
+          </>
+        ) : (
+          <p className="mt-1 text-muted">
+            {Number.isInteger(result.score) ? result.score : result.score.toFixed(1)} от {result.total} точки ({pct}%)
+          </p>
+        )}
       </div>
       <div className="mt-6 grid grid-cols-3 gap-3">
-        <Stat icon={<Gem className="size-5" />} color="text-secondary" label="XP" value={`+${result.xpEarned}`} />
+        <Stat icon={<Star className="size-5" />} color="text-accent-dark" label="XP" value={`+${result.xpEarned}`} />
         <Stat icon={<Flame className="size-5" />} color="text-orange" label="Серия" value={`${result.streak} дни`} />
         <Stat icon={<Trophy className="size-5" />} color="text-[#b88600]" label="Ниво" value={`${result.level}${result.leveledUp ? ' ↑' : ''}`} />
       </div>
@@ -281,9 +393,15 @@ function ResultScreen({
           🏅 Ново постижение: {result.unlocked.map((c) => ACHIEVEMENTS.find((a) => a.code === c)?.name).join(', ')}
         </div>
       )}
+      {result.mistakesCount > 0 && (
+        <a href="/tests/mistakes" className="mt-4 flex items-center justify-between rounded-2xl border-2 border-error/40 bg-error/10 px-4 py-3 font-extrabold text-error-dark hover:bg-error/15">
+          <span>🔁 Упражни грешките си</span>
+          <span className="rounded-full bg-error px-2.5 py-0.5 text-sm text-white">{result.mistakesCount}</span>
+        </a>
+      )}
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
         <ButtonLink href={againHref} block size="lg">
-          Нов тест
+          {ex ? 'Реши отново' : 'Нов тест'}
         </ButtonLink>
         <ButtonLink href={backHref} variant="outline" block size="lg">
           Към тестовете
@@ -396,4 +514,13 @@ export function ReportDialog({ questionId, onClose }: { questionId: string; onCl
       </div>
     </div>
   );
+}
+
+function fmtTime(ms: number) {
+  const t = Math.ceil(ms / 1000);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = t % 60;
+  const mm = String(m).padStart(h ? 2 : 1, '0');
+  return `${h ? `${h}:` : ''}${mm}:${String(sec).padStart(2, '0')}`;
 }

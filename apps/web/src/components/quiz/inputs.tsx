@@ -10,12 +10,14 @@ const PAIR_COLORS = ['#1cb0f6', '#ff9600', '#ce82ff', '#58cc02', '#ff4b4b', '#ff
 /** Публичните данни на въпрос (без верните отговори). */
 export interface InputQuestion {
   id: string;
-  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING' | 'FILL_BLANKS' | 'PUNCTUATION';
+  type: 'SINGLE_CHOICE' | 'SHORT_ANSWER' | 'MATCHING' | 'FILL_BLANKS' | 'PUNCTUATION' | 'FREE_TEXT';
   options: string[];
   answerCount: number;
   matching: { left: string[]; right: string[] } | null;
   blanks: { text: string; blanks: { label: string; options: string[] }[] } | null;
   tokens: string[] | null;
+  /** само за администратора: индекс на верния отговор (зелена точка) */
+  hint?: number | null;
 }
 
 /** Верните отговори — показват се след проверка. */
@@ -52,6 +54,8 @@ export function hasAnswer(q: InputQuestion, a: AnyAnswer | undefined): boolean {
       return !!a.blanks?.some((b) => b != null);
     case 'PUNCTUATION':
       return !!a.text && a.text.trim() !== (q.tokens ?? []).join(' ');
+    case 'FREE_TEXT':
+      return !!a.text?.trim();
   }
 }
 
@@ -67,7 +71,23 @@ export function AnswerInput(props: Props) {
       return <BlanksInput {...props} />;
     case 'PUNCTUATION':
       return <PunctuationInput {...props} />;
+    case 'FREE_TEXT':
+      return <FreeTextInput {...props} />;
   }
+}
+
+function FreeTextInput({ value, onChange, disabled }: Props) {
+  return (
+    <textarea
+      value={value?.text ?? ''}
+      disabled={disabled}
+      onChange={(e) => onChange({ text: e.target.value })}
+      rows={8}
+      maxLength={10000}
+      placeholder="Напиши отговора си…"
+      className="w-full rounded-2xl border-2 border-line bg-surface-2 px-4 py-3 text-base font-semibold leading-relaxed text-ink placeholder:text-muted focus:border-secondary focus:outline-none"
+    />
+  );
 }
 
 function ChoiceInput({ q, value, onChange, disabled, reveal, removed, compact }: Props) {
@@ -97,6 +117,7 @@ function ChoiceInput({ q, value, onChange, disabled, reveal, removed, compact }:
               {LETTERS[i]}
             </span>
             <span className="whitespace-pre-line">{opt}</span>
+            {q.hint === i && <span className="ml-auto size-2.5 shrink-0 rounded-full bg-primary" title="Верен (вижда се само от админа)" />}
           </button>
         );
       })}

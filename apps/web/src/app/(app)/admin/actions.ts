@@ -72,7 +72,7 @@ export async function saveQuestionAction(form: FormData) {
     answerCount: type === 'SHORT_ANSWER' ? Math.min(5, Math.max(1, Number(form.get('answerCount')) || 1)) : 1,
     explanation: str(form.get('explanation')),
     status: pick(STATUSES, form.get('status'), 'ACTIVE'),
-    inMultiplayer: form.get('inMultiplayer') === 'auto' || !form.get('inMultiplayer') ? defaultInMultiplayer(type, section, Number(form.get('answerCount')) || 1) : form.get('inMultiplayer') === 'yes',
+    inMultiplayer: form.get('inMultiplayer') === 'auto' || !form.get('inMultiplayer') ? defaultInMultiplayer(type, section, Number(form.get('answerCount')) || 1, { prompt: String(form.get('prompt') ?? ''), context: str(form.get('context')), options }) : form.get('inMultiplayer') === 'yes',
     workId: section === 'LITERATURE' ? str(form.get('workId')) : null,
     passageId: section === 'READING' ? str(form.get('passageId')) : null,
     sourceNo: form.get('sourceNo') ? Number(form.get('sourceNo')) || null : null,
@@ -143,7 +143,7 @@ export async function importAction(_: unknown, form: FormData): Promise<{ report
   if (file && typeof file === 'object' && 'text' in file && file.size > 0) raw = await file.text();
   if (!raw) return { error: 'Постави JSON или избери файл.' };
   try {
-    const report = await importQuestions(prisma, JSON.parse(raw));
+    const report = await importQuestions(prisma, JSON.parse(raw), { force: form.get('force') === 'on' });
     revalidatePath('/admin');
     return { report };
   } catch (e) {

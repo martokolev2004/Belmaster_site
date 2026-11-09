@@ -11,21 +11,13 @@ const COLORS = ['#58cc02', '#1cb0f6', '#ffc800', '#ff4b4b', '#ce82ff', '#ff9600'
 
 export function ProfileForm({ displayName, avatarColor }: { displayName: string; avatarColor: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(updateProfileAction, {});
-  const [color, setColor] = useState(avatarColor);
+  const [color] = useState(avatarColor);
   return (
     <form action={action} className="space-y-4">
       <Field label="Име">
         <Input name="displayName" defaultValue={displayName} minLength={2} maxLength={30} required />
       </Field>
-      <div>
-        <span className="mb-1.5 block text-sm font-extrabold">Цвят</span>
-        <input type="hidden" name="avatarColor" value={color} />
-        <div className="flex gap-2">
-          {COLORS.map((c) => (
-            <button type="button" key={c} onClick={() => setColor(c)} aria-label={c} className={cn('size-9 rounded-full border-4', color === c ? 'border-ink-strong' : 'border-transparent')} style={{ background: c }} />
-          ))}
-        </div>
-      </div>
+      <input type="hidden" name="avatarColor" value={color} />
       {state.error && <Alert>{state.error}</Alert>}
       {state.ok && <Alert tone="green">{state.ok}</Alert>}
       <Button type="submit" disabled={pending}>

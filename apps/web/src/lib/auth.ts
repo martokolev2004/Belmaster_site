@@ -40,6 +40,8 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { id: hash(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date()) return null;
+  // блокиран от админа — сесията не важи
+  if (session.user.blockedAt) return null;
   return session.user;
 });
 
@@ -49,9 +51,11 @@ export function isAdmin(user: Pick<User, 'email' | 'isGuest'> | null | undefined
 }
 
 /** Изисква влязъл потребител с избран клас. */
-export async function requireUser(opts: { allowNoGrade?: boolean } = {}): Promise<User> {
+export async function requireUser(opts: { allowNoGrade?: boolean; allowIncomplete?: boolean } = {}): Promise<User> {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  // профилите (не гостите) трябва да имат дата на раждане и приети условия
+  if (!user.isGuest && (!user.birthDate || !user.termsAcceptedAt) && !opts.allowIncomplete) redirect('/welcome');
   if (!user.grade && !opts.allowNoGrade) redirect('/grade');
   return user;
 }

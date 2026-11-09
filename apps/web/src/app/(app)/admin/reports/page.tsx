@@ -27,14 +27,15 @@ export default async function ReportsPage() {
             <Link href={`/admin/questions/${r.questionId}?back=/admin/reports`} className="font-extrabold text-secondary">
               Редактирай въпроса
             </Link>
-            <form action={setReportStatusAction} className="flex gap-3">
+            <form action={setReportStatusAction}>
               <input type="hidden" name="id" value={r.id} />
-              <button name="status" value="RESOLVED" className="font-extrabold text-primary">
-                Оправено
-              </button>
-              <button name="status" value="DISMISSED" className="font-extrabold text-muted">
-                Отхвърли
-              </button>
+              <input type="hidden" name="status" value="RESOLVED" />
+              <button className="font-extrabold text-primary">Оправено</button>
+            </form>
+            <form action={setReportStatusAction}>
+              <input type="hidden" name="id" value={r.id} />
+              <input type="hidden" name="status" value="DISMISSED" />
+              <button className="font-extrabold text-muted">Отхвърли</button>
             </form>
           </div>
         </li>

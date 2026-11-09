@@ -3,8 +3,23 @@ import { isShortAnswerCorrect, matchesAccepted } from './answers';
 /** Типове, които по подразбиране влизат в мултиплейъра (пунктуацията и четенето — не). */
 export const MULTIPLAYER_TYPES: QType[] = ['SINGLE_CHOICE', 'SHORT_ANSWER', 'MATCHING', 'FILL_BLANKS'];
 
-export function defaultInMultiplayer(type: QType, section: 'LANGUAGE' | 'LITERATURE' | 'READING', answerCount = 1): boolean {
-  return section !== 'READING' && MULTIPLAYER_TYPES.includes(type) && answerCount <= 1;
+/** Граници за дължина в мултиплейъра — по-дълги въпроси остават само за тестовете. */
+export const MULTIPLAYER_MAX_CONTEXT = 300;
+export const MULTIPLAYER_MAX_TOTAL = 550;
+
+export function questionTextLength(q: { prompt: string; context?: string | null; options?: string[] }) {
+  return q.prompt.length + (q.context?.length ?? 0) + (q.options ?? []).join('').length;
+}
+
+export function defaultInMultiplayer(
+  type: QType,
+  section: 'LANGUAGE' | 'LITERATURE' | 'READING',
+  answerCount = 1,
+  text?: { prompt: string; context?: string | null; options?: string[] },
+): boolean {
+  if (section === 'READING' || !MULTIPLAYER_TYPES.includes(type) || answerCount > 1) return false;
+  if (text && ((text.context?.length ?? 0) > MULTIPLAYER_MAX_CONTEXT || questionTextLength(text) > MULTIPLAYER_MAX_TOTAL)) return false;
+  return true;
 }
 
 export const TYPE_LABELS: Record<QType, string> = {
@@ -130,11 +145,11 @@ export function scoreAnswer(q: GradableQuestion, a: AnyAnswer | null | undefined
 /** Време за въпрос в мултиплейъра: според типа + дължината на текста. */
 export function questionTimeMs(q: { type: QType; prompt: string; context: string | null; data?: QuestionData; matching?: MatchingData | null }): number {
   const base: Record<QType, number> = {
-    SINGLE_CHOICE: 20_000,
-    SHORT_ANSWER: 25_000,
-    MATCHING: 30_000,
-    FILL_BLANKS: 30_000,
-    PUNCTUATION: 50_000,
+    SINGLE_CHOICE: 40_000,
+    SHORT_ANSWER: 45_000,
+    MATCHING: 50_000,
+    FILL_BLANKS: 50_000,
+    PUNCTUATION: 70_000,
   };
   const textLen =
     q.prompt.length +
@@ -198,7 +213,7 @@ function tokenize(text: string): string[] {
       const opening = /^[„(«]/.test(t) || (t.startsWith('"') && !quoteOpen);
       if (t.includes('"')) quoteOpen = !quoteOpen;
       if (opening || !out.length) carry += t;
-      else out[out.length - 1] += t;
+      else out[out.length - 1] += ` ${t}`; // „кое – измислица“: тирето остава с интервал
       continue;
     }
     for (const ch of t) if (ch === '"') quoteOpen = !quoteOpen;
@@ -211,7 +226,7 @@ function tokenize(text: string): string[] {
 
 /** Превръща „оригинал“ + „поправен текст“ в списък с липсващи знаци (за импорта). */
 export function punctuationFromTexts(original: string, corrected: string): PunctuationData {
-  const tokens = original.trim().split(/\s+/);
+  const tokens = tokenize(original);
   const fixed = tokenize(corrected);
   if (tokens.length !== fixed.length) {
     throw new Error(`Пунктуация: броят думи се различава (${tokens.length} срещу ${fixed.length}).`);
@@ -263,4 +278,31 @@ export function renderPunctuated(p: PunctuationData, marks: PunctMark[] = p.mark
       return `${pre}${core}${quotes}${tail}${others}`;
     })
     .join(' ');
+}
+
+/** Точки по задачи в ДЗИ по БЕЛ (12. клас) — еднакви за всички сесии (общо 100). */
+export const DZI12_POINTS: Record<number, number> = {
+  8: 2, 9: 2, 10: 2, 11: 2, 12: 2, 13: 5, 19: 2, 20: 2, 21: 6, 22: 2, 23: 3,
+  35: 2, 36: 2, 37: 2, 38: 2, 39: 3, 40: 6, 41: 30,
+};
+
+/** Колко точки носи задачата в матурата (по подразбиране 1). */
+export function defaultPoints(grade: string, no: number | null | undefined): number {
+  if (no == null) return 1;
+  if (grade === 'G12') return DZI12_POINTS[no] ?? 1;
+  return 1;
+}
+
+/** Ориентировъчна оценка по шестобалната система от процента точки (линейно, 2 + 4 × дял). */
+export function estimateGrade(points: number, max: number): number {
+  if (max <= 0) return 2;
+  return Math.round((2 + 4 * Math.min(1, Math.max(0, points / max))) * 100) / 100;
+}
+
+export function gradeWord(g: number): string {
+  if (g >= 5.5) return 'Отличен';
+  if (g >= 4.5) return 'Много добър';
+  if (g >= 3.5) return 'Добър';
+  if (g >= 3) return 'Среден';
+  return 'Слаб';
 }

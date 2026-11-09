@@ -32,6 +32,7 @@ export function toClient(q: Question & { work?: Work | null }): ClientQuestion {
     workTitle: q.work ? `${q.work.title} — ${q.work.author}` : null,
     label: q.topic ? TOPIC_LABELS[q.topic] : SECTION_LABELS[q.section],
     sourceNo: q.sourceNo,
+    points: q.points,
   };
 }
 
@@ -77,7 +78,7 @@ export async function buildPracticeTest(
 
 export async function buildExamTest(grade: Grade, examId: string) {
   const exam = await prisma.exam.findFirst({
-    where: { id: examId, grade },
+    where: { id: examId, grade, listed: true },
     include: {
       questions: { where: { status: 'ACTIVE' }, include: { work: true }, orderBy: [{ sourceNo: 'asc' }, { createdAt: 'asc' }] },
       passages: true,
@@ -111,4 +112,54 @@ export function grade(q: Question, a: Answer | undefined): QuestionResult {
     correctFull: q.type === 'PUNCTUATION' && d?.punctuation ? renderPunctuated(d.punctuation) : null,
     explanation: q.explanation,
   };
+}
+
+/** Тест от „Моите грешки“: до 10 въпроса, на които им е дошло времето за преговор. */
+export async function buildMistakesTest(userId: string, grade: Grade): Promise<{ questions: ClientQuestion[]; passages: ClientPassage[] }> {
+  const rows = await prisma.userMistake.findMany({
+    where: { userId, dueAt: { lte: new Date() }, question: { status: 'ACTIVE', grade } },
+    select: { questionId: true },
+  });
+  const ids = shuffle(rows.map((r) => r.questionId)).slice(0, TEST_SIZE);
+  const qs = await prisma.question.findMany({ where: { id: { in: ids } }, include: { work: true, passage: true } });
+  const passages = new Map<string, ClientPassage>();
+  for (const q of qs) if (q.passage) passages.set(q.passage.id, { id: q.passage.id, title: q.passage.title, text: q.passage.text });
+  // въпросите към един текст — един след друг
+  qs.sort((a, b) => (a.passageId ?? '').localeCompare(b.passageId ?? ''));
+  return { questions: qs.map((q) => toClient(q)), passages: [...passages.values()] };
+}
+
+/** Колко грешки чакат преговор днес и кога е следващият. */
+export async function mistakesSummary(userId: string, grade: Grade) {
+  const base = { userId, question: { status: 'ACTIVE' as const, grade } };
+  const [due, total, next] = await Promise.all([
+    prisma.userMistake.count({ where: { ...base, dueAt: { lte: new Date() } } }),
+    prisma.userMistake.count({ where: base }),
+    prisma.userMistake.findFirst({ where: { ...base, dueAt: { gt: new Date() } }, orderBy: { dueAt: 'asc' }, select: { dueAt: true } }),
+  ]);
+  return { due, later: total - due, nextAt: next?.dueAt ?? null };
+}
+
+/** „До първа грешка“: случаен въпрос по език или литература, който още не е бил в серията. */
+export async function nextSurvivalQuestion(grade: Grade, seen: string[]): Promise<ClientQuestion | null> {
+  const where = { grade, status: 'ACTIVE' as const, section: { in: ['LANGUAGE' as const, 'LITERATURE' as const] }, id: { notIn: seen.slice(-300) } };
+  const count = await prisma.question.count({ where });
+  if (!count) return null;
+  const q = await prisma.question.findFirst({ where, skip: Math.floor(Math.random() * count), include: { work: true } });
+  return q ? toClient(q) : null;
+}
+
+export async function survivalBest(userId: string): Promise<number> {
+  const r = await prisma.quizAttempt.aggregate({ where: { userId, kind: 'SURVIVAL' }, _max: { score: true } });
+  return Math.round(r._max.score ?? 0);
+}
+
+/** Само за администратора: добавя индекса на верния отговор към въпросите с избор (А–Г). */
+export async function withAdminHints<T extends { id: string; type: string }>(questions: T[], admin: boolean): Promise<T[]> {
+  if (!admin) return questions;
+  const ids = questions.filter((q) => q.type === 'SINGLE_CHOICE').map((q) => q.id);
+  if (!ids.length) return questions;
+  const rows = await prisma.question.findMany({ where: { id: { in: ids } }, select: { id: true, correctIndex: true } });
+  const m = new Map(rows.map((r) => [r.id, r.correctIndex]));
+  return questions.map((q) => (m.has(q.id) ? { ...q, hint: m.get(q.id) ?? null } : q));
 }
