@@ -242,25 +242,27 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
             <p className="rounded-2xl bg-black/35 px-3 py-2 text-xs text-white/80 backdrop-blur">Пускане: клик върху кулата или интервал. 3 перфектни пускания поред успокояват люлеенето.</p>
           </aside>
 
-          {/* вдясно: въпросът или пускането */}
-          <section className="pointer-events-auto w-[min(480px,32vw)] shrink-0">
-            {st.phase === 'question' && question && !anim ? (
-              <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
-            ) : st.phase === 'drop' && !anim ? (
-              <div className="card3d animate-rise rounded-3xl bg-surface p-6 text-center">
-                <p className="text-4xl">🏗️</p>
-                <p className="mt-2 text-2xl font-black text-ink-strong">Пусни етажа!</p>
-                <p className="mt-1 text-muted">Кликни върху кулата или натисни интервал, когато етажът е точно над нея.</p>
-                <div className="mx-auto mt-4 h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
-                  <div className="h-full rounded-full bg-secondary" style={{ width: `${Math.max(0, 100 - ((now - dropStart) / TOWER.DROP_MS) * 100)}%` }} />
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-3xl bg-black/30 p-6 text-center text-white/70 backdrop-blur">…</div>
-            )}
-            {error && <p className="mt-3 rounded-xl bg-error p-2 text-center text-sm font-bold text-white">{error}</p>}
-          </section>
         </div>
+
+        {/* пускане — малка подсказка горе, не пречи на клика */}
+        {st.phase === 'drop' && !anim && (
+          <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-col items-center gap-1.5">
+            <span className="animate-pulse rounded-full bg-black/55 px-5 py-2.5 text-lg font-black text-white">Пусни етажа! (клик или интервал)</span>
+            <div className="h-2.5 w-64 overflow-hidden rounded-full bg-white/30">
+              <div className="h-full bg-white" style={{ width: `${Math.max(0, 100 - ((now - dropStart) / TOWER.DROP_MS) * 100)}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* въпросът — голям, в средата; изчезва след отговора */}
+        {st.phase === 'question' && question && !anim && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-6 backdrop-blur-[2px]">
+            <div className="w-full max-w-3xl">
+              <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
+            </div>
+          </div>
+        )}
+        {error && <p className="absolute inset-x-0 bottom-6 mx-auto w-fit rounded-xl bg-error px-4 py-2 text-center text-sm font-bold text-white">{error}</p>}
       </div>
     );
   }
@@ -332,7 +334,7 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { 
   const pct = Math.max(0, Math.min(100, (left / TOWER.QUESTION_MS) * 100));
   return (
     <div className={docked ? '' : 'absolute inset-0 flex flex-col justify-end bg-black/25'}>
-      <div className={docked ? 'card3d max-h-[85dvh] animate-rise overflow-y-auto rounded-3xl bg-surface p-5 shadow-2xl' : 'max-h-[66%] animate-rise overflow-y-auto rounded-t-3xl bg-surface p-4 shadow-2xl'}>
+      <div className={docked ? 'card3d max-h-[88dvh] animate-rise overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl' : 'max-h-[66%] animate-rise overflow-y-auto rounded-t-3xl bg-surface p-4 shadow-2xl'}>
         <div className="mb-2 flex items-center gap-2">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div className={cn('h-full rounded-full', left < 5000 ? 'bg-error' : 'bg-secondary')} style={{ width: `${pct}%` }} />
@@ -343,15 +345,15 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { 
           <Badge tone="blue">{q.label}</Badge>
           {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
         </div>
-        <p className={cn('whitespace-pre-line font-extrabold leading-snug text-ink-strong', docked ? 'text-xl' : 'text-base')}>{q.prompt}</p>
-        {q.context && <ContextBox text={q.context} compact />}
-        <div className="mt-3">
+        <p className={cn('whitespace-pre-line font-extrabold leading-snug text-ink-strong', docked ? 'text-2xl' : 'text-base')}>{q.prompt}</p>
+        {q.context && <ContextBox text={q.context} compact={!docked} />}
+        <div className={docked ? 'mt-5' : 'mt-3'}>
           <AnswerInput
             q={q}
             value={feedback ? { index: feedback.shown } : undefined}
             onChange={(a) => typeof a.index === 'number' && onAnswer(a.index)}
             disabled={busy || !!feedback}
-            compact
+            compact={!docked}
             reveal={feedback ? { correctIndex: feedback.correctIndex } : null}
           />
         </div>
