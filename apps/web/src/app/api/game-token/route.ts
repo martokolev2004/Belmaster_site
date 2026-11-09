@@ -4,6 +4,7 @@ import { unlockProgress } from '@/lib/avatar';
 import { prisma } from '@/lib/db';
 import { getCurrentUser, isAdmin } from '@/lib/auth';
 import { signGameToken } from '@/lib/game-token';
+import { isRestricted } from '@/lib/age';
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -17,6 +18,7 @@ export async function GET() {
     grade: user.grade,
     isGuest: user.isGuest,
     admin: isAdmin(user),
+    restricted: isRestricted(user),
     avatar: sanitizeAvatar(user.avatar, null, user.id),
     frame: rating && rating.games > 0 ? frameForRating(rating.rating, better < 10) : 'none',
     weapon: (() => {

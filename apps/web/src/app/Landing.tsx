@@ -68,7 +68,11 @@ export function Landing() {
         </div>
       </section>
 
-      <footer className="py-8 text-center text-sm text-muted">© {new Date().getFullYear()} БЕЛ Мастер</footer>
+      <footer className="flex flex-wrap justify-center gap-x-4 gap-y-1 py-8 text-center text-sm text-muted">
+        <span>© {new Date().getFullYear()} БЕЛ Мастер</span>
+        <Link href="/privacy" className="hover:underline">Поверителност</Link>
+        <Link href="/terms" className="hover:underline">Общи условия</Link>
+      </footer>
     </div>
   );
 }

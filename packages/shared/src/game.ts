@@ -232,4 +232,6 @@ export interface GameTokenClaims {
   weapon?: string;
   /** администраторът вижда зелена точка на верния отговор */
   admin?: boolean;
+  /** под 14 г. без съгласие на родител — само игри с бот */
+  restricted?: boolean;
 }

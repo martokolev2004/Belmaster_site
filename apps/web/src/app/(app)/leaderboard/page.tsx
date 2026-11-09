@@ -3,6 +3,7 @@ import { currentSeason, frameForRating, gradeLabel, seasonLabel, type FrameTier 
 import { Trophy } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
+import { publicUserWhere } from '@/lib/age';
 import { Avatar, EmptyState, PageHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -18,7 +19,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   let rows: { id: string; name: string; color: string; avatar: unknown; frame?: FrameTier; value: string; sub?: string }[] = [];
   if (tab === 'rating') {
     const ratings = await prisma.playerRating.findMany({
-      where: { grade, season, games: { gt: 0 } },
+      where: { grade, season, games: { gt: 0 }, user: publicUserWhere() },
       orderBy: [{ rating: 'desc' }, { wins: 'desc' }],
       take: 50,
       include: { user: true },
@@ -26,7 +27,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     rows = ratings.map((r, i) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, frame: frameForRating(r.rating, season === 'all' && i < 10), value: String(r.rating), sub: `${r.wins} победи · ${r.games} битки` }));
   } else if (tab === 'climb') {
     const ratings = await prisma.climbRating.findMany({
-      where: { grade, season, games: { gt: 0 } },
+      where: { grade, season, games: { gt: 0 }, user: publicUserWhere() },
       orderBy: [{ rating: 'desc' }, { wins: 'desc' }],
       take: 50,
       include: { user: true },
@@ -34,14 +35,14 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
     rows = ratings.map((r) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, value: String(r.rating), sub: `${r.wins} победи · ${r.games} игри` }));
   } else if (tab === 'tower') {
     const bests = await prisma.towerBest.findMany({
-      where: { grade, season, best: { gt: 0 }, user: { isGuest: false } },
+      where: { grade, season, best: { gt: 0 }, user: { isGuest: false, ...publicUserWhere() } },
       orderBy: [{ best: 'desc' }, { updatedAt: 'asc' }],
       take: 50,
       include: { user: true },
     });
     rows = bests.map((r) => ({ id: r.userId, name: r.user.displayName, color: r.user.avatarColor, avatar: r.user.avatar, value: `${r.best} ет.`, sub: 'Кула на Словото' }));
   } else {
-    const users = await prisma.user.findMany({ where: { grade, isGuest: false, xp: { gt: 0 } }, orderBy: { xp: 'desc' }, take: 50 });
+    const users = await prisma.user.findMany({ where: { grade, isGuest: false, xp: { gt: 0 }, ...publicUserWhere() }, orderBy: { xp: 'desc' }, take: 50 });
     rows = users.map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, avatar: u.avatar, value: `${u.xp} XP`, sub: `Ниво ${u.level}` }));
   }
 

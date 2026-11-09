@@ -1,4 +1,5 @@
 import 'server-only';
+import { isRestricted } from './age';
 import { nextLevel, sofiaDay } from '@belmaster/shared';
 import { addLeagueXp, syncAchievements } from '@belmaster/db';
 import { prisma } from './db';
@@ -29,7 +30,7 @@ export async function awardProgress(userId: string, xp: number, extra: { perfect
     },
   });
 
-  await addLeagueXp(prisma, userId, xp).catch((e) => console.error('[league]', e));
+  if (!isRestricted(updated)) await addLeagueXp(prisma, userId, xp).catch((e) => console.error('[league]', e));
   const events = [...(extra.events ?? []), ...(extra.perfect ? ['perfect_test'] : [])];
   const unlocked = await syncAchievements(prisma, userId, events);
   return { user: updated, unlocked };

@@ -49,9 +49,11 @@ export function isAdmin(user: Pick<User, 'email' | 'isGuest'> | null | undefined
 }
 
 /** Изисква влязъл потребител с избран клас. */
-export async function requireUser(opts: { allowNoGrade?: boolean } = {}): Promise<User> {
+export async function requireUser(opts: { allowNoGrade?: boolean; allowIncomplete?: boolean } = {}): Promise<User> {
   const user = await getCurrentUser();
   if (!user) redirect('/login');
+  // профилите (не гостите) трябва да имат дата на раждане и приети условия
+  if (!user.isGuest && (!user.birthDate || !user.termsAcceptedAt) && !opts.allowIncomplete) redirect('/welcome');
   if (!user.grade && !opts.allowNoGrade) redirect('/grade');
   return user;
 }

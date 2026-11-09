@@ -5,11 +5,13 @@ import type { AnyAnswer } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { syncAchievements } from '@belmaster/db';
 import { getCurrentUser } from '@/lib/auth';
+import { isRestricted, RESTRICTED_MSG } from '@/lib/age';
 import { assignmentState, computeScores, deadlineOf, notify, questionsOf } from '@/lib/teacher';
 
 export async function joinClassAction(_: unknown, fd: FormData): Promise<{ error?: string; ok?: boolean }> {
   const u = await getCurrentUser();
   if (!u || u.isGuest) return { error: 'Трябва да имаш профил (не гост), за да влезеш в клас.' };
+  if (isRestricted(u)) return { error: RESTRICTED_MSG };
   const code = String(fd.get('code') ?? '').trim().toUpperCase().replace(/\s/g, '');
   const realName = String(fd.get('realName') ?? '').trim().replace(/\s+/g, ' ').slice(0, 60);
   if (realName.split(' ').length < 2) return { error: 'Напиши истинското си име и фамилия, за да те познае учителят.' };

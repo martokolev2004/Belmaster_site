@@ -129,7 +129,13 @@ function emitOnline(socket: S, uids: string[]) {
   socket.emit('presence', { online: uids.filter((u) => userSockets.has(u)) });
 }
 
-async function authenticate(socket: { handshake: { auth: Record<string, unknown> }; data: { user?: GameTokenClaims } }, next: (err?: Error) => void) {
+/** Събития, които събират с други хора — забранени за деца без съгласие на родител. */
+const PEER_EVENTS = new Set(['lobby:create', 'lobby:join', 'quick:join', 'invite:send', 'climb:create', 'climb:join', 'climb:quick']);
+
+async function authenticate(
+  socket: { handshake: { auth: Record<string, unknown> }; data: { user?: GameTokenClaims }; use: (fn: (ev: unknown[], next: (err?: Error) => void) => void) => void; emit: (ev: string, data: unknown) => void },
+  next: (err?: Error) => void,
+) {
   try {
     const token = socket.handshake.auth?.token;
     if (typeof token !== 'string') throw new Error('no token');
@@ -146,6 +152,15 @@ async function authenticate(socket: { handshake: { auth: Record<string, unknown>
       weapon: WEAPONS.some((w) => w.id === claims.weapon) ? claims.weapon : 'stone',
     };
     if (claims.admin === true) ADMIN_UIDS.add(claims.uid);
+    if (claims.restricted === true) {
+      socket.use((ev, nxt) => {
+        if (PEER_EVENTS.has(String(ev[0]))) {
+          socket.emit('error', { message: 'Докато родител не потвърди профила ти, можеш да играеш само срещу бот.' });
+          return;
+        }
+        nxt();
+      });
+    }
     next();
   } catch {
     next(new Error('unauthorized'));

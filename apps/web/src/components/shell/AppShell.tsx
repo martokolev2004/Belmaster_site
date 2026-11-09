@@ -13,6 +13,7 @@ import { UnlockCelebration } from '@/components/unlocks/UnlockCelebration';
 import { NavLinks, BottomNav } from './NavLinks';
 import { GameSocketProvider } from '@/components/game/GameSocketProvider';
 import { InviteToasts } from '@/components/game/InviteToasts';
+import { needsParent } from '@/lib/age';
 
 export async function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
   const admin = isAdmin(user);
@@ -79,7 +80,27 @@ export async function AppShell({ user, children }: { user: User; children: React
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12 has-[[data-wide]]:max-w-none has-[[data-wide]]:lg:px-8">{children}</main>
+        {needsParent(user) ? (
+          <Link href="/profile#privacy" className="block bg-accent/20 px-4 py-2 text-center text-sm font-bold text-ink-strong hover:bg-accent/30">
+            👪 Чакаме родител да потвърди профила ти по имейл. Дотогава играеш само сам и срещу бот. →
+          </Link>
+        ) : (
+          !user.isGuest &&
+          user.email &&
+          !user.emailVerifiedAt && (
+            <Link href="/profile#privacy" className="block bg-secondary/10 px-4 py-2 text-center text-sm font-bold text-ink-strong hover:bg-secondary/20">
+              ✉️ Потвърди имейла си — пратихме ти линк. Не е стигнал? →
+            </Link>
+          )
+        )}
+        <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6 md:pb-12 has-[[data-wide]]:max-w-none has-[[data-wide]]:lg:px-8">
+          {children}
+          <footer className="mt-12 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted [main:has([data-wide])_&]:hidden">
+            <Link href="/privacy" className="hover:underline">Поверителност</Link>
+            <Link href="/terms" className="hover:underline">Общи условия</Link>
+            <span>© БЕЛ Мастер</span>
+          </footer>
+        </main>
         <BottomNav />
         <InviteToasts />
         <UnlockCelebration avatar={user.avatar} seed={user.id} />

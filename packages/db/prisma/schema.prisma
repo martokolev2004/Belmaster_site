@@ -41,6 +41,13 @@ model User {
   weapon         String   @default("stone") // оръжие в „Към върха“
   seenItems      String[] // отключени части, които ученикът е видял/пробвал (без червена точка)
 
+  // поверителност и възраст
+  birthDate        DateTime? // дата на раждане (само за профили, не за гости)
+  termsAcceptedAt  DateTime? // приел общите условия и политиката
+  emailVerifiedAt  DateTime?
+  parentEmail      String? // за деца под 14 г.
+  parentConsentAt  DateTime? // родителят е потвърдил
+
   // учител
   teacherStatus  TeacherStatus @default(NONE)
   teacherSchool  String?
@@ -72,6 +79,7 @@ model User {
   notifications    Notification[]
   towerRuns        TowerRun[]
   towerBests       TowerBest[]
+  emailTokens      EmailToken[]
 }
 
 enum TeacherStatus {
@@ -579,4 +587,31 @@ model TowerBest {
 
   @@id([userId, grade, season])
   @@index([grade, season, best])
+}
+
+// Еднократни линкове по имейл: потвърждение, нова парола, родителско съгласие
+model EmailToken {
+  id        String    @id // sha256 на токена
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String // verify | reset | parent
+  email     String // на кой адрес е пратен
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
+}
+
+// Изпратени имейли — за проверка от админа (и докато пощата не е настроена)
+model MailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  link      String?
+  status    String // sent | skipped | error
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

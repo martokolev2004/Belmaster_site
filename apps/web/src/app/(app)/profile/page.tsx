@@ -11,6 +11,8 @@ import { Avatar, ButtonLink, Card, ProgressBar } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { logoutAction } from '@/app/(auth)/actions';
 import { PasswordForm, ProfileForm, ThemePicker } from './ProfileForms';
+import { PrivacyCard } from './PrivacyCard';
+import { needsParent } from '@/lib/age';
 
 export const metadata = { title: 'Профил' };
 
@@ -114,6 +116,8 @@ export default async function ProfilePage() {
           )}
         </div>
       </section>
+
+      {!user.isGuest && <PrivacyCard email={user.email} verified={!!user.emailVerifiedAt} needsParent={needsParent(user)} parentEmail={user.parentEmail} hasPassword={!!user.passwordHash} />}
 
       <form action={logoutAction}>
         <button className="inline-flex items-center gap-2 font-extrabold uppercase text-error">
