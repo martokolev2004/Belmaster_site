@@ -3,8 +3,14 @@ import { cookies } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: { default: 'БЕЛ Мастер', template: '%s · БЕЛ Мастер' },
-  description: 'Подготовка за матурите по български език и литература — тестове, библиотека и мултиплейър битки.',
+  metadataBase: new URL(process.env.APP_URL ?? 'https://belmaster.eu'),
+  title: { default: 'БЕЛ Мастер — подготовка за матурата по БЕЛ', template: '%s · БЕЛ Мастер' },
+  description: 'Безплатна подготовка за матурата (ДЗИ) по български език и литература: тестове с въпроси от истински матури, анализи на произведенията за 12. клас и образователни игри.',
+  applicationName: 'БЕЛ Мастер',
+  openGraph: { siteName: 'БЕЛ Мастер', locale: 'bg_BG', type: 'website' },
+  ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION, other: process.env.BING_SITE_VERIFICATION ? { 'msvalidate.01': process.env.BING_SITE_VERIFICATION } : {} } }
+    : {}),
   // добавен към началния екран на iPhone — отваря се без лентите на Safari
   appleWebApp: { capable: true, title: 'БЕЛ Мастер', statusBarStyle: 'default' },
 };
