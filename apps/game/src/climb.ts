@@ -198,7 +198,14 @@ export class ClimbRoom {
     if (this.pool.size < 5) return 'Още няма достатъчно въпроси за този клас.';
     this.startedAt = Date.now();
     this.pushLog('Играта започна! Пръв до 10-ото стъпало печели.');
-    this.nextQuestion();
+    // подготовка: сцената, противникът и правилата — после първият въпрос
+    this.phase = 'intro';
+    this.deadline = this.startedAt + CLIMB.INTRO_MS;
+    this.schedule(CLIMB.INTRO_MS, () => {
+      this.nextQuestion();
+      this.emit();
+    });
+    this.emit();
     return null;
   }
 

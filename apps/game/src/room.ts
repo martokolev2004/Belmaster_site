@@ -15,7 +15,7 @@ import {
   type Standing,
 } from '@belmaster/shared';
 import { QuestionPool, botAnswer, correctText, grade, type PoolQuestion } from './questions.js';
-import { BOT_AVATAR, type AnyAnswer, type AvatarConfig, type FrameTier } from '@belmaster/shared';
+import { BOT_AVATAR, GAME_INTRO_MS, type AnyAnswer, type AvatarConfig, type FrameTier } from '@belmaster/shared';
 
 export interface PlayerInternal {
   uid: string;
@@ -305,9 +305,17 @@ export class Room {
       });
 
       this.startedAt = Date.now();
-      this.phase = 'expansion_question';
+      // подготовка: всички виждат картата, столиците и правилата, после идва първият въпрос
+      this.phase = 'intro';
+      this.deadline = this.startedAt + GAME_INTRO_MS;
       this.pushLog('Битката започва! Първо — разпределяне на земите.');
-      this.nextExpansionQuestion();
+      this.schedule(GAME_INTRO_MS, () => {
+        this.phase = 'expansion_question';
+        this.deadline = null;
+        this.nextExpansionQuestion();
+        this.emit();
+      });
+      this.emit();
       return null;
     } finally {
       this.starting = false;

@@ -259,7 +259,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
     setHint('Можеш да атакуваш само области, съседни на твоите (мигащите).');
   };
 
-  const stage = state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
+  const stage = state.phase === 'intro' ? 'Подготовка' : state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
   const overlay = useOverlayLayout();
 
   const header = (
@@ -603,6 +603,13 @@ function MapOverlays({ state, me, meP }: { state: GameState; me: string; meP?: P
   const reveal = state.reveal;
   const qPhase = ['expansion_question', 'battle_question', 'expansion_reveal', 'battle_reveal'].includes(state.phase);
 
+  if (state.phase === 'intro')
+    return (
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px] phone-landscape:p-1.5">
+        <IntroCard state={state} me={me} />
+      </div>
+    );
+
   if (qPhase && q) {
     const participant = q.participants.includes(me);
     const answered = state.answeredUids.includes(me);
@@ -685,6 +692,44 @@ function StatusStrip({ state, me, meP }: { state: GameState; me: string; meP?: P
   );
 }
 
+/** Подготовка преди първия въпрос: кой с кого е, къде са столиците, кратки правила, обратно броене. */
+function IntroCard({ state, me }: { state: GameState; me: string }) {
+  const left = useCountdown(state.deadline);
+  const sec = Math.ceil(left / 1000);
+  const meP = state.players.find((p) => p.uid === me);
+  const works = state.mode === 'WORKS';
+  return (
+    <div className="card3d w-full max-w-xl animate-rise rounded-3xl bg-surface p-6 text-center phone-landscape:max-h-full phone-landscape:overflow-y-auto phone-landscape:p-3">
+      <p className="text-xs font-extrabold uppercase tracking-wider text-muted">{MODE_LABELS[state.mode].name}</p>
+      <p className="mt-1 text-2xl font-black text-ink-strong phone-landscape:text-lg">Пригответе се!</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2 phone-landscape:hidden">
+        {state.players.map((p) => (
+          <span key={p.uid} className="flex items-center gap-2 rounded-full border-2 px-3 py-1 text-sm font-extrabold" style={{ borderColor: p.color }}>
+            <span className="size-3 rounded-full" style={{ background: p.color }} />
+            {p.name}
+            {p.uid === me && <span className="text-muted">(ти)</span>}
+          </span>
+        ))}
+      </div>
+      {meP && (
+        <p className="mt-3 text-sm font-bold phone-landscape:mt-1 phone-landscape:text-xs">
+          Ти си <span style={{ color: meP.color }}>■ този цвят</span> — столицата ти (🏰) вече е на картата.
+        </p>
+      )}
+      <ul className="mx-auto mt-4 max-w-md space-y-1.5 text-left text-sm text-ink phone-landscape:mt-2 phone-landscape:text-xs">
+        <li>1️⃣ <b>Разпределяне:</b> всички отговарят на един въпрос — най-бързите верни избират свободна земя.</li>
+        <li>2️⃣ <b>Битка:</b> по ред нападаш съседна област. Печелиш, ако отговориш вярно и по-бързо от защитника.</li>
+        <li>3️⃣ <b>Столица:</b> пада след 3 загубени битки — и всичките ѝ области стават твои.</li>
+        {works && <li>📚 Всяко поле е произведение — при атака въпросът е за неговата творба.</li>}
+      </ul>
+      <div className="mt-5 flex items-center justify-center gap-3 phone-landscape:mt-2">
+        <span className="text-sm font-extrabold text-muted">Първият въпрос след</span>
+        <span key={sec} className="flex size-14 animate-pop items-center justify-center rounded-full bg-secondary text-3xl font-black text-white phone-landscape:size-10 phone-landscape:text-xl">{sec}</span>
+      </div>
+    </div>
+  );
+}
+
 function TimerBar({ deadline, total }: { deadline: number | null; total: number }) {
   const left = useCountdown(deadline);
   const pct = Math.min(100, (left / total) * 100);
@@ -719,6 +764,8 @@ function ActionPanel({ state, me, meP, bare = false }: { state: GameState; me: s
       </Box>
     );
   }
+
+  if (state.phase === 'intro') return <IntroCard state={state} me={me} />;
 
   if (state.phase === 'expansion_question' || state.phase === 'battle_question' || state.phase === 'expansion_reveal' || state.phase === 'battle_reveal') {
     return <QuestionPanel state={state} me={me} meP={meP} regionName={regionName} />;

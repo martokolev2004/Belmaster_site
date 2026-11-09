@@ -4,6 +4,8 @@ import type { QType } from './questions';
 
 export const CLIMB = {
   STEPS: 10,
+  /** подготовка преди първия въпрос */
+  INTRO_MS: 9_000,
   MAX_QUESTIONS: 35,
   CHOOSE_MS: 12_000,
   AIM_MS: 6_000,
@@ -57,7 +59,7 @@ export const weaponKey = (id: string) => `weapon:${id}`;
 export const weaponById = (id: string | null | undefined) => WEAPONS.find((w) => w.id === id) ?? WEAPONS[0];
 
 // ───────────── Състояние ─────────────
-export type ClimbPhase = 'lobby' | 'question' | 'reveal' | 'choose' | 'aim' | 'resolve' | 'finished';
+export type ClimbPhase = 'lobby' | 'intro' | 'question' | 'reveal' | 'choose' | 'aim' | 'resolve' | 'finished';
 
 export interface ClimbPlayer {
   uid: string;

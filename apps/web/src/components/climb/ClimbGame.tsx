@@ -335,6 +335,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
               <span className="w-10 shrink-0 text-right font-mono text-sm font-black tabular-nums">{Math.ceil(left / 1000)}</span>
             </div>
           )}
+          {state.phase === 'intro' && <ClimbIntro state={state} offset={offset} />}
           {state.phase === 'question' && state.question && <QuestionPanel key={state.question.id} socket={socket} state={state} />}
           {state.phase === 'reveal' && state.reveal && <RevealPanel state={state} />}
           {state.phase === 'choose' && <ChoosePanel socket={socket} state={state} />}
@@ -449,6 +450,13 @@ function DesktopLayout({
             </div>
           </div>
         )}
+        {state.phase === 'intro' && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/35 p-5">
+            <div className="w-full max-w-xl">
+              <ClimbIntro state={state} offset={offset} />
+            </div>
+          </div>
+        )}
         {modal && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 p-5 backdrop-blur-[2px]">
             <div className={cn('max-h-full w-full overflow-y-auto rounded-2xl animate-rise', state.phase === 'finished' ? 'max-w-sm' : q?.context ? 'max-w-4xl' : 'max-w-2xl')}>
@@ -482,6 +490,32 @@ function DesktopLayout({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Подготовка преди първия въпрос: противникът, оръжието, кратки правила, обратно броене. */
+function ClimbIntro({ state, offset }: { state: ClimbState; offset: number }) {
+  const left = useLeft(state.deadline, offset);
+  const sec = Math.max(0, Math.ceil(left / 1000));
+  const me = state.players.find((p) => p.uid === state.you);
+  const other = state.players.find((p) => p.uid !== state.you);
+  return (
+    <div className="card3d animate-rise rounded-3xl bg-surface p-6 text-center phone-landscape:p-3">
+      <p className="text-xs font-extrabold uppercase tracking-wider text-muted">Към върха</p>
+      <p className="mt-1 text-2xl font-black text-ink-strong phone-landscape:text-lg">
+        {me?.name} <span className="text-muted">срещу</span> {other?.name}
+      </p>
+      <ul className="mx-auto mt-4 max-w-md space-y-1.5 text-left text-sm text-ink phone-landscape:mt-2 phone-landscape:text-xs">
+        <li>❓ Двамата отговаряте на един въпрос — <b>най-бързият верен избира</b>.</li>
+        <li>⬆️ <b>Качи се</b> с едно стъпало или 🎯 <b>хвърли</b> {me ? weaponById(me.weapon).emoji : ''} по стъпалото на другия (натисни в зеленото).</li>
+        <li>🛡️ <b>Щит</b> — веднъж за игра: ако те целят, ударът се връща. Жокери: 50/50 и +5 с.</li>
+        <li>🏁 Пръв до {CLIMB.STEPS}-ото стъпало печели.</li>
+      </ul>
+      <div className="mt-5 flex items-center justify-center gap-3 phone-landscape:mt-2">
+        <span className="text-sm font-extrabold text-muted">Първият въпрос след</span>
+        <span key={sec} className="flex size-14 animate-pop items-center justify-center rounded-full bg-secondary text-3xl font-black text-white phone-landscape:size-10 phone-landscape:text-xl">{sec}</span>
+      </div>
     </div>
   );
 }

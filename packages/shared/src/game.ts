@@ -25,6 +25,9 @@ export const PLAYER_COLORS = ['#ff4b4b', '#1cb0f6', '#ffc800', '#58cc02'] as con
 
 export type GameMode = 'CLASSIC' | 'WORKS';
 
+/** Подготовка преди първия въпрос (карта, играчи, правила). */
+export const GAME_INTRO_MS = 9_000;
+
 export const MODE_LABELS: Record<GameMode, { name: string; description: string }> = {
   CLASSIC: { name: 'Класическа битка', description: 'Случайни въпроси по език и литература.' },
   WORKS: { name: 'Битка на произведенията', description: 'Всяко поле е творба — въпросът е за нея.' },
@@ -49,6 +52,7 @@ export const CHAT_MESSAGES: { key: string; text: string }[] = [
 // ───────────── Състояние (изпраща се към клиентите) ─────────────
 export type GamePhase =
   | 'lobby'
+  | 'intro'
   | 'expansion_question'
   | 'expansion_reveal'
   | 'expansion_pick'

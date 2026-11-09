@@ -57,10 +57,19 @@ export async function startTowerAction(): Promise<{ state: TowerState; question:
   // незавършени игри се приключват (с каквото са построили)
   for (const old of await prisma.towerRun.findMany({ where: { userId: user.id, status: 'ACTIVE' } })) await finishRun(old, 'left', user.isGuest, user.id);
   const run = await prisma.towerRun.create({
-    data: { userId: user.id, grade: user.grade, season: currentSeason(), theme: randomTheme(), seed: Math.random(), lives: TOWER.LIVES, log: [] },
+    // първо „подготовка“ — въпросът (и таймерът му) идва чак след „Строй!“
+    data: { userId: user.id, grade: user.grade, season: currentSeason(), theme: randomTheme(), seed: Math.random(), lives: TOWER.LIVES, log: [], phase: 'intro' },
   });
-  const { run: r, question } = await askNext(run, isAdmin(user));
-  return { state: towerState(r), question, best: await towerBest(user.id, user.grade) };
+  return { state: towerState(run), question: null, best: await towerBest(user.id, user.grade) };
+}
+
+/** Край на подготовката → първият въпрос. */
+export async function beginTowerAction(runId: string): Promise<{ state: TowerState; question: ClientQuestion | null } | { error: string }> {
+  const r = await myRun(runId);
+  if (!r) return { error: 'Играта не е намерена.' };
+  if (r.run.phase !== 'intro') return { error: 'Играта вече е започнала.' };
+  const { run, question } = await askNext(r.run, isAdmin(r.user));
+  return { state: towerState(run), question };
 }
 
 export async function answerTowerAction(

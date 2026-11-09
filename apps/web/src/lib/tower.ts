@@ -15,7 +15,7 @@ export interface TowerState {
   runId: string;
   theme: TowerTheme;
   seed: number;
-  phase: 'question' | 'drop' | 'over';
+  phase: 'intro' | 'question' | 'drop' | 'over';
   phaseAt: number;
   xs: number[];
   lean: number;

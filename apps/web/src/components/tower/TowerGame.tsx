@@ -13,7 +13,7 @@ import { cn } from '@/lib/cn';
 import { play } from '@/lib/sound';
 import type { ClientQuestion } from '@/lib/quiz-types';
 import type { TowerState } from '@/lib/tower';
-import { answerTowerAction, dropTowerAction, quitTowerAction, startTowerAction, towerReviewAction, type TowerFinish } from '@/app/(app)/tower/actions';
+import { answerTowerAction, beginTowerAction, dropTowerAction, quitTowerAction, startTowerAction, towerReviewAction, type TowerFinish } from '@/app/(app)/tower/actions';
 import { Floor, Roof } from './floors';
 
 const VW = 450;
@@ -108,6 +108,15 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     setAnim(null);
     applyState(r.state, r.question);
     setScreen('play');
+  };
+
+  const begin = async () => {
+    if (!st || busy) return;
+    setBusy(true);
+    const r = await beginTowerAction(st.runId);
+    setBusy(false);
+    if ('error' in r) return setError(r.error);
+    applyState(r.state, r.question);
   };
 
   const answer = async (shown: number) => {
@@ -212,6 +221,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     return (
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#0b0f1a]">
         <Scene wide st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+        {st.phase === 'intro' && <TowerIntro onBegin={begin} busy={busy} best={best} />}
         {toast && now - toast.at < 1400 && (
           <div className="pointer-events-none absolute inset-x-0 top-[44%] flex justify-center">
             <span className={cn('animate-pop rounded-2xl px-5 py-2.5 text-xl font-black text-white shadow-lg', toast.tone === 'good' ? 'bg-primary' : toast.tone === 'bad' ? 'bg-error' : 'bg-secondary')}>{toast.text}</span>
@@ -271,6 +281,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0f1a]">
       <div className="relative overflow-hidden" style={{ width: 'min(100vw, calc(100dvh * 9 / 16))', height: 'min(100dvh, calc(100vw * 16 / 9))' }}>
         <Scene st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+        {st.phase === 'intro' && <TowerIntro onBegin={begin} busy={busy} best={best} />}
 
         {/* горна лента */}
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
@@ -312,6 +323,28 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
           <QuestionSheet q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
         )}
         {error && <p className="absolute inset-x-3 bottom-3 rounded-xl bg-error p-2 text-center text-sm font-bold text-white">{error}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Подготовка: как се играе — таймерът тръгва след „Строй!“. */
+function TowerIntro({ onBegin, busy, best }: { onBegin: () => void; busy: boolean; best: number }) {
+  return (
+    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
+      <div className="card3d w-full max-w-lg animate-rise rounded-3xl bg-surface p-6 text-center">
+        <p className="text-4xl">🏛️</p>
+        <p className="mt-1 text-2xl font-black text-ink-strong">Кула на Словото</p>
+        <ul className="mx-auto mt-4 space-y-2 text-left text-sm text-ink">
+          <li>❓ Отговори вярно на въпроса (30 сек.) — получаваш <b>нов етаж</b>.</li>
+          <li>🏗️ Кранът носи етажа наляво-надясно. <b>Тапни / кликни / интервал</b>, когато е точно над кулата.</li>
+          <li>⚖️ Ако стъпи на по-малко от половината — пада. Кривото строене люлее кулата, а 3 перфектни поред я успокояват.</li>
+          <li>❤️ 3 сърца за цялата игра — губиш сърце при грешка, изтекло време или паднал етаж.</li>
+        </ul>
+        {best > 0 && <p className="mt-3 text-sm font-extrabold text-accent-dark">Рекордът ти: {best} етажа — можеш ли повече?</p>}
+        <Button block size="lg" className="mt-5" onClick={onBegin} disabled={busy}>
+          {busy ? '…' : 'Строй!'}
+        </Button>
       </div>
     </div>
   );
