@@ -136,7 +136,8 @@ export function PlayHub({ inviteUid, inviteName, hasQuestions }: { inviteUid: st
       </section>
 
       {!connected && <p className="text-center text-sm text-muted">Свързване с игровия сървър…</p>}
-      {quick.searching && <Searching since={quick.since} offerBot={quick.offerBot} mode={mode} onBot={() => (wantRoom.current = true)} />}
+      {quick.searching && <Searching since={quick.since} mode={mode} />}
+      {!quick.searching && quick.offerBot && <NoOpponent mode={mode} onBot={() => (wantRoom.current = true)} />}
     </div>
   );
 }
@@ -152,10 +153,11 @@ function ActionCard({ icon, tone, title, text, action }: { icon: React.ReactNode
   );
 }
 
-function Searching({ since, offerBot, mode, onBot }: { since: number | null; offerBot: boolean; mode: GameMode; onBot: () => void }) {
+function Searching({ since, mode }: { since: number | null; mode: GameMode }) {
   const { socket } = useGame();
   const elapsed = useCountdown(since ? since + 3_600_000 : null);
   const secs = since ? Math.floor((3_600_000 - elapsed) / 1000) : 0;
+  void mode;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="card3d w-full max-w-sm animate-pop rounded-3xl bg-surface p-6 text-center">
@@ -167,25 +169,42 @@ function Searching({ since, offerBot, mode, onBot }: { since: number | null; off
         </div>
         <p className="text-xl font-black">Търсим съперник…</p>
         <p className="mt-1 tabular-nums text-muted">{secs} с</p>
-        {offerBot && (
-          <div className="mt-4">
-            <p className="mb-2 text-sm text-muted">Никой не е свободен в момента. Искаш ли да играеш срещу бот?</p>
-            <Button
-              variant="purple"
-              block
-              onClick={() => {
-                onBot();
-                socket?.emit('bot:start', { mode });
-              }}
-              icon={<Bot className="size-5" />}
-            >
-              Играй срещу бот
-            </Button>
-          </div>
-        )}
         <Button variant="ghost" block className="mt-3" onClick={() => socket?.emit('quick:leave')}>
           Откажи
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Никой не се появи — казваме го и предлагаме бот или нов опит. */
+function NoOpponent({ mode, onBot }: { mode: GameMode; onBot: () => void }) {
+  const { socket } = useGame();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="card3d w-full max-w-sm animate-pop rounded-3xl bg-surface p-6 text-center">
+        <p className="text-5xl">😴</p>
+        <p className="mt-2 text-xl font-black">Няма свободен съперник</p>
+        <p className="mt-1 text-sm text-muted">В момента никой от твоя клас не търси битка. Опитай пак след малко, покани приятел или играй срещу бота.</p>
+        <div className="mt-4 space-y-2">
+          <Button
+            variant="purple"
+            block
+            onClick={() => {
+              onBot();
+              socket?.emit('bot:start', { mode });
+            }}
+            icon={<Bot className="size-5" />}
+          >
+            Играй срещу бот
+          </Button>
+          <Button variant="outline" block onClick={() => socket?.emit('quick:join', { mode })}>
+            Опитай пак
+          </Button>
+          <Button variant="ghost" block onClick={() => socket?.emit('quick:leave')}>
+            Затвори
+          </Button>
+        </div>
       </div>
     </div>
   );

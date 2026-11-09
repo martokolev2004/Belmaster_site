@@ -862,9 +862,12 @@ export function registerClimb(ns: NS, newCode: () => string) {
       const since = Date.now();
       queue.push({ user, since });
       socket.emit('quick', { searching: true, since, offerBot: false });
+      // никой не се е появил — спираме търсенето и казваме, че в момента няма свободни (с предложение за бот)
       setTimeout(() => {
-        if (queue.some((q) => q.user.uid === user.uid && q.since === since))
-          for (const sid of userSockets.get(user.uid) ?? []) ns.to(sid).emit('quick', { searching: true, since, offerBot: true });
+        if (queue.some((q) => q.user.uid === user.uid && q.since === since)) {
+          queue = queue.filter((q) => q.user.uid !== user.uid);
+          for (const sid of userSockets.get(user.uid) ?? []) ns.to(sid).emit('quick', { searching: false, since: null, offerBot: true });
+        }
       }, CLIMB.QUICK_MATCH_BOT_OFFER_MS);
     });
     socket.on('climb:quick_leave', () => {

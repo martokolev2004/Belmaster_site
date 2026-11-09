@@ -258,9 +258,11 @@ io.on('connection', (socket: S) => {
     list.push({ uid: user.uid, name: user.name, isGuest: user.isGuest, since, avatar: user.avatar, frame: user.frame });
     quickQueue.set(key, list);
     socket.emit('quick:status', { searching: true, since, offerBot: false });
+    // никой не се е появил — спираме търсенето и казваме, че в момента няма свободни (с предложение за бот)
     setTimeout(() => {
       if ((quickQueue.get(key) ?? []).some((e) => e.uid === user.uid && e.since === since)) {
-        for (const sid of userSockets.get(user.uid) ?? []) io.to(sid).emit('quick:status', { searching: true, since, offerBot: true });
+        leaveQuick(user.uid);
+        for (const sid of userSockets.get(user.uid) ?? []) io.to(sid).emit('quick:status', { searching: false, since: null, offerBot: true });
       }
     }, RULES.QUICK_MATCH_BOT_OFFER_MS);
   });

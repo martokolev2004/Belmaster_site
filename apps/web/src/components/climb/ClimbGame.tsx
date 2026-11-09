@@ -94,14 +94,25 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
         {quick.searching && (
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
             <span>Търсим противник от твоя клас…</span>
-            {quick.offerBot && (
-              <button onClick={() => socket.emit('climb:bot')} className="rounded-xl bg-white px-3 py-1 font-extrabold text-secondary">
-                Играй с бота
-              </button>
-            )}
             <button onClick={() => socket.emit('climb:quick_leave')} className="underline">
               Откажи
             </button>
+          </div>
+        )}
+        {!quick.searching && quick.offerBot && (
+          <div className="mt-3 rounded-2xl bg-black/20 p-3 text-sm font-bold">
+            <p>😴 Няма свободен противник в момента. Опитай пак след малко или играй с бота.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button onClick={() => socket.emit('climb:bot')} className="rounded-xl bg-white px-3 py-1.5 font-extrabold text-secondary">
+                Играй с бота
+              </button>
+              <button onClick={() => socket.emit('climb:quick')} className="rounded-xl bg-white/20 px-3 py-1.5 font-extrabold">
+                Опитай пак
+              </button>
+              <button onClick={() => socket.emit('climb:quick_leave')} className="px-2 underline">
+                Затвори
+              </button>
+            </div>
           </div>
         )}
         </div>
