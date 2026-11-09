@@ -25,6 +25,14 @@ export async function consumeToken(token: string, kind: Kind, consume = true) {
   return t;
 }
 
+/** Токен за потвърждение на имейл — може да се отваря многократно, докато не изтече. */
+export async function findVerifyToken(token: string) {
+  const t = await prisma.emailToken.findUnique({ where: { id: hash(String(token)) }, include: { user: true } });
+  if (!t || t.kind !== 'verify' || t.expiresAt < new Date()) return null;
+  if (!t.usedAt) await prisma.emailToken.update({ where: { id: t.id }, data: { usedAt: new Date() } });
+  return t;
+}
+
 export async function sendVerifyEmail(user: Pick<User, 'id' | 'email' | 'displayName'>) {
   if (!user.email) return;
   const token = await issue(user.id, 'verify', user.email);

@@ -1,15 +1,16 @@
 import { ButtonLink } from '@/components/ui';
 import { prisma } from '@/lib/db';
-import { consumeToken } from '@/lib/email-tokens';
+import { findVerifyToken } from '@/lib/email-tokens';
 
 export const metadata = { title: 'Потвърждение на имейл' };
 export const dynamic = 'force-dynamic';
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
-  const t = token ? await consumeToken(token, 'verify') : null;
+  // повторно отваряне (или скенер на пощата, който „натиска“ линка първи) не бива да проваля потвърждението
+  const t = token ? await findVerifyToken(token) : null;
   const ok = !!t && t.email === t.user.email;
-  if (ok) await prisma.user.update({ where: { id: t!.userId }, data: { emailVerifiedAt: new Date() } });
+  if (ok && !t.user.emailVerifiedAt) await prisma.user.update({ where: { id: t!.userId }, data: { emailVerifiedAt: new Date() } });
   return (
     <div className="animate-rise text-center">
       <p className="text-6xl">{ok ? '✅' : '⚠️'}</p>
