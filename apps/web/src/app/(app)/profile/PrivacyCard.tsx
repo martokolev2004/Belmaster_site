@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
-import { Download, ShieldCheck, Trash2 } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { Alert, Button, Card, Field, Input } from '@/components/ui';
 import { resendParentAction, resendVerifyAction, type FormState } from '@/app/(auth)/actions';
 import { deleteAccountAction } from './actions';
@@ -49,14 +49,14 @@ export function PrivacyCard({ email, verified, needsParent, parentEmail, hasPass
           </form>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <a href="/api/me/export" className="inline-flex items-center gap-1.5 rounded-xl bg-surface-2 px-3 py-2 font-extrabold hover:bg-line">
-            <Download className="size-4" /> Изтегли данните ми
-          </a>
-          <button onClick={() => setShowDelete((v) => !v)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-extrabold text-error hover:bg-error/10">
-            <Trash2 className="size-4" /> Изтрий профила
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+          <Link href="/privacy" className="hover:underline">Политика за поверителност</Link>
+          <Link href="/terms" className="hover:underline">Общи условия</Link>
+          <a href="/api/me/export" className="hover:underline">Изтегли данните ми</a>
+          <button type="button" onClick={() => setShowDelete((v) => !v)} className="hover:text-error hover:underline">
+            Изтрий профила
           </button>
-        </div>
+        </p>
         {showDelete && (
           <form action={del} className="space-y-3 rounded-2xl border-2 border-error/40 bg-error/5 p-3">
             <p className="font-bold">Изтриването е окончателно: губиш XP, нивата, постиженията, рекордите и приятелите си.</p>
@@ -74,9 +74,6 @@ export function PrivacyCard({ email, verified, needsParent, parentEmail, hasPass
             </Button>
           </form>
         )}
-        <p className="text-xs text-muted">
-          <Link href="/privacy" className="underline">Политика за поверителност</Link> · <Link href="/terms" className="underline">Общи условия</Link>
-        </p>
       </div>
     </Card>
   );
