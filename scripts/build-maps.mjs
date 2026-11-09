@@ -169,6 +169,7 @@ function build({ id, name, shape, regions, lands, capitalCounts }) {
     regions: regions.map((r, i) => ({
       id: r.id,
       name: r.name,
+      ...(r.sub ? { sub: r.sub } : {}),
       land: r.land,
       path: ringToPath(cells[i]),
       center: centroid(cells[i]),
@@ -316,9 +317,15 @@ function river(big) {
         { id: 'm', name: 'Средната долина', color: '#58cc02' },
         { id: 's', name: 'Южният бряг', color: '#ff9600' },
       ];
-  const names = ['Воденица', 'Брод', 'Върба', 'Мелница', 'Ливада', 'Кладенец', 'Бент', 'Поляна', 'Сал', 'Ручей', 'Ракита', 'Камък', 'Устие', 'Извор', 'Острец', 'Мочур', 'Гъсталак', 'Пасище', 'Хармана', 'Коритото'];
+  // „Литературна България“ — родните места на писателите от програмата (и места от творбите им)
+  const places = [
+    ['Калофер', 'Ботев'], ['Сопот', 'Вазов'], ['Свищов', 'Алеко'], ['Чирпан', 'Яворов'], ['Байлово', 'Елин Пелин'], ['Жеравна', 'Йовков'],
+    ['Копривщица', 'Дебелянов'], ['Кукуш', 'Смирненски'], ['Банско', 'Вапцаров'], ['Прилеп', 'Талев'], ['Трявна', 'П. Славейков'], ['Солун', 'Далчев'],
+    ['Бургас', 'Дубарова'], ['Калиманица', 'Радичков'], ['Търново', 'Ем. Станев'], ['Батошево', 'Б. Христов'], ['Шипка', 'Вазов'], ['Сливница', 'Вазов'], ['Карлово', 'Левски'], ['Рила', 'Вазов'],
+  ];
+  const names = places.map((p) => p[0]);
   const regions = [];
-  const add = (x, d, landId) => regions.push({ id: `${big ? 'R' : 'r'}${regions.length + 1}`, name: names[regions.length], land: landId, at: [x, round(ry(x) + d)] });
+  const add = (x, d, landId) => regions.push({ id: `${big ? 'R' : 'r'}${regions.length + 1}`, name: names[regions.length], sub: places[regions.length][1], land: landId, at: [x, round(ry(x) + d)] });
   if (big) {
     for (const [x, d] of [[150, -110], [290, -95], [420, -100], [200, -215], [360, -205]]) add(x, d, 'nw');
     for (const [x, d] of [[580, -100], [710, -95], [850, -100], [640, -205], [800, -200]]) add(x, d, 'ne');

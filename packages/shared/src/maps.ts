@@ -9,6 +9,8 @@ export interface MapLand {
 export interface MapRegion {
   id: string;
   name: string;
+  /** втори ред под името (напр. автор) */
+  sub?: string;
   land: string;
   path: string;
   center: [number, number];

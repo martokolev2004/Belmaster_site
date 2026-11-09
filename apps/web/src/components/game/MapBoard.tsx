@@ -174,6 +174,21 @@ export function MapBoard({ map, state, selectable, onSelect, onBlocked, highligh
             >
               {label}
             </text>
+            {!works && r.sub && (
+              <text
+                x={x}
+                y={(reg?.capital ? y + 16 : y) + 24}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={16}
+                fontWeight={700}
+                fill="#fff"
+                fillOpacity={0.9}
+                style={{ paintOrder: 'stroke', stroke: 'rgba(0,0,0,.45)', strokeWidth: 3 }}
+              >
+                {r.sub}
+              </text>
+            )}
           </g>
         );
       })}
