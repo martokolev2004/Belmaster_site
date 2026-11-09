@@ -132,7 +132,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <li>🎯 <b>Хвърли</b> — натисни, когато маркерът е в зеленото. Уцелиш ли, другият пада стъпало. Не уцелиш ли — пада твоето.</li>
             <li>🃏 <b>Жокери</b> — 50/50 и +5 секунди, по веднъж за игра.</li>
             <li>⛳ Ако другият е на земята, няма какво да целиш — направо се качваш.</li>
-            <li>🛡️ <b>Щит</b> — веднъж за игра. Пази стъпалото, на което си, и другият не го вижда: ако те цели, ударът се връща към него. Щом смениш стъпалото, щитът изчезва.</li>
+            <li>🛡️ <b>Щит</b> — веднъж за игра. Пази стъпалото, на което си, и другият не го вижда: ако те цели, ударът се връща към него; ако ти не уцелиш, не падаш. Щом се качиш на следващото стъпало, щитът изчезва.</li>
             <li>🧗 Колкото по-високо си, толкова по-тясна е зелената зона.</li>
             <li>🏁 Пръв до 10 стъпала, или по-високият след {CLIMB.MAX_QUESTIONS} въпроса.</li>
           </ul>
@@ -509,7 +509,7 @@ function ClimbIntro({ state, offset }: { state: ClimbState; offset: number }) {
       <ul className="mx-auto mt-4 max-w-md space-y-1.5 text-left text-sm text-ink phone-landscape:mt-2 phone-landscape:text-xs">
         <li>❓ Двамата отговаряте на един въпрос — <b>най-бързият верен избира</b>.</li>
         <li>⬆️ <b>Качи се</b> с едно стъпало или 🎯 <b>хвърли</b> {me ? weaponById(me.weapon).emoji : ''} по стъпалото на другия (натисни в зеленото).</li>
-        <li>🛡️ <b>Щит</b> — веднъж за игра, скрит, пази само текущото стъпало: ако те целят, ударът се връща. Жокери: 50/50 и +5 с.</li>
+        <li>🛡️ <b>Щит</b> — веднъж за игра, скрит, пази текущото стъпало: ако те целят, ударът се връща; ако не уцелиш, не падаш. Жокери: 50/50 и +5 с.</li>
         <li>🏁 Пръв до {CLIMB.STEPS}-ото стъпало печели.</li>
       </ul>
       <div className="mt-5 flex items-center justify-center gap-3 phone-landscape:mt-2">
@@ -524,7 +524,7 @@ function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boole
   if (armed)
     return (
       <div className="flex items-center gap-2 rounded-2xl border-2 border-secondary bg-secondary/10 px-4 py-2.5 text-sm font-extrabold text-secondary-dark">
-        <Shield className="size-5" /> Щитът пази това стъпало — ако те целят, ударът се връща. Изчезва, щом смениш стъпалото.
+        <Shield className="size-5" /> Щитът пази това стъпало — ако те целят, ударът се връща. Изчезва, щом се качиш по-нагоре.
       </div>
     );
   if (used) return <p className="text-xs font-bold text-muted">🛡️ Щитът е използван.</p>;

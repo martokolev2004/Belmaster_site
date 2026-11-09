@@ -129,8 +129,8 @@ export interface ClimbAim {
 export type ClimbOutcome =
   | { kind: 'climb'; actorUid: string }
   | { kind: 'hit'; actorUid: string; targetUid: string; weapon: string; pos: number; targetAtGround: boolean }
-  | { kind: 'miss'; actorUid: string; targetUid: string; weapon: string; pos: number; actorAtGround: boolean }
-  | { kind: 'reflect'; actorUid: string; targetUid: string; weapon: string; pos: number; actorAtGround: boolean }
+  | { kind: 'miss'; actorUid: string; targetUid: string; weapon: string; pos: number; actorAtGround: boolean; /** щитът го опази — не пада */ saved?: boolean }
+  | { kind: 'reflect'; actorUid: string; targetUid: string; weapon: string; pos: number; actorAtGround: boolean; /** хвърлящият също е с щит — не пада */ saved?: boolean }
   | { kind: 'shield_wasted'; actorUid: string; targetUid: string };
 
 export type ClimbTheme = 'dusk' | 'night' | 'canyon';

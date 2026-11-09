@@ -209,7 +209,14 @@ export function ClimbScene({ state, chat = [] }: { state: ClimbState; chat?: { u
         // предметът не стига — пада обратно върху собственото стъпало
         const to = land(a, before[a]);
         add({ kind: 'projectile', from, to, via: [640 + (a === 0 ? -60 : 60), geo.plat - 170], start: t0 + T.throw, dur: T.flight + 200, emoji });
-        at(T.throw + T.flight + 200, () => impact(a, before[a], 'lost'));
+        at(T.throw + T.flight + 200, () => {
+          if (!out.saved) return impact(a, before[a], 'lost');
+          // щитът поема падането
+          const [x, y] = geo.stand(a, before[a]);
+          add({ kind: 'shield', x, y: y - 70, start: performance.now() });
+          play('capture');
+          setDisp(heights);
+        });
         return T.throw + T.flight + 1400;
       }
       // reflect: до щита и обратно
@@ -222,7 +229,12 @@ export function ClimbScene({ state, chat = [] }: { state: ClimbState; chat?: { u
       });
       const to = land(a, before[a]);
       add({ kind: 'projectile', from: shieldAt, to, via: arc(shieldAt, to, 200), start: t0 + T.throw + T.flight, dur: T.back, emoji });
-      at(T.throw + T.flight + T.back, () => impact(a, before[a], 'hit'));
+      at(T.throw + T.flight + T.back, () => {
+        if (!out.saved) return impact(a, before[a], 'hit');
+        const [x, y] = geo.stand(a, before[a]);
+        add({ kind: 'shield', x, y: y - 70, start: performance.now() });
+        setDisp(heights);
+      });
       return T.throw + T.flight + T.back + 1100;
     };
 

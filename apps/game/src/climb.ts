@@ -398,12 +398,18 @@ export class ClimbRoom {
     let out: ClimbOutcome;
     if (target.shieldArmed) {
       target.shieldArmed = false;
-      out = { kind: 'reflect', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
-      if (actor.height > 0) actor.stats.falls++;
       target.stats.reflects++;
-      this.leaveStep(actor);
-      actor.height = Math.max(0, actor.height - 1);
-      this.pushLog(`🛡️ ${target.name} отби удара! ${actor.name} пада на стъпало ${actor.height}.`);
+      if (actor.shieldArmed) {
+        // и хвърлящият е с щит — неговият поема върнатия удар
+        actor.shieldArmed = false;
+        out = { kind: 'reflect', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0, saved: true };
+        this.pushLog(`🛡️ ${target.name} отби удара, но и ${actor.name} беше с щит — никой не пада.`);
+      } else {
+        out = { kind: 'reflect', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
+        if (actor.height > 0) actor.stats.falls++;
+        actor.height = Math.max(0, actor.height - 1);
+        this.pushLog(`🛡️ ${target.name} отби удара! ${actor.name} пада на стъпало ${actor.height}.`);
+      }
       if (actor.isBot) this.botSay('wow', 0.6, 2200);
     } else if (hit) {
       out = { kind: 'hit', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, targetAtGround: target.height === 0 };
@@ -415,16 +421,22 @@ export class ClimbRoom {
       if (target.isBot) this.botSay(Math.random() < 0.5 ? 'oops' : 'wow', 0.6, 1600);
       else if (actor.isBot) this.botSay('laugh', 0.35, 1600);
     } else {
-      out = { kind: 'miss', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
-      if (actor.height > 0) actor.stats.falls++;
-      this.leaveStep(actor);
-      actor.height = Math.max(0, actor.height - 1);
-      this.pushLog(`💥 ${actor.name} не уцели и падна на стъпало ${actor.height}.`);
+      if (actor.shieldArmed) {
+        // щитът поема падането: остава на стъпалото, щитът изчезва
+        actor.shieldArmed = false;
+        out = { kind: 'miss', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0, saved: true };
+        this.pushLog(`🛡️ ${actor.name} не уцели, но щитът го опази — остава на стъпало ${actor.height}.`);
+      } else {
+        out = { kind: 'miss', actorUid: uid, targetUid: target.uid, weapon: actor.weapon, pos, actorAtGround: actor.height === 0 };
+        if (actor.height > 0) actor.stats.falls++;
+        actor.height = Math.max(0, actor.height - 1);
+        this.pushLog(`💥 ${actor.name} не уцели и падна на стъпало ${actor.height}.`);
+      }
     }
     this.resolveOutcome([out]);
   }
 
-  /** Тръгваш от стъпалото — щитът остава там (тихо, другият не разбира). */
+  /** Качваш се по-нагоре — щитът остава на старото стъпало (тихо, другият не разбира). */
   private leaveStep(p: P) {
     if (!p.shieldArmed) return;
     p.shieldArmed = false;
