@@ -41,15 +41,19 @@ export default async function FriendsPage() {
               <li key={f.id} className="card3d flex items-center gap-3 rounded-2xl bg-surface p-3">
                 <Avatar name={f.requester.displayName} avatar={f.requester.avatar} seed={f.requester.id} />
                 <span className="flex-1 font-extrabold">{f.requester.displayName}</span>
-                <form action={respondFriendAction} className="flex gap-2">
-                  <input type="hidden" name="id" value={f.id} />
-                  <button name="decision" value="accept" className="btn3d rounded-xl bg-primary px-3 py-2 text-sm font-extrabold uppercase text-white [--btn-shadow:var(--color-primary-dark)]">
-                    Приеми
-                  </button>
-                  <button name="decision" value="decline" className="rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2">
-                    Откажи
-                  </button>
-                </form>
+                {/* отделна форма за всеки бутон — решението е в скрито поле, не в бутона */}
+                <div className="flex gap-2">
+                  <form action={respondFriendAction}>
+                    <input type="hidden" name="id" value={f.id} />
+                    <input type="hidden" name="decision" value="accept" />
+                    <button className="btn3d rounded-xl bg-primary px-3 py-2 text-sm font-extrabold uppercase text-white [--btn-shadow:var(--color-primary-dark)]">Приеми</button>
+                  </form>
+                  <form action={respondFriendAction}>
+                    <input type="hidden" name="id" value={f.id} />
+                    <input type="hidden" name="decision" value="decline" />
+                    <button className="rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2">Откажи</button>
+                  </form>
+                </div>
               </li>
             ))}
           </ul>
@@ -77,7 +81,8 @@ export default async function FriendsPage() {
                 <span className="flex-1 font-bold">{f.addressee.displayName}</span>
                 <form action={respondFriendAction}>
                   <input type="hidden" name="id" value={f.id} />
-                  <button name="decision" value="cancel" className="text-sm font-extrabold text-muted hover:text-error">
+                  <input type="hidden" name="decision" value="cancel" />
+                  <button className="text-sm font-extrabold text-muted hover:text-error">
                     Откажи
                   </button>
                 </form>

@@ -44,7 +44,8 @@ export async function respondFriendAction(form: FormData) {
   const f = await prisma.friendship.findUnique({ where: { id } });
   if (!f) return;
   if (decision === 'accept' && f.addresseeId === user.id && f.status === 'PENDING') await accept(id, user.id);
-  else if (decision !== 'accept' && (f.addresseeId === user.id || f.requesterId === user.id)) {
+  // изтриване само при изрично „откажи“ — никога по подразбиране
+  else if ((decision === 'decline' || decision === 'cancel') && (f.addresseeId === user.id || f.requesterId === user.id)) {
     await prisma.friendship.delete({ where: { id } });
     revalidatePath('/friends');
   }
