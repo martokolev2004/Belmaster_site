@@ -52,9 +52,9 @@ export async function AppShell({ user, children }: { user: User; children: React
             <Link href="/" className="md:hidden">
               <Logo compact />
             </Link>
-            <span className="hidden rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-extrabold text-muted md:inline">
-              {gradeLabel(user.grade)}
-            </span>
+            <Link href="/grade?next=/" title="Смени клас" className="hidden rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-extrabold text-muted hover:bg-line hover:text-ink md:inline">
+              {gradeLabel(user.grade)} ▾
+            </Link>
             <div className="flex items-center gap-2 text-sm font-extrabold">
               <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-orange" title="Серия от дни">
                 <Flame className="size-5" fill="currentColor" /> {user.streak}

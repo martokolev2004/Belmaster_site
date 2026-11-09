@@ -39,12 +39,12 @@ export default async function ProfilePage() {
         <div className="flex-1">
           <h1 className="text-3xl font-black">{user.displayName}</h1>
           <p className="text-muted">
-            {user.isGuest ? 'Гост' : user.email} · {gradeLabel(user.grade)} ·{' '}
-            <Link href="/grade?next=/profile" className="font-bold text-secondary">
-              смени клас
-            </Link>
+            {user.isGuest ? 'Гост' : user.email}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
+            <Link href="/grade?next=/profile" className="inline-flex items-center gap-1.5 rounded-xl bg-accent/20 px-3 py-1.5 text-sm font-extrabold text-ink-strong hover:bg-accent/30">
+              🎓 {gradeLabel(user.grade)} · Смени клас
+            </Link>
             <Link href="/profile/avatar" className="inline-flex items-center gap-1.5 rounded-xl bg-secondary/10 px-3 py-1.5 text-sm font-extrabold text-secondary hover:bg-secondary/20">
               ✏️ Промени аватара
             </Link>
