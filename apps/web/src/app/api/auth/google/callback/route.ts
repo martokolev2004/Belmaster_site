@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  if (user.blockedAt) return NextResponse.redirect(new URL('/login?error=blocked', appUrl));
   await createSession(user.id);
   const next = req.cookies.get('bm_oauth_next')?.value ?? '/';
   const res = NextResponse.redirect(new URL(user.grade ? next : '/grade', appUrl));

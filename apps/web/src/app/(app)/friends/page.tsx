@@ -5,6 +5,7 @@ import { requireUser } from '@/lib/auth';
 import { Avatar, Card, EmptyState, PageHeader } from '@/components/ui';
 import { AddFriendForm, CopyCode, FriendList } from './FriendForms';
 import { respondFriendAction } from './actions';
+import { ReportUserButton } from '@/components/report/ReportUserButton';
 
 export const metadata = { title: 'Приятели' };
 
@@ -41,6 +42,7 @@ export default async function FriendsPage() {
               <li key={f.id} className="card3d flex items-center gap-3 rounded-2xl bg-surface p-3">
                 <Avatar name={f.requester.displayName} avatar={f.requester.avatar} seed={f.requester.id} />
                 <span className="flex-1 font-extrabold">{f.requester.displayName}</span>
+                <ReportUserButton userId={f.requester.id} name={f.requester.displayName} />
                 {/* отделна форма за всеки бутон — решението е в скрито поле, не в бутона */}
                 <div className="flex gap-2">
                   <form action={respondFriendAction}>

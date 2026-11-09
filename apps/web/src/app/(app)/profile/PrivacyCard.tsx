@@ -52,6 +52,7 @@ export function PrivacyCard({ email, verified, needsParent, parentEmail, hasPass
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
           <Link href="/privacy" className="hover:underline">Политика за поверителност</Link>
           <Link href="/terms" className="hover:underline">Общи условия</Link>
+          <Link href="/contact" className="hover:underline">Контакти</Link>
           <a href="/api/me/export" className="hover:underline">Изтегли данните ми</a>
           <button type="button" onClick={() => setShowDelete((v) => !v)} className="hover:text-error hover:underline">
             Изтрий профила

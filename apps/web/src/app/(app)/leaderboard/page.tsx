@@ -4,6 +4,7 @@ import { Trophy } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { publicUserWhere } from '@/lib/age';
+import { ReportUserButton } from '@/components/report/ReportUserButton';
 import { Avatar, EmptyState, PageHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -88,7 +89,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
           {tab === 'tower' ? 'Построй кула, за да се появиш тук.' : tab === 'rating' ? 'Изиграй битка с рейтинг, за да се появиш тук.' : 'Реши тест, за да се появиш тук.'}
         </EmptyState>
       ) : (
-        <ol className="card3d divide-y-2 divide-line overflow-hidden rounded-2xl bg-surface">
+        <ol className="card3d divide-y-2 divide-line rounded-2xl bg-surface [&>li:first-child]:rounded-t-2xl [&>li:last-child]:rounded-b-2xl">
           {rows.map((r, i) => (
             <li key={r.id} className={cn('flex items-center gap-3 px-4 py-3', r.id === user.id && 'bg-secondary/10')}>
               <span className={cn('w-8 text-center text-lg font-black', i === 0 ? 'text-[#e5a400]' : i === 1 ? 'text-[#9aa5ab]' : i === 2 ? 'text-[#cd7f32]' : 'text-muted')}>{i + 1}</span>
@@ -98,6 +99,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
                 {r.sub && <span className="block text-xs text-muted">{r.sub}</span>}
               </span>
               <span className="font-black text-ink-strong">{r.value}</span>
+              {!user.isGuest && r.id !== user.id && <ReportUserButton userId={r.id} name={r.name} />}
             </li>
           ))}
         </ol>

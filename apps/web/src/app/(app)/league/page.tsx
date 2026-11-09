@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ReportUserButton } from '@/components/report/ReportUserButton';
 import { LEAGUE_GROUP_SIZE, LEAGUE_MOVE, LEAGUE_TIERS, leagueWeek, leagueWeekEnd } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -72,13 +73,13 @@ export default async function LeaguePage() {
 
 async function Group({ group, meId }: { group: string; meId: string }) {
   const rows = await prisma.leagueMember.findMany({
-    where: { group },
+    where: { group, user: { blockedAt: null } },
     orderBy: [{ xp: 'desc' }, { createdAt: 'asc' }],
     include: { user: { select: { displayName: true, avatar: true, avatarColor: true } } },
   });
   const n = rows.length;
   return (
-    <ol className="card3d overflow-hidden rounded-2xl bg-surface">
+    <ol className="card3d rounded-2xl bg-surface [&>li:first-child>div]:rounded-t-2xl [&>li:last-child>div]:rounded-b-2xl">
       {rows.map((r, i) => {
         const rank = i + 1;
         const up = rank <= LEAGUE_MOVE && r.xp > 0 && r.tier < LEAGUE_TIERS.length - 1;
@@ -95,6 +96,7 @@ async function Group({ group, meId }: { group: string; meId: string }) {
                 {r.userId === meId && ' (ти)'}
               </span>
               <span className="font-black">{r.xp} XP</span>
+              {r.userId !== meId && <ReportUserButton userId={r.userId} name={r.user.displayName} />}
             </div>
           </li>
         );

@@ -12,6 +12,8 @@ const ITEMS = [
   { href: '/admin/import', label: 'Импорт' },
   { href: '/admin/reports', label: 'Доклади' },
   { href: '/admin/teachers', label: 'Учители' },
+  { href: '/admin/users', label: 'Потребители' },
+  { href: '/admin/messages', label: 'Съобщения' },
   { href: '/admin/mail', label: 'Имейли' },
 ];
 

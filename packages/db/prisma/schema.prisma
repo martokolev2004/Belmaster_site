@@ -47,6 +47,10 @@ model User {
   emailVerifiedAt  DateTime?
   parentEmail      String? // за деца под 14 г.
   parentConsentAt  DateTime? // родителят е потвърдил
+  blockedAt        DateTime? // блокиран от админа
+  blockReason      String?
+  reportsMade      UserReport[] @relation("reportsMade")
+  reportsAbout     UserReport[] @relation("reportsAbout")
 
   // учител
   teacherStatus  TeacherStatus @default(NONE)
@@ -259,6 +263,35 @@ model QuestionReport {
   createdAt  DateTime     @default(now())
 
   @@index([status])
+}
+
+/** Доклад за потребител (име, поведение). */
+model UserReport {
+  id         String       @id @default(cuid())
+  reporterId String?
+  reporter   User?        @relation("reportsMade", fields: [reporterId], references: [id], onDelete: SetNull)
+  targetId   String
+  target     User         @relation("reportsAbout", fields: [targetId], references: [id], onDelete: Cascade)
+  reason     String
+  message    String?
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+
+  @@index([status])
+}
+
+/** Съобщение от формата „Контакти“. */
+model ContactMessage {
+  id        String    @id @default(cuid())
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  message   String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
 }
 
 // ─────────────────────────── Мини тестове ───────────────────────────

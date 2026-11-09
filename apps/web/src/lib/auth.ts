@@ -40,6 +40,8 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   if (!token) return null;
   const session = await prisma.session.findUnique({ where: { id: hash(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date()) return null;
+  // блокиран от админа — сесията не важи
+  if (session.user.blockedAt) return null;
   return session.user;
 });
 

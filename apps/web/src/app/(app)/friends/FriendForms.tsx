@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ReportUserButton } from '@/components/report/ReportUserButton';
 import { Check, Copy, Swords } from 'lucide-react';
 import { Alert, Avatar, Button, Input } from '@/components/ui';
 import { useGame } from '@/components/game/GameSocketProvider';
@@ -76,6 +77,7 @@ export function FriendList({ friends }: { friends: FriendRow[] }) {
                 {on ? 'на линия' : 'офлайн'} · {f.grade}
               </span>
             </span>
+            <ReportUserButton userId={f.id} name={f.name} />
             {f.sameGrade ? (
               <Link
                 href={`/play?invite=${f.id}`}

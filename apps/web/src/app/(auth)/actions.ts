@@ -141,6 +141,7 @@ export async function loginAction(_: FormState, form: FormData): Promise<FormSta
   if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
     return { error: 'Грешен имейл или парола.' };
   }
+  if (user.blockedAt) return { error: 'Профилът е блокиран заради нарушение на Общите условия. Ако смяташ, че е грешка, пиши ни от страницата „Контакти“.' };
   await createSession(user.id);
   redirect(user.grade ? safeNext(form.get('next')) : '/grade');
 }

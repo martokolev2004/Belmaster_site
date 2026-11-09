@@ -72,6 +72,7 @@ export function Landing() {
         <span>© {new Date().getFullYear()} БЕЛ Мастер</span>
         <Link href="/privacy" className="hover:underline">Поверителност</Link>
         <Link href="/terms" className="hover:underline">Общи условия</Link>
+        <Link href="/contact" className="hover:underline">Контакти</Link>
       </footer>
     </div>
   );

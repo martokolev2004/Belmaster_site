@@ -27,10 +27,10 @@ export function parseBirth(d: unknown, m: unknown, y: unknown): Date | string {
   return date;
 }
 
-/** Prisma филтър: скрива от публични списъци децата без съгласие на родител. */
+/** Prisma филтър: скрива от публични списъци блокираните и децата без съгласие на родител. */
 export function publicUserWhere(now = new Date()) {
   const cutoff = new Date(now.getFullYear() - CONSENT_AGE, now.getMonth(), now.getDate());
-  return { NOT: { birthDate: { gt: cutoff }, parentConsentAt: null } };
+  return { blockedAt: null, NOT: { birthDate: { gt: cutoff }, parentConsentAt: null } };
 }
 
 export const RESTRICTED_MSG = 'Докато родител не потвърди профила ти, тази функция е заключена. Виж „Профил → Поверителност“.';
