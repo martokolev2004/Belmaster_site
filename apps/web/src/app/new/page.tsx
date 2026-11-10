@@ -2,14 +2,12 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import '@fontsource-variable/unbounded';
 import '@/components/landing/landing-next.css';
-import { prisma } from '@/lib/db';
 import { LogoMark } from '@/components/Logo';
 import { ClimbDemo } from '@/components/climb/ClimbDemo';
 import { MapPreview } from '@/components/game/MapPreview';
-import { CountUp, Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
+import { Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
 
 export const metadata = { title: 'БЕЛ Мастер — български език и литература като игра', robots: { index: false } };
-export const dynamic = 'force-dynamic';
 
 const TOPICS = ['Правопис', 'Граматика', 'Пунктуация', 'Лексика', 'Литература', 'Четене с разбиране', 'Изразни средства', 'Герои и теми'];
 const GAMES = [
@@ -18,8 +16,7 @@ const GAMES = [
   { no: '03', c: '#ffd84d', img: '/landing/tower.webp', tag: 'Аркада · сам', title: 'Кула на Словото', text: 'Всеки верен отговор е нов етаж. Пусни го точно — иначе кулата се срутва.', href: '/tower' },
 ];
 
-export default async function NewLanding() {
-  const [questions, works] = await Promise.all([prisma.question.count({ where: { status: 'ACTIVE' } }), prisma.work.count({ where: { published: true } })]);
+export default function NewLanding() {
   const row = [...TOPICS, ...TOPICS, ...TOPICS];
 
   return (
@@ -91,22 +88,6 @@ export default async function NewLanding() {
         </div>
         <span className="ln-scroll" aria-hidden />
       </Hero>
-
-      <div className="ln-stats">
-        {[
-          { n: questions, l: 'въпроса', x: '' },
-          { n: works, l: 'произведения в библиотеката', x: '' },
-          { n: 3, l: 'игри в едно', x: '' },
-          { n: 100, l: 'безплатно', x: '%' },
-        ].map((s, i) => (
-          <Reveal key={s.l} delay={i * 0.08} className="ln-stat">
-            <div className="ln-display ln-stat-n ln-grad">
-              <CountUp to={s.n} suffix={s.x} />
-            </div>
-            <div className="ln-stat-l">{s.l}</div>
-          </Reveal>
-        ))}
-      </div>
 
       <section id="games" className="ln-section">
         <div className="ln-orb" style={{ background: '#58cc02', top: '-10rem', right: '-18rem' }} />
