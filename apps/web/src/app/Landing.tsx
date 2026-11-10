@@ -1,3 +1,5 @@
+// РЕЗЕРВЕН ВАРИАНТ: старата начална страница. Не се показва никъде — пази се, за да може да се върне.
+// За връщане: в app/page.tsx сложи <Landing /> вместо <LandingNext />.
 import Link from 'next/link';
 import { BookOpen, Castle, ListChecks, Swords, Trophy, Users } from 'lucide-react';
 import { Logo } from '@/components/Logo';

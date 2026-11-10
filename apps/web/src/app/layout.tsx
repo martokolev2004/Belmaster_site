@@ -4,8 +4,8 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? 'https://belmaster.eu'),
-  title: { default: 'БЕЛ Мастер — подготовка за матурата по БЕЛ', template: '%s · БЕЛ Мастер' },
-  description: 'Безплатна подготовка за матурата (ДЗИ) по български език и литература: тестове с въпроси от истински матури, анализи на произведенията за 12. клас и образователни игри.',
+  title: { default: 'БЕЛ Мастер — български език и литература като игра', template: '%s · БЕЛ Мастер' },
+  description: 'Български език и литература като игра: образователни игри, тестове и библиотека с произведенията. Безплатно, за 7., 10. и 12. клас.',
   applicationName: 'БЕЛ Мастер',
   openGraph: { siteName: 'БЕЛ Мастер', locale: 'bg_BG', type: 'website' },
   ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION

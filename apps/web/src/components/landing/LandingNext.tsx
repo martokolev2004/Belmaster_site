@@ -7,8 +7,15 @@ import { ClimbDemo } from '@/components/climb/ClimbDemo';
 import { MapPreview } from '@/components/game/MapPreview';
 import { Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
 
-export const metadata = { title: 'БЕЛ Мастер — български език и литература като игра', robots: { index: false } };
 
+const LD = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'БЕЛ Мастер',
+  url: process.env.APP_URL ?? 'https://belmaster.eu',
+  inLanguage: 'bg',
+  description: 'Български език и литература като игра — образователни игри, тестове и библиотека с произведенията за 7., 10. и 12. клас.',
+};
 const TOPICS = ['Правопис', 'Граматика', 'Пунктуация', 'Лексика', 'Литература', 'Четене с разбиране', 'Изразни средства', 'Герои и теми'];
 const GAMES = [
   { no: '01', c: '#ff5a5a', img: '/landing/battle.webp', tag: 'Стратегия · 2–4 играчи', title: 'Битка за Континента', text: 'Завладявай области с верни и бързи отговори. Пази столицата си — пада след три удара.', href: '/play' },
@@ -16,14 +23,16 @@ const GAMES = [
   { no: '03', c: '#ffd84d', img: '/landing/tower.webp', tag: 'Аркада · сам', title: 'Кула на Словото', text: 'Всеки верен отговор е нов етаж. Пусни го точно — иначе кулата се срутва.', href: '/tower' },
 ];
 
-export default function NewLanding() {
+/** Началната страница за посетители (без вход). Старият вариант е запазен в app/Landing.tsx. */
+export function LandingNext() {
   const row = [...TOPICS, ...TOPICS, ...TOPICS];
 
   return (
     <div className="ln-root">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LD) }} />
       <Nav>
         <div className="ln-wrap ln-nav-in">
-          <Link href="/new" className="flex items-center gap-3" aria-label="БЕЛ Мастер">
+          <Link href="/" className="flex items-center gap-3" aria-label="БЕЛ Мастер">
             <LogoMark size={38} />
             <span className="ln-display text-[1.05rem]">
               БЕЛ <span className="ln-grad">Мастер</span>

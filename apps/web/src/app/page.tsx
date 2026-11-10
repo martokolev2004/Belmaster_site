@@ -2,11 +2,11 @@ import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/shell/AppShell';
 import { Dashboard } from './Dashboard';
-import { Landing } from './Landing';
+import { LandingNext } from '@/components/landing/LandingNext';
 
 export default async function Home() {
   const user = await getCurrentUser();
-  if (!user) return <Landing />;
+  if (!user) return <LandingNext />;
   if (!user.isGuest && (!user.birthDate || !user.termsAcceptedAt)) redirect('/welcome');
   if (!user.grade) redirect('/grade');
   return (
