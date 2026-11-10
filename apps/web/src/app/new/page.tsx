@@ -8,9 +8,10 @@ import { ClimbDemo } from '@/components/climb/ClimbDemo';
 import { MapPreview } from '@/components/game/MapPreview';
 import { CountUp, Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
 
-export const metadata = { title: 'БЕЛ Мастер — матурата като игра', robots: { index: false } };
+export const metadata = { title: 'БЕЛ Мастер — български език и литература като игра', robots: { index: false } };
 export const dynamic = 'force-dynamic';
 
+const TOPICS = ['Правопис', 'Граматика', 'Пунктуация', 'Лексика', 'Литература', 'Четене с разбиране', 'Изразни средства', 'Герои и теми'];
 const GAMES = [
   { no: '01', c: '#ff5a5a', img: '/landing/battle.webp', tag: 'Стратегия · 2–4 играчи', title: 'Битка за Континента', text: 'Завладявай области с верни и бързи отговори. Пази столицата си — пада след три удара.', href: '/play' },
   { no: '02', c: '#35b8ff', img: '/landing/climb.webp', tag: 'Дуел · 1 на 1', title: 'Към върха', text: 'Строй стъпала към върха или събори съперника с точен изстрел. Щитът е само един.', href: '/climb' },
@@ -18,14 +19,8 @@ const GAMES = [
 ];
 
 export default async function NewLanding() {
-  const [questions, exams, works, list] = await Promise.all([
-    prisma.question.count({ where: { status: 'ACTIVE' } }),
-    prisma.exam.count(),
-    prisma.work.count({ where: { published: true } }),
-    prisma.work.findMany({ where: { published: true, grade: 'G12' }, select: { author: true }, distinct: ['author'] }),
-  ]);
-  const authors = list.map((w) => w.author);
-  const row = [...authors, ...authors];
+  const [questions, works] = await Promise.all([prisma.question.count({ where: { status: 'ACTIVE' } }), prisma.work.count({ where: { published: true } })]);
+  const row = [...TOPICS, ...TOPICS, ...TOPICS];
 
   return (
     <div className="ln-root">
@@ -47,19 +42,19 @@ export default async function NewLanding() {
         </div>
       </Nav>
 
-      <Hero image="/landing/hero.webp">
-        <div className="ln-wrap">
+      <Hero>
+        <div className="ln-wrap ln-hero-grid">
           <div className="ln-hero-copy">
-            <p className="ln-eyebrow ln-in">Матура по БЕЛ · 12. клас</p>
+            <p className="ln-eyebrow ln-in">Български език и литература · 7. – 12. клас</p>
             <h1 className="ln-display ln-h1 ln-in" style={{ '--d': '.12s' } as CSSProperties}>
-              Матурата
+              Не зубри.
               <br />
-              не се учи.
+              Играй.
               <br />
-              <span className="ln-grad">Печели се.</span>
+              <span className="ln-grad">Печели.</span>
             </h1>
             <p className="ln-lead ln-in" style={{ '--d': '.26s' } as CSSProperties}>
-              Истинските въпроси от матурите, превърнати в три игри. Завладявай земи, изкачвай върхове и строй кули — с всеки верен отговор.
+              Правопис, граматика, пунктуация и литература, превърнати в три игри. Завладявай земи, изкачвай върхове и строй кули — с всеки верен отговор.
             </p>
             <div className="ln-cta ln-in" style={{ '--d': '.4s' } as CSSProperties}>
               <span className="ln-glow">
@@ -72,8 +67,26 @@ export default async function NewLanding() {
             <p className="ln-trust ln-in" style={{ '--d': '.54s' } as CSSProperties}>
               <span><b>Безплатно</b> · без реклами</span>
               <span><b>Без регистрация</b> — влез като гост</span>
-              <span>Въпроси от <b>МОН</b></span>
+              <span>Срещу <b>приятел</b> или <b>бот</b></span>
             </p>
+          </div>
+          <div className="ln-fan ln-in" style={{ '--d': '.3s' } as CSSProperties}>
+            {[
+              { g: GAMES[0], st: { '--tx': '-70%', '--ty': '9%', '--r': '-11deg', '--z': 1, '--k': '-14px', '--fd': '-2s' } },
+              { g: GAMES[2], st: { '--tx': '70%', '--ty': '9%', '--r': '11deg', '--z': 2, '--k': '-20px', '--fd': '-4s' } },
+              { g: GAMES[1], st: { '--tx': '0%', '--ty': '-2%', '--r': '0deg', '--s': 1.1, '--z': 3, '--k': '-30px', '--fd': '0s' } },
+            ].map(({ g, st }) => (
+              <div key={g.no} className="ln-fan-slot" style={st as CSSProperties}>
+                <div className="ln-fan-float" style={st as CSSProperties}>
+                  <Link href={g.href} className="ln-fan-card" style={{ backgroundImage: `url(${g.img})`, '--c': g.c } as CSSProperties}>
+                    <span className="ln-display">
+                      <em>{g.tag}</em>
+                      {g.title}
+                    </span>
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         <span className="ln-scroll" aria-hidden />
@@ -81,14 +94,14 @@ export default async function NewLanding() {
 
       <div className="ln-stats">
         {[
-          { n: questions, l: 'въпроса от матури' },
-          { n: exams, l: 'изпита на МОН' },
-          { n: works, l: 'произведения' },
-          { n: 3, l: 'игри в едно' },
+          { n: questions, l: 'въпроса', x: '' },
+          { n: works, l: 'произведения в библиотеката', x: '' },
+          { n: 3, l: 'игри в едно', x: '' },
+          { n: 100, l: 'безплатно', x: '%' },
         ].map((s, i) => (
           <Reveal key={s.l} delay={i * 0.08} className="ln-stat">
             <div className="ln-display ln-stat-n ln-grad">
-              <CountUp to={s.n} />
+              <CountUp to={s.n} suffix={s.x} />
             </div>
             <div className="ln-stat-l">{s.l}</div>
           </Reveal>
@@ -176,8 +189,8 @@ export default async function NewLanding() {
               Всичко за <span className="ln-grad">шестицата.</span>
             </h2>
             <ul className="ln-list">
-              <li><i>📝</i><span><b>Истински матури</b>Правопис, граматика, пунктуация, литература и четене с разбиране — с ключовете на МОН.</span></li>
-              <li><i>📚</i><span><b>Библиотека</b>Резюме, герои, теми и идеи за всяко произведение от програмата.</span></li>
+              <li><i>📝</i><span><b>Истински изпитни въпроси</b>Правопис, граматика, пунктуация, лексика, литература и четене с разбиране.</span></li>
+              <li><i>📚</i><span><b>Библиотека</b>Резюме, герои, теми и идеи за произведенията, които учиш.</span></li>
               <li><i>🔁</i><span><b>Грешките се връщат</b>Сайтът помни къде бъркаш и ти го дава отново, докато го научиш.</span></li>
               <li><i>🏆</i><span><b>Лиги и класации</b>Седмични лиги, рейтинг, постижения и аватар, който расте с теб.</span></li>
             </ul>
@@ -210,12 +223,12 @@ export default async function NewLanding() {
       </section>
 
       <section className="ln-final">
-        <div className="ln-final-bg" style={{ backgroundImage: 'url(/landing/hero.webp)' }} />
+        <div className="ln-hero-glow" style={{ zIndex: -2 }} />
         <div className="ln-wrap">
           <Reveal>
-            <p className="ln-eyebrow" style={{ justifyContent: 'center' }}>Май идва по-бързо, отколкото мислиш</p>
-            <h2 className="ln-display ln-h1" style={{ marginInline: 'auto', maxWidth: '16ch' }}>
-              Бъди <span className="ln-grad">готов.</span>
+            <p className="ln-eyebrow" style={{ justifyContent: 'center' }}>Първата игра е на един клик</p>
+            <h2 className="ln-display ln-final-h">
+              Твой <span className="ln-grad">ред е.</span>
             </h2>
             <span className="ln-glow">
               <Link href="/login?tab=register" className="ln-btn ln-btn-primary">

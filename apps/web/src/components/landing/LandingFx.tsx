@@ -19,7 +19,7 @@ export function Nav({ children }: { children: ReactNode }) {
 }
 
 /** Герой: фонът се мести леко с мишката + носещи се искрици. */
-export function Hero({ image, children }: { image: string; children: ReactNode }) {
+export function Hero({ children }: { children: ReactNode }) {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -80,8 +80,7 @@ export function Hero({ image, children }: { image: string; children: ReactNode }
   }, []);
   return (
     <section ref={root} className="ln-hero">
-      <div className="ln-hero-bg" style={{ backgroundImage: `url(${image})` }} />
-      <div className="ln-hero-shade" />
+      <div className="ln-hero-glow" />
       <canvas ref={canvas} className="ln-embers" />
       <div className="ln-grain" />
       {children}
