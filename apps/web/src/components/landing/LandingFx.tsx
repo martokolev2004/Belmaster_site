@@ -45,8 +45,12 @@ export function Hero({ children }: { children: ReactNode }) {
     };
     fit();
     window.addEventListener('resize', fit);
-    const N = Math.min(90, Math.round(window.innerWidth / 16));
-    const ps = Array.from({ length: N }, () => ({ x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 2.2, v: 0.02 + Math.random() * 0.06, p: Math.random() * 6.28, gold: Math.random() < 0.45 }));
+    // цветовете идват от палитрата на страницата; малко и по-меки — като прашинки, не като конфети
+    const cs = getComputedStyle(el);
+    const col = (v: string) => cs.getPropertyValue(v).trim().split(/\s+/).join(',') || '255,255,255';
+    const c1 = col('--acc-hi'), c2 = '255,255,255';
+    const N = Math.min(38, Math.round(window.innerWidth / 36));
+    const ps = Array.from({ length: N }, () => ({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.5, v: 0.02 + Math.random() * 0.06, p: Math.random() * 6.28, gold: Math.random() < 0.45 }));
     let last = performance.now();
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
@@ -60,10 +64,10 @@ export function Hero({ children }: { children: ReactNode }) {
           p.y = 1.05;
           p.x = Math.random();
         }
-        const a = (0.35 + 0.65 * Math.abs(Math.sin(now / 900 + p.p))) * Math.min(1, (1 - p.y) * 3);
+        const a = (0.2 + 0.4 * Math.abs(Math.sin(now / 1400 + p.p))) * Math.min(1, (1 - p.y) * 3);
         const x = p.x * w, y = p.y * h;
         const grd = g.createRadialGradient(x, y, 0, x, y, p.r * 5);
-        grd.addColorStop(0, p.gold ? `rgba(255,220,110,${a})` : `rgba(170,255,110,${a})`);
+        grd.addColorStop(0, `rgba(${p.gold ? c2 : c1},${a})`);
         grd.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = grd;
         g.beginPath();

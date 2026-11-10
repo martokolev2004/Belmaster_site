@@ -24,11 +24,11 @@ const GAMES = [
 ];
 
 /** Началната страница за посетители (без вход). Старият вариант е запазен в app/Landing.tsx. */
-export function LandingNext() {
+export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'warm' | 'green' }) {
   const row = [...TOPICS, ...TOPICS, ...TOPICS];
 
   return (
-    <div className="ln-root">
+    <div className="ln-root" data-theme={theme}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LD) }} />
       <Nav>
         <div className="ln-wrap ln-nav-in">
