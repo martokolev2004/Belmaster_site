@@ -33,7 +33,7 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
       <Nav>
         <div className="ln-wrap ln-nav-in">
           <Link href="/" className="flex items-center gap-3" aria-label="БЕЛ Мастер">
-            <LogoMark size={38} />
+            <LogoMark size={38} tone="blue" />
             <span className="ln-display text-[1.05rem]">
               БЕЛ <span className="ln-grad">Мастер</span>
             </span>
