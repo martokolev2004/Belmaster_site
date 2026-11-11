@@ -407,7 +407,8 @@ function Climber({ p, side, pos, pose, winner, you }: { p: ClimbPlayer; side: nu
             <ellipse cx="26" cy="-40" rx="8" ry="15" fill={`url(#${id}-limb)`} stroke={ink} strokeWidth="2.5" transform="rotate(-20 26 -40)" />
           )}
         </g>
-        <image href={uri} x="-50" y="-140" width="100" height="100" />
+        {/* аватарите гледат наляво — левият се обръща огледално, за да гледа към противника */}
+        <image href={uri} x="-50" y="-140" width="100" height="100" transform={side === 0 ? 'scale(-1 1)' : undefined} />
         {pose === 'build' && (
           <g transform={`scale(${flip} 1)`}>
             <g className="climb-hammer" style={{ transformOrigin: '40px -66px' }}>
