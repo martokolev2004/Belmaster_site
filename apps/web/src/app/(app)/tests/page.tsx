@@ -1,10 +1,10 @@
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { TOPIC_LABELS } from '@belmaster/shared';
 import { BookOpen, ChevronRight, FileText, Languages, ScrollText } from 'lucide-react';
-import { prisma } from '@/lib/db';
+import '@/components/landing/landing-next.css';
 import { requireUser } from '@/lib/auth';
 import { mistakesSummary, survivalBest } from '@/lib/quiz';
-import { PageHeader } from '@/components/ui';
 
 export const metadata = { title: 'Тестове' };
 
@@ -14,69 +14,81 @@ export default async function TestsPage() {
   const ms = await mistakesSummary(user.id, grade);
   const mistakes = ms.due;
   const best = await survivalBest(user.id);
+  const mistakesText = mistakes
+    ? `${mistakes} въпроса за преговор днес`
+    : ms.later
+      ? `Следващ преговор: ${ms.nextAt?.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia', day: 'numeric', month: 'long' })} (${ms.later} чакат)`
+      : 'Няма грешки за преговор';
 
   return (
-    <div>
-      <PageHeader title="Мини тестове" subtitle="По 10 случайни въпроса от минали матури. Всеки верен отговор носи 20 XP." />
-      <Link href="/tests/survival" className="card3d mb-3 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-orange/15 to-accent/15 p-4">
-        <span className="text-4xl">🔥</span>
-        <span className="flex-1">
-          <span className="block text-lg font-extrabold text-ink-strong">До първа грешка</span>
-          <span className="block text-sm text-muted">Колко поредни верни ще отговориш?</span>
-        </span>
-        <span className="shrink-0 rounded-xl bg-surface px-3 py-1.5 text-center">
-          <span className="block text-[10px] font-extrabold uppercase text-muted">Рекорд</span>
-          <span className="block text-xl font-black tabular-nums text-orange">{best}</span>
-        </span>
-      </Link>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
-        <Link href="/tests/mistakes" className={`card3d flex items-center gap-3 rounded-2xl p-4 ${mistakes ? 'border-error/40! bg-error/8' : 'bg-surface'}`}>
-          <span className="text-3xl">🔁</span>
-          <span className="flex-1">
-            <span className="block font-extrabold text-ink-strong">Моите грешки</span>
-            <span className="block text-sm text-muted">{mistakes ? `${mistakes} въпроса за преговор днес` : ms.later ? `Следващ преговор: ${ms.nextAt?.toLocaleDateString('bg-BG', { timeZone: 'Europe/Sofia', day: 'numeric', month: 'long' })} (${ms.later} чакат)` : 'Няма грешки за преговор'}</span>
+    <div data-nx>
+      <header className="nx-head animate-rise">
+        <p className="ln-eyebrow">Тренировка</p>
+        <h1 className="ln-display nx-h1">
+          Мини <span className="ln-grad">тестове</span>
+        </h1>
+        <p className="nx-sub">По 10 случайни въпроса. Всеки верен отговор носи 20 XP.</p>
+      </header>
+
+      <div className="nx-stack">
+        <Link href="/tests/survival" className="nx-panel nx-feature" style={{ '--c': '#ff9d3c' } as CSSProperties}>
+          <span className="nx-emoji">🔥</span>
+          <span className="min-w-0">
+            <span className="ln-display nx-tile-t block">До първа грешка</span>
+            <span className="mt-1 block text-sm font-semibold text-muted">Колко поредни верни ще отговориш?</span>
+          </span>
+          <span className="nx-record">
+            <small>Рекорд</small>
+            <b className="ln-display">{best}</b>
           </span>
         </Link>
-        <Link href="/stats" className="card3d flex items-center gap-3 rounded-2xl bg-surface p-4">
-          <span className="text-3xl">📊</span>
-          <span className="flex-1">
-            <span className="block font-extrabold text-ink-strong">Моята статистика</span>
-            <span className="block text-sm text-muted">Силни и слаби теми</span>
-          </span>
-        </Link>
-      </div>
-      <div className="space-y-4">
-        <Section href="/tests/language" icon={<Languages className="size-8" />} tone="bg-primary/15 text-primary" title="Език" text="Граматика, лексика, правопис и пунктуация">
-          <div className="mt-4 flex flex-wrap gap-2">
+
+        <div className="nx-tiles" style={{ marginTop: 0 }}>
+          <Link href="/tests/mistakes" className="nx-panel nx-feature" style={{ '--c': mistakes ? '#ff5a6a' : '#6ea2ff' } as CSSProperties}>
+            <span className="nx-emoji">🔁</span>
+            <span className="min-w-0">
+              <span className="ln-display nx-tile-t block">Моите грешки</span>
+              <span className="mt-1 block text-sm font-semibold text-muted">{mistakesText}</span>
+            </span>
+            <ChevronRight className="nx-tile-go size-5" />
+          </Link>
+          <Link href="/stats" className="nx-panel nx-feature" style={{ '--c': '#5fe0d0' } as CSSProperties}>
+            <span className="nx-emoji">📊</span>
+            <span className="min-w-0">
+              <span className="ln-display nx-tile-t block">Моята статистика</span>
+              <span className="mt-1 block text-sm font-semibold text-muted">Силни и слаби теми</span>
+            </span>
+            <ChevronRight className="nx-tile-go size-5" />
+          </Link>
+        </div>
+
+        <Block href="/tests/language" c="#6ea2ff" icon={<Languages className="size-6" />} title="Език" text="Граматика, лексика, правопис и пунктуация">
+          <div className="nx-chips">
             {Object.entries(TOPIC_LABELS).map(([key, label]) => (
-              <Link
-                key={key}
-                href={`/tests/language?topic=${key}`}
-                className="card3d rounded-xl bg-surface px-3 py-1.5 text-sm font-extrabold hover:bg-surface-2"
-              >
+              <Link key={key} href={`/tests/language?topic=${key}`} className="nx-chip">
                 {label}
               </Link>
             ))}
           </div>
-        </Section>
-        <Section href="/tests/literature" icon={<BookOpen className="size-8" />} tone="bg-accent/20 text-[#b88600]" title="Литература" text="Случайни въпроси по всички произведения" />
-        <Section href="/tests/reading" icon={<FileText className="size-8" />} tone="bg-secondary/15 text-secondary" title="Четене с разбиране" text="Случаен текст с въпросите към него" />
-        <Section href="/exams" icon={<ScrollText className="size-8" />} tone="bg-purple/20 text-purple-dark" title="Цели матури" text="Пробна матура с таймер, точки по ключа и ориентировъчна оценка" />
+        </Block>
+        <Block href="/tests/literature" c="#ffd166" icon={<BookOpen className="size-6" />} title="Литература" text="Случайни въпроси по всички произведения" />
+        <Block href="/tests/reading" c="#5fe0d0" icon={<FileText className="size-6" />} title="Четене с разбиране" text="Случаен текст с въпросите към него" />
+        <Block href="/exams" c="#c59bff" icon={<ScrollText className="size-6" />} title="Цели изпити" text="Пробен изпит с таймер, точки по ключа и ориентировъчна оценка" />
       </div>
     </div>
   );
 }
 
-function Section({ href, icon, tone, title, text, children }: { href: string; icon: React.ReactNode; tone: string; title: string; text: string; children?: React.ReactNode }) {
+function Block({ href, icon, c, title, text, children }: { href: string; icon: React.ReactNode; c: string; title: string; text: string; children?: React.ReactNode }) {
   return (
-    <div className="card3d rounded-2xl bg-surface p-5">
-      <Link href={href} className="group flex items-center gap-4">
-        <span className={`rounded-2xl p-3 ${tone}`}>{icon}</span>
-        <span className="flex-1">
-          <span className="block text-xl font-extrabold text-ink-strong">{title}</span>
-          <span className="block text-muted">{text}</span>
+    <div className="nx-panel nx-block" style={{ '--c': c } as CSSProperties}>
+      <Link href={href}>
+        <span className="nx-tile-ic">{icon}</span>
+        <span className="min-w-0">
+          <span className="ln-display nx-tile-t block">{title}</span>
+          <span className="mt-1 block text-sm font-semibold text-muted">{text}</span>
         </span>
-        <ChevronRight className="size-6 text-muted transition group-hover:translate-x-0.5" />
+        <ChevronRight className="nx-tile-go size-5" />
       </Link>
       {children}
     </div>

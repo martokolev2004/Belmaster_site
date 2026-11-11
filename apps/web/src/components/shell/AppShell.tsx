@@ -30,7 +30,7 @@ export async function AppShell({ user, children, skin }: { user: User; children:
   ]);
   return (
     <GameSocketProvider>
-      <div className={skin === 'next' ? 'nx min-h-dvh md:pl-64' : 'min-h-dvh md:pl-64'}>
+      <div className={skin === 'next' ? 'app-shell nx min-h-dvh md:pl-64' : 'app-shell min-h-dvh md:pl-64'}>
         {/* Странично меню (компютър) */}
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r-2 border-line bg-bg px-4 py-6 md:flex">
           <Link href="/" className="mb-8 px-3">

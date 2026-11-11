@@ -8,7 +8,6 @@ import { prisma } from '@/lib/db';
 import { UserAvatar } from '@/components/avatar/UserAvatar';
 import { Tilt } from '@/components/landing/LandingFx';
 import { newItemKeys } from '@/lib/unlocks';
-import { diamondsOf } from '@/lib/avatar';
 
 const GAMES = [
   { no: '01', c: '#ff5a5a', img: '/landing/battle.webp', tag: 'Стратегия · 2–4 играчи', title: 'Битка за Континента', text: 'Завладявай области с верни и бързи отговори.', href: '/play' },
@@ -52,12 +51,6 @@ export async function DashboardNext({ user }: { user: User }) {
             <div className="nx-bar">
               <i style={{ width: `${Math.max(2, Math.min(100, (lp.inLevel / lp.needed) * 100))}%` }} />
             </div>
-            <p className="nx-stats">
-              <span>🔥 Серия <b>{user.streak}</b> {user.streak === 1 ? 'ден' : 'дни'}</span>
-              <span>⭐ Общо <b>{user.xp}</b> XP</span>
-              <span>💎 <b>{diamondsOf(user)}</b></span>
-              <Link href="/profile/avatar" className="text-secondary hover:underline">{hasNew ? '🎁 Имаш нови неща за аватара' : 'Промени аватара →'}</Link>
-            </p>
           </div>
         </div>
       </section>

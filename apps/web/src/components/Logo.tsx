@@ -1,6 +1,7 @@
 import { cn } from '@/lib/cn';
 
-const TONES = { green: ['#58cc02', '#46a302'], blue: ['#548eff', '#2e60de'] } as const;
+// зеленото се сменя само през CSS променливите на новия вид (--logo-main / --logo-dark)
+const TONES = { green: ['var(--logo-main, #58cc02)', 'var(--logo-dark, #46a302)'], blue: ['#548eff', '#2e60de'] } as const;
 
 export function LogoMark({ size = 40, className, tone = 'green' }: { size?: number; className?: string; tone?: keyof typeof TONES }) {
   const [main, dark] = TONES[tone];
