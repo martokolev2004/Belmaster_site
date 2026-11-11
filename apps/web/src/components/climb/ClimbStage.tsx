@@ -194,7 +194,8 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       }).then(() => (star.remove(), ring.remove()));
     };
     const pop = (x: number, y: number, text: string, color: string, size = 44) => {
-      x = Math.max(190, Math.min(W - 190, x));
+      const half = Math.min(W / 2 - 20, text.length * size * 0.42 + 30);
+      x = Math.max(half, Math.min(W - half, x));
       y = Math.max(70, y);
       const t = mk('text', { 'text-anchor': 'middle', 'font-size': size, 'font-weight': 900, fill: color, stroke: INK, 'stroke-width': 7, 'paint-order': 'stroke', 'stroke-linejoin': 'round', class: 'st-font' });
       t.textContent = text;
@@ -228,11 +229,23 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
     const setStep = (g: SVGGElement, s: number, dy = 0) => g.setAttribute('transform', `translate(${g.dataset.x} ${Number(g.dataset.y) + dy}) scale(${s})`);
 
     const emit = (msg: string | null = null) => hud.current({ heights: [heroes[0].height, heroes[1].height], msg, busy, shieldUsed: heroes[0].shieldUsed, winner });
-    const setShield = (h: Hero, on: boolean) => {
+    /**
+     * Щитът пази само стъпалото, на което е вдигнат. Виждаш само своя (левия);
+     * чуждият е скрит и се показва чак когато отбие удар.
+     */
+    const setShield = (h: Hero, on: boolean, reveal = false) => {
       h.shield = on;
-      const s = h.el.shield;
-      if (on) run(350, (k) => (s.setAttribute('opacity', String(k)), s.setAttribute('transform', `scale(${ease.back(k)})`)));
-      else run(300, (k) => (s.setAttribute('opacity', String(1 - k)), s.setAttribute('transform', `scale(${1 + k * 0.5})`)));
+      const s = h.el.shield, mine = h === heroes[0];
+      if (on) {
+        if (mine) run(350, (k) => (s.setAttribute('opacity', String(k)), s.setAttribute('transform', `scale(${ease.back(k)})`)));
+      } else if (mine || reveal) {
+        // чуждият щит първо „светва“, после се пръсва
+        run(reveal && !mine ? 520 : 300, (k) => {
+          const show = reveal && !mine ? Math.min(1, k * 5) * (1 - Math.max(0, (k - 0.45) / 0.55)) : 1 - k;
+          s.setAttribute('opacity', String(show));
+          s.setAttribute('transform', `scale(${1 + ease.out(k) * 0.45})`);
+        });
+      } else s.setAttribute('opacity', '0');
     };
 
     // ── действия ──
@@ -354,13 +367,13 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
         burst(target[0], target[1], '#bdf1ff');
         puff(target[0], target[1], 16, '#9fe8ff', 260, 5, 0.5, 100);
         shake = 0.3;
-        setShield(b, false);
-        pop(target[0], target[1] - 90, 'ОТБИТО!', '#9fe8ff');
+        setShield(b, false, true);
+        pop(target[0], target[1] - 120, i === 0 ? 'ИМАЛ Е ЩИТ!' : 'ОТБИТО!', '#9fe8ff');
         const back: [number, number] = [r.x, r.y - 95];
         await fly(p, target, back, 380, 110, '#9fe8ff');
         p.remove();
         await impact(a, -a.face);
-        return done(i === 0 ? null : '🛡️ Щитът върна удара!');
+        return done(i === 0 ? '🛡️ Ботът имаше щит — ударът се върна към теб' : '🛡️ Щитът ти върна удара');
       }
       if (hit) {
         p.remove();
@@ -372,8 +385,8 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       puff(missTo[0], missTo[1], 6, '#e8e3f5', 90, 5, 0.4, 200);
       pop(b.rig.x, b.rig.y - 170, 'ПРОПУСК', '#c9d0ee', 34);
       if (a.shield) {
-        setShield(a, false);
-        pop(r.x, r.y - 190, 'ЩИТЪТ ТЕ ОПАЗИ', '#9fe8ff', 28);
+        setShield(a, false, true);
+        pop(r.x, r.y - 190, i === 0 ? 'ЩИТЪТ ТЕ ОПАЗИ' : 'ИМАЛ Е ЩИТ', '#9fe8ff', 28);
         await sleep(500);
       } else {
         // загуба на равновесие
@@ -400,8 +413,8 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       if (busy || h.shieldUsed || h.height <= 0) return;
       h.shieldUsed = true;
       setShield(h, true);
-      puff(h.rig.x, h.rig.y - 62, 12, '#9fe8ff', 170, 4, 0.5, 0);
-      emit(i === 0 ? '🛡️ Щитът е вдигнат (в играта другият не го вижда)' : null);
+      if (i === 0) puff(h.rig.x, h.rig.y - 78, 12, '#9fe8ff', 170, 4, 0.5, 0);
+      emit(i === 0 ? '🛡️ Щитът пази това стъпало — другият не го вижда' : null);
     }
     async function win(i: number) {
       winner = i;
@@ -463,6 +476,9 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       setAuto: (v) => ((auto = v), (turn = 0)),
       reset,
     };
+
+    // за автоматичните проверки на пробната страница
+    Object.assign(window, { __stg: { heroes, shieldUp, throwAt, climb, setAuto: (v: boolean) => (auto = v) } });
 
     // ── кадър ──
     const J = (el: SVGElement, t: string) => el.setAttribute('transform', t);
