@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { MODE_LABELS, type GameMode } from '@belmaster/shared';
 import { BookOpen, Bot, Hash, Plus, Shuffle, Swords, Zap } from 'lucide-react';
 import { Alert, Button, Input } from '@/components/ui';
-import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
 import { useCountdown } from './useCountdown';
 
@@ -45,91 +44,90 @@ export function PlayHub({ inviteUid, inviteName, hasQuestions }: { inviteUid: st
       {inviteName && <Alert tone="green">Създай стая — {inviteName} ще получи покана веднага.</Alert>}
 
       <section>
-        <p className="mb-2 text-sm font-extrabold uppercase text-muted">Режим</p>
+        <p className="ln-eyebrow mb-3">Режим</p>
         <div className="grid gap-3 sm:grid-cols-2">
           {(Object.keys(MODE_LABELS) as GameMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={cn('card3d flex items-start gap-3 rounded-2xl bg-surface p-4 text-left transition', mode === m ? 'border-secondary! bg-secondary/10' : 'hover:bg-surface-2')}
-            >
-              <span className={cn('rounded-xl p-2.5', m === 'CLASSIC' ? 'bg-primary/15 text-primary' : 'bg-accent/20 text-[#b88600]')}>
-                {m === 'CLASSIC' ? <Shuffle className="size-6" /> : <BookOpen className="size-6" />}
+            <button key={m} onClick={() => setMode(m)} data-on={mode === m} className="nx-panel ph-mode" style={{ '--c': m === 'CLASSIC' ? '#6ea2ff' : '#ffd166' } as React.CSSProperties}>
+              <span className="nx-tile-ic">{m === 'CLASSIC' ? <Shuffle className="size-6" /> : <BookOpen className="size-6" />}</span>
+              <span className="min-w-0">
+                <span className="ln-display nx-tile-t block">{MODE_LABELS[m].name}</span>
+                <span className="mt-1 block text-sm font-semibold text-muted">{MODE_LABELS[m].description}</span>
               </span>
-              <span>
-                <span className="block text-lg font-extrabold text-ink-strong">{MODE_LABELS[m].name}</span>
-                <span className="block text-sm text-muted">{MODE_LABELS[m].description}</span>
+              <span className="ph-check" aria-hidden>
+                ✓
               </span>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="grid gap-3 md:grid-cols-3">
-        <ActionCard
-          icon={<Zap className="size-7" />}
-          tone="bg-accent text-[#4b3b00]"
-          title="Бърза игра"
-          text="1 на 1 със случаен съперник от твоя клас."
-          action={
-            <Button
-              variant="accent"
-              block
-              disabled={!connected || quick.searching}
-              onClick={() => {
-                wantRoom.current = true;
-                socket?.emit('quick:join', { mode });
-              }}
-            >
-              Търси
-            </Button>
-          }
-        />
-        <ActionCard
-          icon={<Plus className="size-7" />}
-          tone="bg-primary text-white"
-          title="Нова стая"
-          text="За 2–4 приятели — с код или линк."
-          action={
-            <Button block disabled={!connected} onClick={create}>
-              Създай
-            </Button>
-          }
-        />
-        <ActionCard
-          icon={<Bot className="size-7" />}
-          tone="bg-purple text-white"
-          title="Упражнение"
-          text="Срещу бот, без рейтинг. Добре за загрявка."
-          action={
-            <Button
-              variant="purple"
-              block
-              disabled={!connected}
-              onClick={() => {
-                wantRoom.current = true;
-                socket?.emit('bot:start', { mode });
-              }}
-            >
-              Играй
-            </Button>
-          }
-        />
+      <section>
+        <p className="ln-eyebrow mb-3">Как ще играеш</p>
+        <div className="grid gap-3 md:grid-cols-3">
+          <ActionCard
+            icon={<Zap className="size-6" />}
+            c="#6ea2ff"
+            title="Бърза игра"
+            text="1 на 1 със случаен съперник от твоя клас."
+            action={
+              <Button
+                block
+                disabled={!connected || quick.searching}
+                onClick={() => {
+                  wantRoom.current = true;
+                  socket?.emit('quick:join', { mode });
+                }}
+              >
+                Търси съперник
+              </Button>
+            }
+          />
+          <ActionCard
+            icon={<Plus className="size-6" />}
+            c="#5fe0d0"
+            title="Нова стая"
+            text="За 2–4 приятели — с код или линк."
+            action={
+              <Button variant="outline" block disabled={!connected} onClick={create}>
+                Създай стая
+              </Button>
+            }
+          />
+          <ActionCard
+            icon={<Bot className="size-6" />}
+            c="#c59bff"
+            title="Упражнение"
+            text="Срещу бот, без рейтинг. Добре за загрявка."
+            action={
+              <Button
+                variant="outline"
+                block
+                disabled={!connected}
+                onClick={() => {
+                  wantRoom.current = true;
+                  socket?.emit('bot:start', { mode });
+                }}
+              >
+                Играй с бота
+              </Button>
+            }
+          />
+        </div>
       </section>
 
-      <section className="card3d rounded-2xl bg-surface p-4">
-        <p className="mb-2 flex items-center gap-2 font-extrabold">
+      <section className="nx-panel ph-code">
+        <p className="ln-display nx-tile-t flex items-center gap-2">
           <Hash className="size-5 text-muted" /> Имаш код?
         </p>
         <form
-          className="flex gap-2"
+          className="flex flex-1 gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             if (code.trim().length >= 4) router.push(`/play/${code.trim().toUpperCase()}`);
           }}
         >
           <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="НАПР. K7Q2MX" maxLength={6} className="font-mono tracking-widest" />
-          <Button type="submit" variant="secondary" disabled={code.trim().length < 4}>
+          <Button type="submit" variant="outline" disabled={code.trim().length < 4}>
             Влез
           </Button>
         </form>
@@ -142,12 +140,12 @@ export function PlayHub({ inviteUid, inviteName, hasQuestions }: { inviteUid: st
   );
 }
 
-function ActionCard({ icon, tone, title, text, action }: { icon: React.ReactNode; tone: string; title: string; text: string; action: React.ReactNode }) {
+function ActionCard({ icon, c, title, text, action }: { icon: React.ReactNode; c: string; title: string; text: string; action: React.ReactNode }) {
   return (
-    <div className="card3d flex flex-col rounded-2xl bg-surface p-4">
-      <span className={cn('mb-3 inline-flex w-fit rounded-2xl p-3', tone)}>{icon}</span>
-      <p className="text-lg font-extrabold text-ink-strong">{title}</p>
-      <p className="mb-4 flex-1 text-sm text-muted">{text}</p>
+    <div className="nx-panel ph-act" style={{ '--c': c } as React.CSSProperties}>
+      <span className="nx-tile-ic">{icon}</span>
+      <p className="ln-display nx-tile-t mt-4">{title}</p>
+      <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">{text}</p>
       {action}
     </div>
   );

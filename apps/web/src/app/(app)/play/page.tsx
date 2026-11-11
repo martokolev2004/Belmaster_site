@@ -1,8 +1,6 @@
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
-import { PageHeader } from '@/components/ui';
 import { PlayHub } from '@/components/game/PlayHub';
-import { MapPreview } from '@/components/game/MapPreview';
 
 export const metadata = { title: 'Битка' };
 
@@ -19,13 +17,16 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
   });
   return (
     <div>
-      <div className="mb-6 grid items-center gap-6 md:grid-cols-[1fr_320px]">
-        <PageHeader
-          title="Битка за Континента"
-          subtitle="Отговаряй вярно и по-бързо, за да завладяваш области. Пази столицата си — пада след 3 удара. 12 кръга."
-        />
-        <MapPreview className="hidden w-full md:block" />
-      </div>
+      <header className="nx-panel ph-hero animate-rise">
+        <div className="ph-hero-art" style={{ backgroundImage: 'url(/landing/battle.webp)' }} />
+        <div className="ph-hero-copy">
+          <p className="ln-eyebrow">Стратегия · 2–4 играчи</p>
+          <h1 className="ln-display nx-h1">
+            Битка за <span className="ln-grad">Континента</span>
+          </h1>
+          <p className="nx-sub">Отговаряй вярно и по-бързо, за да завладяваш области. Пази столицата си — пада след 3 удара. 12 кръга.</p>
+        </div>
+      </header>
       <PlayHub inviteUid={inviteName ? invite! : null} inviteName={inviteName} hasQuestions={questions >= 5} />
     </div>
   );

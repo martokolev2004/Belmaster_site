@@ -213,3 +213,19 @@ html:has(.nx) body { background: #090d1e; }
 .pf-set-t { display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; font-weight: 800; color: #fff; }
 .pf-settings > h2 { margin-top: 0.4rem; }
 .pf-settings .pf-two { align-items: start; }
+
+/* ── начален екран на битката ── */
+.ph-hero { position: relative; isolation: isolate; overflow: hidden; margin-bottom: 1.6rem; padding: clamp(1.4rem, 3.5vw, 2.4rem); min-height: 13.5rem; display: flex; align-items: center; }
+.ph-hero-art { position: absolute; inset: 0 0 0 38%; z-index: -2; background-size: cover; background-position: 50% 30%; }
+.ph-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #0f1634 0%, #0f1634 36%, rgb(15 22 52 / 0.75) 56%, rgb(15 22 52 / 0.1) 100%); }
+.ph-hero-copy { max-width: 34rem; }
+.ph-hero-copy .nx-sub { margin-top: 0.8rem; color: #c5cfee; font-weight: 600; }
+.ph-mode { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 1.05rem 1.2rem; text-align: left; cursor: pointer; transition: transform 0.2s, background 0.2s, box-shadow 0.2s; }
+.ph-mode:hover { transform: translateY(-2px); }
+.ph-mode[data-on='true'] { background: linear-gradient(120deg, color-mix(in srgb, var(--c) 24%, transparent), rgba(255, 255, 255, 0.03)); box-shadow: inset 0 0 0 2px var(--c); }
+.ph-check { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; font-size: 0.85rem; font-weight: 900; color: #0b1026; background: var(--c); opacity: 0; transform: scale(0.6); transition: opacity 0.2s, transform 0.2s; }
+.ph-mode[data-on='true'] .ph-check { opacity: 1; transform: none; }
+.ph-act { display: flex; flex-direction: column; padding: 1.3rem; box-shadow: inset 0 0 0 1px var(--ln-line), inset 0 3px 0 var(--c); transition: transform 0.25s; }
+.ph-act:hover { transform: translateY(-4px); }
+.ph-code { display: flex; flex-wrap: wrap; align-items: center; gap: 0.9rem 1.5rem; padding: 1.1rem 1.3rem; }
+@media (max-width: 700px) { .ph-hero-art { inset: 0; opacity: 0.35; } .ph-hero::before { background: linear-gradient(180deg, rgb(15 22 52 / 0.6), #0f1634); } }
