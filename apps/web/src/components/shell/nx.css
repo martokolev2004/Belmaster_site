@@ -55,9 +55,8 @@
 .nx-hello { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; }
 .nx-h1 { font-size: clamp(1.7rem, 4.2vw, 3.1rem); margin-top: 0.9rem; }
 .nx-h2 { font-size: clamp(1.25rem, 2.6vw, 1.9rem); margin-top: 0.7rem; }
-.nx-avatar { position: relative; display: block; padding: 3px; background: linear-gradient(140deg, rgb(var(--acc)), rgb(var(--acc2) / 0.5)); clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); transition: transform 0.25s; }
+.nx-avatar { position: relative; display: block; padding: 3px; line-height: 0; border-radius: 24px; background: linear-gradient(140deg, rgb(var(--acc)), rgb(var(--acc2) / 0.6)); box-shadow: 0 10px 30px -8px rgb(var(--acc) / 0.6); transition: transform 0.25s; }
 .nx-avatar:hover { transform: scale(1.04) rotate(-1.5deg); }
-.nx-avatar > div { background: #121a3a; clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
 .nx-panel {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)); box-shadow: inset 0 0 0 1px var(--ln-line);
   clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
