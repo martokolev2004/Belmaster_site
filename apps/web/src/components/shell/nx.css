@@ -192,7 +192,7 @@ html:has(.nx) body { background: #090d1e; }
 .pf-settings details[open] .pf-chev { transform: rotate(90deg); }
 .pf-settings details > div { padding: 0 1.2rem 1.2rem; max-width: 30rem; }
 .pf-settings details > div.pf-privacy { max-width: none; }
-.pf-privacy .card3d { border: 0; background: none; box-shadow: none; padding: 0; }
+.nx .pf .pf-privacy .card3d { border: 0; background: none; box-shadow: none; padding: 0; border-radius: 0; }
 .pf-privacy .card3d > h2 { display: none; }
 .pf-logout { display: inline-flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; padding: 0.7rem 0.4rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-error); }
 @media (max-width: 900px) {
@@ -209,3 +209,7 @@ html:has(.nx) body { background: #090d1e; }
   .pf-ach { grid-template-columns: 1fr; }
   .pf .nx-tiles { grid-template-columns: 1fr !important; }
 }
+
+.pf-set-t { display: flex; align-items: center; gap: 0.6rem; font-size: 0.95rem; font-weight: 800; color: #fff; }
+.pf-settings > h2 { margin-top: 0.4rem; }
+.pf-settings .pf-two { align-items: start; }
