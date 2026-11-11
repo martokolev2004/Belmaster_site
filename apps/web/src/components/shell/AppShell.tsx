@@ -14,8 +14,12 @@ import { NavLinks, BottomNav } from './NavLinks';
 import { GameSocketProvider } from '@/components/game/GameSocketProvider';
 import { InviteToasts } from '@/components/game/InviteToasts';
 import { needsParent } from '@/lib/age';
+import '@fontsource-variable/unbounded';
+import './nx.css';
 
-export async function AppShell({ user, children }: { user: User; children: React.ReactNode }) {
+/** skin="next" — новият (син) вид; включва се страница по страница. */
+export async function AppShell({ user, children, skin }: { user: User; children: React.ReactNode; skin?: 'next' }) {
+  const tone = skin === 'next' ? 'blue' : undefined;
   const admin = isAdmin(user);
   const hasNew = newItemKeys(user).length > 0;
   const diamonds = admin ? 9999 : diamondsOf(user);
@@ -26,11 +30,11 @@ export async function AppShell({ user, children }: { user: User; children: React
   ]);
   return (
     <GameSocketProvider>
-      <div className="min-h-dvh md:pl-64">
+      <div className={skin === 'next' ? 'nx min-h-dvh md:pl-64' : 'min-h-dvh md:pl-64'}>
         {/* Странично меню (компютър) */}
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r-2 border-line bg-bg px-4 py-6 md:flex">
           <Link href="/" className="mb-8 px-3">
-            <Logo />
+            <Logo tone={tone} />
           </Link>
           <NavLinks admin={admin} teacher={teacher} inClass={!!member} />
           <Link href="/profile" className="mt-auto flex items-center gap-3 rounded-2xl px-3 py-2 hover:bg-surface-2">
@@ -51,7 +55,7 @@ export async function AppShell({ user, children }: { user: User; children: React
         <header className="sticky top-0 z-20 border-b-2 border-line bg-bg/90 backdrop-blur">
           <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
             <Link href="/" className="md:hidden">
-              <Logo compact />
+              <Logo compact tone={tone} />
             </Link>
             <Link href="/grade?next=/" title="Смени клас" className="hidden rounded-xl bg-surface-2 px-3 py-1.5 text-sm font-extrabold text-muted hover:bg-line hover:text-ink md:inline">
               {gradeLabel(user.grade)} ▾

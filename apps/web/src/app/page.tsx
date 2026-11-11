@@ -1,7 +1,7 @@
 import { getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/shell/AppShell';
-import { Dashboard } from './Dashboard';
+import { DashboardNext } from './DashboardNext';
 import { LandingNext } from '@/components/landing/LandingNext';
 
 export default async function Home() {
@@ -10,8 +10,8 @@ export default async function Home() {
   if (!user.isGuest && (!user.birthDate || !user.termsAcceptedAt)) redirect('/welcome');
   if (!user.grade) redirect('/grade');
   return (
-    <AppShell user={user}>
-      <Dashboard user={user} />
+    <AppShell user={user} skin="next">
+      <DashboardNext user={user} />
     </AppShell>
   );
 }

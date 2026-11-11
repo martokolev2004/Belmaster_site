@@ -1,0 +1,94 @@
+/* Новият вид на сайта (син, „игрален“). Включва се страница по страница с <AppShell skin="next">. */
+.nx {
+  /* основните цветове на сайта — преопределени само вътре в новия вид */
+  --bg: #090d1e;
+  --surface: #10172f;
+  --surface-2: #19224a;
+  --line: #27325e;
+  --ink: #d5dcf0;
+  --ink-strong: #ffffff;
+  --muted: #8b95ba;
+  --color-primary: #548eff;
+  --color-primary-dark: #2e60de;
+  /* палитрата на началната страница (за общите ln- класове) */
+  --bgc: 9 13 30;
+  --bg2: 16 24 54;
+  --acc: 84 142 255;
+  --acc-hi: 168 204 255;
+  --acc-lo: 46 96 222;
+  --acc2: 118 226 255;
+  --btn-ink: #fff;
+  --ln-bg: rgb(var(--bgc));
+  --ln-ink: #eaf0ff;
+  --ln-muted: #8b95ba;
+  --ln-green: rgb(var(--acc));
+  --ln-lime: rgb(var(--acc-hi));
+  --ln-gold: rgb(var(--acc2));
+  --ln-line: rgba(255, 255, 255, 0.09);
+  color: var(--ink);
+  background:
+    radial-gradient(60rem 34rem at 78% -6rem, rgb(var(--acc) / 0.2), transparent 65%),
+    radial-gradient(40rem 30rem at 108% 70%, rgb(var(--acc2) / 0.1), transparent 65%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* ── странично меню ── */
+.nx aside { background: linear-gradient(180deg, #0c1230 0%, #080c1b 100%); border-right-width: 1px; }
+.nx aside [data-nav] {
+  position: relative; border: 0; border-radius: 0; padding: 0.78rem 0.95rem; gap: 0.9rem;
+  font-family: 'Unbounded Variable', 'Nunito Variable', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; color: var(--muted);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: color 0.2s, background 0.2s, transform 0.2s;
+}
+.nx aside [data-nav] svg { width: 1.25rem; height: 1.25rem; }
+.nx aside [data-nav]:hover { color: #fff; background: rgba(255, 255, 255, 0.05); transform: translateX(3px); }
+.nx aside [data-nav][data-active='true'] { color: #fff; background: linear-gradient(90deg, rgb(var(--acc) / 0.32), rgb(var(--acc) / 0.05)); box-shadow: inset 3px 0 0 rgb(var(--acc)); }
+.nx aside [data-nav][data-active='true'] svg { color: rgb(var(--acc-hi)); }
+
+/* ── горна лента и долно меню ── */
+.nx > header { background: rgb(var(--bgc) / 0.72); border-bottom-width: 1px; backdrop-filter: blur(16px) saturate(1.4); }
+.nx > nav.fixed { background: rgb(var(--bgc) / 0.92); border-top-width: 1px; backdrop-filter: blur(16px); }
+
+/* ── „Начало“ ── */
+.nx-dash { display: grid; gap: clamp(2.2rem, 5vw, 3.6rem); }
+.nx-hello { display: grid; grid-template-columns: 1fr auto; gap: 1.5rem; align-items: center; }
+.nx-h1 { font-size: clamp(1.7rem, 4.2vw, 3.1rem); margin-top: 0.9rem; }
+.nx-h2 { font-size: clamp(1.25rem, 2.6vw, 1.9rem); margin-top: 0.7rem; }
+.nx-avatar { position: relative; display: block; padding: 3px; background: linear-gradient(140deg, rgb(var(--acc)), rgb(var(--acc2) / 0.5)); clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); transition: transform 0.25s; }
+.nx-avatar:hover { transform: scale(1.04) rotate(-1.5deg); }
+.nx-avatar > div { background: #121a3a; clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); }
+.nx-panel {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)); box-shadow: inset 0 0 0 1px var(--ln-line);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+}
+.nx-level { display: grid; grid-template-columns: auto 1fr; gap: 1.1rem; align-items: center; padding: 1.1rem 1.3rem; margin-top: 1.5rem; }
+.nx-level-n { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; font-size: 1.5rem; color: #fff; background: linear-gradient(180deg, rgb(var(--acc)), rgb(var(--acc-lo))); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.nx-bar { height: 0.55rem; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+.nx-bar > i { display: block; height: 100%; background: linear-gradient(90deg, rgb(var(--acc)), rgb(var(--acc2))); box-shadow: 0 0 18px rgb(var(--acc) / 0.8); transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.nx-stats { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; margin-top: 0.55rem; font-size: 0.8rem; font-weight: 800; color: var(--muted); }
+.nx-stats b { color: #fff; }
+
+.nx-games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; margin-top: 1.4rem; perspective: 1400px; }
+.nx-games .ln-card-title { font-size: clamp(1.05rem, 1.7vw, 1.4rem); }
+.nx-games .ln-card-text { font-size: 0.9rem; }
+.nx-games .ln-card-no { font-size: 2.6rem; }
+@media (max-width: 860px) {
+  .nx-games { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: -1rem; padding: 0 1rem 0.6rem; scrollbar-width: none; }
+  .nx-games > * { flex: 0 0 72%; scroll-snap-align: center; }
+  .nx-hello { grid-template-columns: 1fr; }
+  .nx-hello .nx-avatar { order: -1; width: max-content; }
+}
+
+.nx-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.9rem; margin-top: 1.3rem; }
+@media (max-width: 640px) { .nx-tiles { grid-template-columns: 1fr; } }
+.nx-tile { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 1.05rem 1.2rem; transition: transform 0.25s, background 0.25s; }
+.nx-tile:hover { transform: translateY(-4px); background: linear-gradient(160deg, rgb(var(--acc) / 0.2), rgba(255, 255, 255, 0.03)); }
+.nx-tile-ic { display: grid; place-items: center; width: 3rem; height: 3rem; color: var(--c, rgb(var(--acc-hi))); background: color-mix(in srgb, var(--c, rgb(var(--acc))) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, rgb(var(--acc))) 45%, transparent); clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px); }
+.nx-tile-t { font-size: 0.92rem; color: #fff; }
+.nx-tile p { margin-top: 0.2rem; font-size: 0.86rem; font-weight: 600; color: var(--muted); }
+.nx-tile-go { color: var(--muted); transition: transform 0.25s, color 0.25s; }
+.nx-tile:hover .nx-tile-go { transform: translateX(5px); color: #fff; }
+.nx-recent { padding: 1.2rem 1.3rem; }
+.nx-recent a { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.4rem; font-weight: 700; border-top: 1px solid var(--ln-line); }
+.nx-recent a:hover { color: #fff; }

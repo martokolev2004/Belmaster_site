@@ -15,10 +15,10 @@ export function LogoMark({ size = 40, className, tone = 'green' }: { size?: numb
   );
 }
 
-export function Logo({ className, compact }: { className?: string; compact?: boolean }) {
+export function Logo({ className, compact, tone }: { className?: string; compact?: boolean; tone?: 'green' | 'blue' }) {
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
-      <LogoMark size={36} />
+      <LogoMark size={36} tone={tone} />
       {!compact && (
         <span className="text-xl font-black tracking-tight text-primary">
           БЕЛ<span className="text-ink-strong"> Мастер</span>

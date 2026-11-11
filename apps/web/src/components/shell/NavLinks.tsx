@@ -37,6 +37,8 @@ export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher:
           <Link
             key={href}
             href={href}
+            data-nav
+            data-active={active}
             className={cn(
               'flex items-center gap-4 rounded-2xl border-2 px-3 py-2.5 text-[15px] font-extrabold uppercase tracking-wide transition',
               active ? 'border-secondary/50 bg-secondary/10 text-secondary' : 'border-transparent text-muted hover:bg-surface-2',

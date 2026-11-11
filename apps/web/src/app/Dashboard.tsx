@@ -1,3 +1,4 @@
+// РЕЗЕРВЕН ВАРИАНТ: старото „Начало“. Не се показва — за връщане сложи <Dashboard /> в app/page.tsx (и махни skin="next").
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel, levelProgress } from '@belmaster/shared';
