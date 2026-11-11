@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { GameMap, GameState } from '@belmaster/shared';
 import { cn } from '@/lib/cn';
+import { UserAvatar } from '@/components/avatar/UserAvatar';
 
 interface Props {
   map: GameMap;
@@ -150,11 +151,21 @@ export function MapBoard({ map, state, selectable, onSelect, onBlocked, highligh
         const reg = state.regions[r.id];
         const [x, y] = r.center;
         const label = works && reg?.workTitle ? shorten(reg.workTitle) : r.name;
+        const owner = reg?.capital && reg.owner ? state.players.find((p) => p.uid === reg.owner) : undefined;
         return (
           <g key={`l-${r.id}`} className="pointer-events-none">
             {reg?.capital && (
               <g className={cn(flash.hit.has(r.id) && 'animate-capital-hit')} style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
-                <g transform={`translate(${x - 24}, ${y - 66}) scale(1.4)`}>
+                {/* аватарът на собственика до замъка — да се вижда чия е столицата */}
+                {owner && (
+                  <g transform={`translate(${x - 58}, ${y - 72})`}>
+                    <rect x="-3" y="-3" width="54" height="54" rx="14" fill={owner.color} stroke="#fff" strokeWidth="2.5" />
+                    <foreignObject x="0" y="0" width="48" height="48">
+                      <UserAvatar avatar={owner.avatar} name={owner.uid} size={48} />
+                    </foreignObject>
+                  </g>
+                )}
+                <g transform={`translate(${owner ? x + 2 : x - 24}, ${y - 66}) scale(1.4)`}>
                   <path d="M2 30V10h6v5h5V8h8v7h5v-5h6v20z" fill="#fff" stroke="#1f1f1f" strokeWidth="2.5" strokeLinejoin="round" />
                   {Array.from({ length: 3 }).map((_, i) => (
                     <circle key={i} cx={8 + i * 9} cy={38} r={3.6} fill={i < reg.hp ? '#ff4b4b' : 'rgba(0,0,0,.25)'} stroke="#fff" strokeWidth="1.5" />
