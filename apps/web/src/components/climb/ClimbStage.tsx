@@ -72,10 +72,10 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
         <circle cx="0" cy="22" r="7" fill="#f4cfa6" stroke={INK} strokeWidth="3" />
         {k === 'af' && (
           <>
-            <g data-j="hammer" opacity="0" transform="translate(0 24)">
-              <rect x="-3.5" y="-46" width="7" height="54" rx="3" fill="#9a6a3c" stroke={INK} strokeWidth="2.5" />
-              <rect x="-17" y="-60" width="34" height="20" rx="5" fill="#c3cae6" stroke={INK} strokeWidth="2.5" />
-              <rect x="-14" y="-57" width="28" height="5" rx="2" fill="#fff" opacity=".6" />
+            <g data-j="hammer" opacity="0" transform="translate(0 22) rotate(180)">
+              <rect x="-4" y="-30" width="8" height="40" rx="3.5" fill="#9a6a3c" stroke={INK} strokeWidth="2.5" />
+              <rect x="-20" y="-50" width="40" height="24" rx="6" fill="#c3cae6" stroke={INK} strokeWidth="3" />
+              <rect x="-16" y="-46" width="32" height="5" rx="2.5" fill="#fff" opacity=".6" />
             </g>
             <text data-j="item" opacity="0" x="0" y="34" textAnchor="middle" fontSize="30">
               ●
@@ -108,7 +108,8 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
         <path d="M-13 -86q13 12 26 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
         <path d="M-9 -56h18" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round" />
         <g data-j="head">
-          <image href={uri} x="-50" y="-178" width="100" height="100" transform="scale(-1 1)" />
+          <rect x="-6" y="-96" width="12" height="16" rx="5" fill="#e9b98c" stroke={INK} strokeWidth="3" />
+          <image href={uri} x="-52" y="-171" width="104" height="104" transform="scale(-1 1)" />
         </g>
         <g transform="translate(22 -75)">{arm('af')}</g>
         <path data-j="flash" d="M-34 -176h68v180h-68z" fill="#fff" opacity="0" style={{ mixBlendMode: 'screen' }} />
@@ -181,14 +182,14 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
         parts.push({ el, x: x + (Math.random() - 0.5) * 50, y, vx: (Math.random() - 0.5) * 320, vy: -120 - Math.random() * 220, g: 900, life: 0.9, max: 0.9, rot: Math.random() * 360, vr: (Math.random() - 0.5) * 900, s: 1, grow: 0 });
       }
     };
-    const burst = (x: number, y: number, color = '#fff6c9') => {
+    const burst = (x: number, y: number, color = '#fff6c9', size = 1) => {
       const star = mk('path', { d: 'M0-60 14-18 58-26 24 4 44 46 0 22-44 46-24 4-58-26-14-18Z', fill: color, stroke: '#fff', 'stroke-width': 3 });
       const ring = mk('circle', { r: 20, fill: 'none', stroke: '#fff', 'stroke-width': 8 });
       fx.append(star, ring);
       run(260, (k) => {
-        star.setAttribute('transform', `translate(${x} ${y}) rotate(${k * 40}) scale(${0.3 + ease.out(k) * 1.1})`);
+        star.setAttribute('transform', `translate(${x} ${y}) rotate(${k * 40}) scale(${(0.3 + ease.out(k) * 1.1) * size})`);
         star.setAttribute('opacity', String(1 - k * k));
-        ring.setAttribute('transform', `translate(${x} ${y}) scale(${1 + ease.out(k) * 4})`);
+        ring.setAttribute('transform', `translate(${x} ${y}) scale(${(1 + ease.out(k) * 4) * size})`);
         ring.setAttribute('opacity', String(1 - k));
       }).then(() => (star.remove(), ring.remove()));
     };
@@ -266,13 +267,15 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
         const step = addStep(h, n);
         const [sx, sy] = spot(h.side, n);
         r.hammer = 1;
-        await to(r, { afS: -165, afE: -25, rot: -7, head: -6, by: -3 }, 200, ease.out);
+        await to(r, { afS: -170, afE: -30, rot: -9, head: -6, by: -3 }, 240, ease.out);
         for (let b = 0; b < 3; b++) {
-          await to(r, { afS: -55, afE: -5, rot: 9, by: 4, sy: 0.95 }, 85, ease.in);
+          await to(r, { afS: -30, afE: -50, rot: 6, by: 4, sy: 0.95 }, 95, ease.in);
+          burst(sx - h.side * 30, sy - 8, '#ffe27a', 0.4);
+          await sleep(70);
           setStep(step, 0.45 + b * 0.28);
-          puff(sx - h.side * 26, sy, 6, '#ffe27a', 190, 3.5, 0.35, 500);
+          puff(sx - h.side * 30, sy - 6, 6, '#ffe27a', 190, 3.5, 0.35, 500);
           shake = Math.max(shake, 0.1);
-          if (b < 2) await to(r, { afS: -165, afE: -25, rot: -7, by: -3, sy: 1 }, 150, ease.out);
+          if (b < 2) await to(r, { afS: -170, afE: -30, rot: -9, by: -3, sy: 1 }, 200, ease.out);
         }
         run(260, (k) => setStep(step, 1, -10 * Math.sin(k * Math.PI) * (1 - k)));
         r.hammer = 0;
@@ -468,7 +471,7 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       const sy = r.sy + Math.sin(ph) * 0.016 * w, bob = Math.sin(ph) * 1.2 * w;
       J(e.g, `translate(${r.x.toFixed(1)} ${r.y.toFixed(1)})`);
       J(e.root, `scale(${h.face * 0.98} 0.98) translate(0 ${(r.by + bob).toFixed(2)}) rotate(${r.rot.toFixed(1)} 0 -60) scale(${r.sx.toFixed(3)} ${sy.toFixed(3)})`);
-      J(e.head, `rotate(${(r.head + Math.sin(ph * 0.7) * 1.6 * w).toFixed(2)} 0 -84)`);
+      J(e.head, `rotate(${(r.head + Math.sin(ph * 0.7) * 1.6 * w).toFixed(2)} 0 -88)`);
       J(e.afS, `rotate(${(r.afS + Math.sin(ph) * 3 * w).toFixed(1)})`);
       J(e.afE, `translate(0 24) rotate(${r.afE.toFixed(1)})`);
       J(e.abS, `rotate(${(r.abS - Math.sin(ph) * 3 * w).toFixed(1)})`);
