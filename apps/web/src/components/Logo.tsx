@@ -25,7 +25,7 @@ export function Logo({ className, compact, tone }: { className?: string; compact
       <LogoMark size={36} tone={tone} />
       {!compact && (
         <span className="text-[1.02rem] font-extrabold uppercase tracking-tight text-ink-strong" style={{ fontFamily: "'Unbounded Variable', 'Nunito Variable', sans-serif", letterSpacing: '-0.03em' }}>
-          БЕЛ <span className="text-brand">Мастер</span>
+          БЕЛ <span className="text-brand">Мастър</span>
         </span>
       )}
     </span>

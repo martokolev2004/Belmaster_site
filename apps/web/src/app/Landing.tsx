@@ -9,7 +9,7 @@ import { prisma } from '@/lib/db';
 import { slugify } from '@/lib/slug';
 
 const FAQ = [
-  { q: 'Какво е БЕЛ Мастер?', a: 'Безплатен сайт за подготовка за матурата (ДЗИ) по български език и литература за 12. клас. Решаваш въпроси от истински матури на МОН, учиш произведенията от програмата и играеш образователни игри срещу съученици или бот.' },
+  { q: 'Какво е БЕЛ Мастър?', a: 'Безплатен сайт за подготовка за матурата (ДЗИ) по български език и литература за 12. клас. Решаваш въпроси от истински матури на МОН, учиш произведенията от програмата и играеш образователни игри срещу съученици или бот.' },
   { q: 'Откъде са въпросите?', a: 'От официалните държавни зрелостни изпити по БЕЛ (2017–2026), с верните отговори от ключовете на МОН: правопис, граматика, пунктуация, лексика, литература и четене с разбиране.' },
   { q: 'Безплатно ли е?', a: 'Да, напълно. Можеш да пробваш и като гост, без регистрация. С профил прогресът ти се пази и влизаш в класациите.' },
   { q: 'Кои произведения има в библиотеката?', a: 'Всички творби от програмата по литература за матурата — от Ботев, Вазов, Алеко Константинов, Яворов, Елин Пелин, Йовков, Смирненски, Вапцаров, Далчев, Багряна, Талев, Радичков и други — с резюме, герои, теми и идеи.' },
@@ -29,7 +29,7 @@ export async function Landing() {
   const works = await prisma.work.findMany({ where: { published: true, grade: 'G12' }, orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }], select: { title: true, author: true } });
   const base = process.env.APP_URL ?? 'https://belmaster.eu';
   const ld = [
-    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'БЕЛ Мастер', url: base, inLanguage: 'bg', description: 'Подготовка за матурата по български език и литература — тестове от минали матури, анализи на произведенията и образователни игри.' },
+    { '@context': 'https://schema.org', '@type': 'WebSite', name: 'БЕЛ Мастър', url: base, inLanguage: 'bg', description: 'Подготовка за матурата по български език и литература — тестове от минали матури, анализи на произведенията и образователни игри.' },
     { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
   ];
   return (
@@ -72,7 +72,7 @@ export async function Landing() {
 
       <section className="border-t-2 border-line bg-surface-2/60 py-16">
         <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-8 text-center text-3xl font-black">Какво има в БЕЛ Мастер</h2>
+          <h2 className="mb-8 text-center text-3xl font-black">Какво има в БЕЛ Мастър</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, color, title, text }) => (
               <div key={title} className="card3d rounded-2xl bg-surface p-5">
@@ -118,7 +118,7 @@ export async function Landing() {
       </section>
 
       <footer className="flex flex-wrap justify-center gap-x-4 gap-y-1 py-8 text-center text-sm text-muted">
-        <span>© {new Date().getFullYear()} БЕЛ Мастер</span>
+        <span>© {new Date().getFullYear()} БЕЛ Мастър</span>
         <Link href="/privacy" className="hover:underline">Поверителност</Link>
         <Link href="/terms" className="hover:underline">Общи условия</Link>
         <Link href="/contact" className="hover:underline">Контакти</Link>

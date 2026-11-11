@@ -10,7 +10,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
     <div className="nx min-h-dvh">
       <header className="sticky top-0 z-20 border-b-2 border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
-          <Link href="/" aria-label="БЕЛ Мастер — начало">
+          <Link href="/" aria-label="БЕЛ Мастър — начало">
             <Logo />
           </Link>
           <nav className="flex items-center gap-2">
@@ -28,7 +28,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
       </header>
       <main className="mx-auto w-full max-w-5xl px-4 pb-16 pt-6">{children}</main>
       <footer className="flex flex-wrap justify-center gap-x-4 gap-y-1 pb-8 text-xs text-muted">
-        <span>© БЕЛ Мастер</span>
+        <span>© БЕЛ Мастър</span>
         <Link href="/privacy" className="hover:underline">Поверителност</Link>
         <Link href="/terms" className="hover:underline">Общи условия</Link>
         <Link href="/contact" className="hover:underline">Контакти</Link>

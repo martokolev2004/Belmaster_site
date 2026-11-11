@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const base = process.env.APP_URL ?? 'https://belmaster.eu';
   const works = await prisma.work.findMany({ where: { published: true, grade: 'G12' }, orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }], select: { title: true, author: true, genre: true } });
-  const body = `# БЕЛ Мастер
+  const body = `# БЕЛ Мастър
 
 > Безплатен български сайт за подготовка за матурата (ДЗИ) по български език и литература за 12. клас: тестове с въпроси от истински матури на МОН (2017–2026), библиотека с анализи на произведенията от програмата, преговор на грешките и образователни игри (битки за територии, „Към върха“, „Кула на Словото“) срещу съученици или бот.
 

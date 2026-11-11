@@ -5,16 +5,16 @@ import '@fontsource-variable/unbounded';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL ?? 'https://belmaster.eu'),
-  title: { default: 'БЕЛ Мастер — български език и литература като игра', template: '%s · БЕЛ Мастер' },
+  title: { default: 'БЕЛ Мастър — български език и литература като игра', template: '%s · БЕЛ Мастър' },
   description: 'Български език и литература като игра: образователни игри, тестове и библиотека с произведенията. Безплатно, за 7., 10. и 12. клас.',
-  applicationName: 'БЕЛ Мастер',
-  openGraph: { siteName: 'БЕЛ Мастер', locale: 'bg_BG', type: 'website', images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'БЕЛ Мастер — български език и литература като игра' }] },
+  applicationName: 'БЕЛ Мастър',
+  openGraph: { siteName: 'БЕЛ Мастър', locale: 'bg_BG', type: 'website', images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'БЕЛ Мастър — български език и литература като игра' }] },
   twitter: { card: 'summary_large_image', images: ['/og.jpg'] },
   ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION
     ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION, other: process.env.BING_SITE_VERIFICATION ? { 'msvalidate.01': process.env.BING_SITE_VERIFICATION } : {} } }
     : {}),
   // добавен към началния екран на iPhone — отваря се без лентите на Safari
-  appleWebApp: { capable: true, title: 'БЕЛ Мастер', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'БЕЛ Мастър', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {

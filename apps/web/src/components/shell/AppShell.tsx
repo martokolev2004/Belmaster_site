@@ -105,7 +105,7 @@ export async function AppShell({ user, children, skin }: { user: User; children:
             <Link href="/privacy" className="hover:underline">Поверителност</Link>
             <Link href="/terms" className="hover:underline">Общи условия</Link>
             <Link href="/contact" className="hover:underline">Контакти</Link>
-            <span>© БЕЛ Мастер</span>
+            <span>© БЕЛ Мастър</span>
           </footer>
         </main>
         <BottomNav />

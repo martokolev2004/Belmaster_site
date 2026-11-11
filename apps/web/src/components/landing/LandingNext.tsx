@@ -11,7 +11,7 @@ import { Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
 const LD = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'БЕЛ Мастер',
+  name: 'БЕЛ Мастър',
   url: process.env.APP_URL ?? 'https://belmaster.eu',
   inLanguage: 'bg',
   description: 'Български език и литература като игра — образователни игри, тестове и библиотека с произведенията за 7., 10. и 12. клас.',
@@ -32,10 +32,10 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(LD) }} />
       <Nav>
         <div className="ln-wrap ln-nav-in">
-          <Link href="/" className="flex items-center gap-3" aria-label="БЕЛ Мастер">
+          <Link href="/" className="flex items-center gap-3" aria-label="БЕЛ Мастър">
             <LogoMark size={38} tone="blue" />
             <span className="ln-display text-[1.05rem]">
-              БЕЛ <span className="ln-grad">Мастер</span>
+              БЕЛ <span className="ln-grad">Мастър</span>
             </span>
           </Link>
           <nav className="flex items-center gap-7">
@@ -230,7 +230,7 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
       </section>
 
       <footer className="ln-wrap ln-footer">
-        <span>© {new Date().getFullYear()} БЕЛ Мастер</span>
+        <span>© {new Date().getFullYear()} БЕЛ Мастър</span>
         <span className="flex flex-wrap gap-6">
           <Link href="/library">Библиотека</Link>
           <Link href="/privacy">Поверителност</Link>

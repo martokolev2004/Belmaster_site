@@ -51,7 +51,7 @@ function jsonLd(work: Work) {
     educationalLevel: '12. клас',
     learningResourceType: 'Анализ на литературно произведение',
     about: { '@type': 'CreativeWork', name: work.title, author: { '@type': 'Person', name: work.author }, genre: work.genre ?? undefined },
-    isPartOf: { '@type': 'WebSite', name: 'БЕЛ Мастер', url: process.env.APP_URL ?? 'https://belmaster.eu' },
+    isPartOf: { '@type': 'WebSite', name: 'БЕЛ Мастър', url: process.env.APP_URL ?? 'https://belmaster.eu' },
   };
 }
 

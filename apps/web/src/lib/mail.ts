@@ -7,7 +7,7 @@ export function appUrl(): string {
   return (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 }
 
-const FROM = process.env.MAIL_FROM ?? 'БЕЛ Мастер <noreply@belmaster.eu>';
+const FROM = process.env.MAIL_FROM ?? 'БЕЛ Мастър <noreply@belmaster.eu>';
 
 function transport() {
   if (!process.env.SMTP_HOST) return null;
@@ -28,9 +28,9 @@ function esc(s: string) {
  * но се записва в дневника — админът вижда линка в „Админ → Имейли“.
  */
 export async function sendMail(to: string, subject: string, lines: string[], button?: { text: string; url: string }) {
-  const text = [...lines, ...(button ? ['', `${button.text}: ${button.url}`] : []), '', '— БЕЛ Мастер'].join('\n');
+  const text = [...lines, ...(button ? ['', `${button.text}: ${button.url}`] : []), '', '— БЕЛ Мастър'].join('\n');
   const html = `<div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#1f1f1f;max-width:520px">
-<p style="font-size:22px;font-weight:bold;color:#1cb0f6">БЕЛ Мастер</p>
+<p style="font-size:22px;font-weight:bold;color:#1cb0f6">БЕЛ Мастър</p>
 ${lines.map((l) => `<p>${esc(l)}</p>`).join('')}
 ${button ? `<p><a href="${esc(button.url)}" style="display:inline-block;background:#58cc02;color:#fff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:12px">${esc(button.text)}</a></p><p style="font-size:13px;color:#777">Ако бутонът не работи, отвори: ${esc(button.url)}</p>` : ''}
 <p style="font-size:13px;color:#777">Ако не си очаквал този имейл, просто го игнорирай.</p></div>`;

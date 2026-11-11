@@ -36,7 +36,7 @@ export async function findVerifyToken(token: string) {
 export async function sendVerifyEmail(user: Pick<User, 'id' | 'email' | 'displayName'>) {
   if (!user.email) return;
   const token = await issue(user.id, 'verify', user.email);
-  await sendMail(user.email, 'Потвърди имейла си — БЕЛ Мастер', [`Здравей, ${user.displayName}!`, 'Потвърди, че този имейл е твой, за да можеш да възстановиш паролата си, ако я забравиш.'], {
+  await sendMail(user.email, 'Потвърди имейла си — БЕЛ Мастър', [`Здравей, ${user.displayName}!`, 'Потвърди, че този имейл е твой, за да можеш да възстановиш паролата си, ако я забравиш.'], {
     text: 'Потвърди имейла',
     url: `${appUrl()}/verify?token=${token}`,
   });
@@ -45,7 +45,7 @@ export async function sendVerifyEmail(user: Pick<User, 'id' | 'email' | 'display
 export async function sendResetEmail(user: Pick<User, 'id' | 'email' | 'displayName'>) {
   if (!user.email) return;
   const token = await issue(user.id, 'reset', user.email);
-  await sendMail(user.email, 'Нова парола — БЕЛ Мастер', [`Здравей, ${user.displayName}!`, 'Получихме заявка за нова парола. Линкът важи 1 час.'], {
+  await sendMail(user.email, 'Нова парола — БЕЛ Мастър', [`Здравей, ${user.displayName}!`, 'Получихме заявка за нова парола. Линкът важи 1 час.'], {
     text: 'Задай нова парола',
     url: `${appUrl()}/reset?token=${token}`,
   });
@@ -54,9 +54,9 @@ export async function sendResetEmail(user: Pick<User, 'id' | 'email' | 'displayN
 export async function sendParentEmail(user: Pick<User, 'id' | 'displayName' | 'parentEmail'>) {
   if (!user.parentEmail) return;
   const token = await issue(user.id, 'parent', user.parentEmail);
-  await sendMail(user.parentEmail, 'Съгласие на родител — БЕЛ Мастер', [
+  await sendMail(user.parentEmail, 'Съгласие на родител — БЕЛ Мастър', [
     'Здравейте!',
-    `Вашето дете си е направило профил „${user.displayName}“ в БЕЛ Мастер — безплатен сайт за подготовка за матурите по български език и литература.`,
+    `Вашето дете си е направило профил „${user.displayName}“ в БЕЛ Мастър — безплатен сайт за подготовка за матурите по български език и литература.`,
     'Тъй като детето е под 14 години, по закон е нужно Вашето съгласие за обработка на данните му (име, имейл, дата на раждане, резултати от тестовете). Преди да потвърдите, можете да прочетете политиката за поверителност.',
   ], { text: 'Прегледай и потвърди', url: `${appUrl()}/parent?token=${token}` });
 }

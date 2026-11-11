@@ -374,7 +374,7 @@ io.on('connection', (socket: S) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`[game] БЕЛ Мастер игрови сървър на порт ${PORT} (CORS: ${ORIGINS.join(', ')})`);
+  console.log(`[game] БЕЛ Мастър игрови сървър на порт ${PORT} (CORS: ${ORIGINS.join(', ')})`);
 });
 
 process.on('unhandledRejection', (e) => console.error('[game] unhandled', e));

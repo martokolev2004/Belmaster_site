@@ -8,8 +8,11 @@ import { cn } from '@/lib/cn';
 import { EXTRA_SVG, FRAME_SVG } from './extras';
 
 export function avatarSvg(cfg: AvatarConfig, frame: FrameTier = 'none', opts: { noBg?: boolean } = {}): string {
+  // главата в „Adventurer“ стои по-нагоре от средата — сваляме я малко, за да е центрирана в рамката
+  const ty = opts.noBg ? 0 : 6;
   const svg = createAvatar(adventurer, {
     randomizeIds: true,
+    translateY: ty,
     hair: [cfg.hair as never],
     hairColor: [cfg.hairColor],
     skinColor: [cfg.skinColor],
@@ -25,7 +28,8 @@ export function avatarSvg(cfg: AvatarConfig, frame: FrameTier = 'none', opts: { 
     backgroundColor: opts.noBg ? [] : [cfg.bg],
     radius: opts.noBg ? 0 : 20,
   }).toString();
-  const extra = EXTRA_SVG[cfg.extra] ?? '';
+  const rawExtra = EXTRA_SVG[cfg.extra] ?? '';
+  const extra = rawExtra && ty ? `<g transform="translate(0 ${(762 * ty) / 100})">${rawExtra}</g>` : rawExtra;
   const fr = opts.noBg ? '' : FRAME_SVG[frame] ?? '';
   return svg.replace(/<\/svg>\s*$/, `${extra}${fr}</svg>`);
 }
