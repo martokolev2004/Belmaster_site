@@ -39,7 +39,7 @@ interface Rig {
   afS: number; afE: number; abS: number; abE: number; lfH: number; lfK: number; lbH: number; lbK: number;
   flash: number; hammer: number; item: number;
 }
-const REST: Omit<Rig, 'x' | 'y'> = { by: 0, sx: 1, sy: 1, rot: 0, head: 0, afS: 8, afE: -10, abS: -8, abE: -10, lfH: -4, lfK: 4, lbH: 6, lbK: 2, flash: 0, hammer: 0, item: 0 };
+const REST: Omit<Rig, 'x' | 'y'> = { by: 0, sx: 1, sy: 1, rot: 0, head: 0, afS: -9, afE: -7, abS: 9, abE: 7, lfH: -4, lfK: 4, lbH: 6, lbK: 2, flash: 0, hammer: 0, item: 0 };
 
 interface Hero {
   side: number;
@@ -66,10 +66,10 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
   const dark = { fill: '#232a55', stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const };
   const arm = (k: string) => (
     <g data-j={`${k}S`} transform="translate(0 0)">
-      <rect x="-7" y="-4" width="14" height="30" rx="7" {...limb} />
+      <rect x="-6.5" y="-5" width="13" height="30" rx="6.5" {...limb} />
       <g data-j={`${k}E`} transform="translate(0 24)">
-        <rect x="-6.5" y="-4" width="13" height="26" rx="6.5" {...limb} />
-        <circle cx="0" cy="24" r="7.5" fill="#f4cfa6" stroke={INK} strokeWidth="3" />
+        <rect x="-6" y="-4" width="12" height="24" rx="6" {...limb} />
+        <circle cx="0" cy="22" r="7" fill="#f4cfa6" stroke={INK} strokeWidth="3" />
         {k === 'af' && (
           <>
             <g data-j="hammer" opacity="0" transform="translate(0 24)">
@@ -99,18 +99,18 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
     <g data-hero={id}>
       <ellipse data-j="shadow" cx="0" cy="3" rx="34" ry="7" fill="#050818" opacity=".45" />
       <g data-j="root">
-        <g transform="translate(-13 -73)">{arm('ab')}</g>
+        <g transform="translate(-22 -75)">{arm('ab')}</g>
         <g transform="translate(-8 -34)">{leg('lb')}</g>
-        <rect x="-27" y="-76" width="16" height="34" rx="7" fill="#f2b84b" stroke={INK} strokeWidth="3" />
+        <rect x="-16" y="-80" width="32" height="40" rx="9" fill="#f2b84b" stroke={INK} strokeWidth="3" />
         <g transform="translate(8 -34)">{leg('lf')}</g>
-        <path d="M-21 -78q0-8 8-8h26q8 0 8 8v40q0 8-8 8h-26q-8 0-8-8z" {...limb} />
+        <path d="M-23 -74q0-12 12-12h22q12 0 12 12v36q0 8-8 8h-30q-8 0-8-8z" {...limb} />
         <path d="M-21 -44h42v6q0 8-8 8h-26q-8 0-8-8z" fill="#000" opacity=".16" />
         <path d="M-13 -86q13 12 26 0" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round" />
         <path d="M-9 -56h18" stroke="#fff" strokeOpacity=".5" strokeWidth="3" strokeLinecap="round" />
         <g data-j="head">
           <image href={uri} x="-50" y="-178" width="100" height="100" transform="scale(-1 1)" />
         </g>
-        <g transform="translate(14 -73)">{arm('af')}</g>
+        <g transform="translate(22 -75)">{arm('af')}</g>
         <path data-j="flash" d="M-34 -176h68v180h-68z" fill="#fff" opacity="0" style={{ mixBlendMode: 'screen' }} />
       </g>
       <g data-j="shield" opacity="0">
