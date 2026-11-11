@@ -5,7 +5,7 @@ import type { ComponentProps, ReactNode } from 'react';
 export type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'danger' | 'outline' | 'ghost' | 'purple';
 
 const variants: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-white [--btn-shadow:var(--color-primary-dark)] hover:brightness-105',
+  primary: 'bg-brand text-white [--btn-shadow:var(--color-brand-dark)] hover:brightness-105',
   secondary: 'bg-secondary text-white [--btn-shadow:var(--color-secondary-dark)] hover:brightness-105',
   accent: 'bg-accent text-[#4b3b00] [--btn-shadow:var(--color-accent-dark)] hover:brightness-105',
   danger: 'bg-error text-white [--btn-shadow:var(--color-error-dark)] hover:brightness-105',

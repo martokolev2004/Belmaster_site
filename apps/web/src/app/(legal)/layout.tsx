@@ -1,9 +1,11 @@
+import '@fontsource-variable/unbounded';
+import '@/components/shell/nx.css';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh">
+    <div className="nx min-h-dvh">
       <header className="mx-auto flex w-full max-w-3xl items-center px-4 py-4">
         <Link href="/" aria-label="Начало">
           <Logo />

@@ -10,8 +10,8 @@
   --muted: #8b95ba;
   --logo-main: #548eff;
   --logo-dark: #2e60de;
-  --color-primary: #548eff;
-  --color-primary-dark: #2e60de;
+  --color-brand: #548eff;
+  --color-brand-dark: #2e60de;
   /* палитрата на началната страница (за общите ln- класове) */
   --bgc: 9 13 30;
   --bg2: 16 24 54;
@@ -49,8 +49,8 @@
 :is(.nx, .app-shell:has([data-nx])) aside [data-nav][data-active='true'] svg { color: rgb(var(--acc-hi)); }
 
 /* ── горна лента и долно меню ── */
-:is(.nx, .app-shell:has([data-nx])) > header { background: rgb(var(--bgc) / 0.72); border-bottom-width: 1px; backdrop-filter: blur(16px) saturate(1.4); }
-:is(.nx, .app-shell:has([data-nx])) > nav.fixed { background: rgb(var(--bgc) / 0.92); border-top-width: 1px; backdrop-filter: blur(16px); }
+.app-shell.nx > header { background: rgb(var(--bgc) / 0.72); border-bottom-width: 1px; backdrop-filter: blur(16px) saturate(1.4); }
+.app-shell.nx > nav.fixed { background: rgb(var(--bgc) / 0.92); border-top-width: 1px; backdrop-filter: blur(16px); }
 
 /* ── „Начало“ ── */
 .nx-dash { display: grid; gap: clamp(2.2rem, 5vw, 3.6rem); }
@@ -86,7 +86,7 @@
 .nx-tile { display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center; padding: 1.05rem 1.2rem; transition: transform 0.25s, background 0.25s; }
 .nx-tile:hover { transform: translateY(-4px); background: linear-gradient(160deg, rgb(var(--acc) / 0.2), rgba(255, 255, 255, 0.03)); }
 .nx-tile-ic { display: grid; place-items: center; width: 3rem; height: 3rem; color: var(--c, rgb(var(--acc-hi))); background: color-mix(in srgb, var(--c, rgb(var(--acc))) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c, rgb(var(--acc))) 45%, transparent); clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px); }
-.nx-tile-t { font-size: 0.92rem; color: #fff; }
+.nx-tile-t { font-size: 0.92rem; line-height: 1.2; color: #fff; }
 .nx-tile p { margin-top: 0.2rem; font-size: 0.86rem; font-weight: 600; color: var(--muted); }
 .nx-tile-go { color: var(--muted); transition: transform 0.25s, color 0.25s; }
 .nx-tile:hover .nx-tile-go { transform: translateX(5px); color: #fff; }
@@ -110,3 +110,30 @@
 .nx-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--ln-line); }
 .nx-chip { padding: 0.45rem 0.9rem; font-size: 0.8rem; font-weight: 800; color: var(--ink); background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px var(--ln-line); clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); transition: background 0.2s, color 0.2s; }
 .nx-chip:hover { background: rgb(var(--acc) / 0.35); color: #fff; }
+
+/* ══ общи елементи — така всички страници наследяват новия вид (без екраните на самите игри: [data-game]) ══ */
+html:has(.nx) body { background: #090d1e; }
+.nx .card3d:not([data-game] *) {
+  border: 1px solid var(--line); border-radius: 14px;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012));
+  box-shadow: 0 14px 34px -22px rgba(0, 0, 0, 0.9);
+  transition: border-color 0.2s, transform 0.2s, background-color 0.2s;
+}
+.nx a.card3d:not([data-game] *):hover { border-color: rgb(var(--acc) / 0.65); transform: translateY(-2px); }
+.nx .btn3d:not([data-game] *) {
+  border: 0; border-radius: 0; box-shadow: none; letter-spacing: 0.1em;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.2s;
+}
+.nx .btn3d:not([data-game] *):hover { transform: translateY(-2px); filter: brightness(1.1); }
+.nx .btn3d:not([data-game] *):active { transform: scale(0.98); }
+.nx .btn3d.bg-brand:not([data-game] *) { background-image: linear-gradient(180deg, rgb(var(--acc)), rgb(var(--acc-lo))); }
+.nx .btn3d.bg-surface:not([data-game] *) { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); color: #fff; }
+.nx main h1:not(.ln-display):not([data-game] *) {
+  font-family: 'Unbounded Variable', 'Nunito Variable', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: -0.03em; line-height: 1.05;
+  font-size: clamp(1.45rem, 3.2vw, 2.3rem);
+}
+.nx main h2:not(.ln-display):not(.whitespace-pre-line):not([data-game] *) { font-family: 'Unbounded Variable', 'Nunito Variable', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; font-size: 1rem; line-height: 1.2; }
+.nx :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea):not([data-game] *) { border-width: 1px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.05); }
+.nx :is(input, select, textarea):not([data-game] *):focus { border-color: rgb(var(--acc)); box-shadow: 0 0 0 3px rgb(var(--acc) / 0.25); }
+.nx-shell-plain { min-height: 100dvh; }

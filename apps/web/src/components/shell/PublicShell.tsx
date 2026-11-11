@@ -1,3 +1,5 @@
+import '@fontsource-variable/unbounded';
+import '@/components/shell/nx.css';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { ButtonLink } from '@/components/ui';
@@ -5,7 +7,7 @@ import { ButtonLink } from '@/components/ui';
 /** Обвивка за публичните страници (без вход) — за посетители и търсачки. */
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh">
+    <div className="nx min-h-dvh">
       <header className="sticky top-0 z-20 border-b-2 border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Link href="/" aria-label="БЕЛ Мастер — начало">

@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, currentSeason, gradeLabel, levelProgress, type AchievementCategory, type AchievementIcon } from '@belmaster/shared';
 import { achievementMetrics } from '@belmaster/db';
 import { Award, BookOpen, Brain, Castle, CheckCircle2, Crown, Flame, Gem, GraduationCap, LogOut, Medal, Mountain, Rocket, ScrollText, Shield, Star, Swords, Target, Trophy, Users, Zap } from 'lucide-react';
@@ -10,7 +9,7 @@ import { newItemKeys } from '@/lib/unlocks';
 import { Avatar, ButtonLink, Card, ProgressBar } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { logoutAction } from '@/app/(auth)/actions';
-import { PasswordForm, ProfileForm, ThemePicker } from './ProfileForms';
+import { PasswordForm, ProfileForm } from './ProfileForms';
 import { PrivacyCard } from './PrivacyCard';
 import { needsParent } from '@/lib/age';
 
@@ -31,7 +30,6 @@ export default async function ProfilePage() {
   const lp = levelProgress(user.xp, user.level);
   const fresh = newItemKeys(user);
   const diamonds = diamondsOf(user);
-  const theme = (await cookies()).get('bm_theme')?.value;
   const accuracy = attempts._sum.total ? Math.round(((attempts._sum.score ?? 0) / attempts._sum.total) * 100) : 0;
 
   return (
@@ -104,10 +102,6 @@ export default async function ProfilePage() {
           <ProfileForm displayName={user.displayName} avatarColor={user.avatarColor} />
         </Card>
         <div className="space-y-6">
-          <Card>
-            <h2 className="mb-4 text-lg font-black">Тема</h2>
-            <ThemePicker current={theme === 'light' || theme === 'system' ? theme : 'dark'} />
-          </Card>
           {!user.isGuest && (
             <Card>
               <h2 className="mb-4 text-lg font-black">Парола</h2>

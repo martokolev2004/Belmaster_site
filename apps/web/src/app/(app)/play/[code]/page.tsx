@@ -16,5 +16,9 @@ export default async function RoomPage({ params }: { params: Promise<{ code: str
     .filter((u) => u.grade === user.grade)
     .map((u) => ({ id: u.id, name: u.displayName, color: u.avatarColor, avatar: u.avatar }));
   const upper = code.toUpperCase();
-  return <GameRoom key={upper} code={upper} me={user.id} friends={friends} />;
+  return (
+    <div data-game className="contents">
+      <GameRoom key={upper} code={upper} me={user.id} friends={friends} />
+    </div>
+  );
 }

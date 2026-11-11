@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { EmptyState, PageHeader } from '@/components/ui';
 
-export const metadata = { title: 'Матури' };
+export const metadata = { title: 'Изпити' };
 
 export default async function ExamsPage() {
   const user = await requireUser();
@@ -20,9 +20,9 @@ export default async function ExamsPage() {
   });
   return (
     <div>
-      <PageHeader title="Цели матури" subtitle={`Минали изпити за ${gradeLabel(user.grade)} — без есето и задачите със свободен текст.`} />
+      <PageHeader title="Цели изпити" subtitle={`Минали изпити за ${gradeLabel(user.grade)} — без есето и задачите със свободен текст.`} />
       {exams.length === 0 ? (
-        <EmptyState title="Още няма качени матури" icon={<ScrollText className="size-12" />}>
+        <EmptyState title="Още няма качени изпити" icon={<ScrollText className="size-12" />}>
           Скоро ще добавим минали изпити.
         </EmptyState>
       ) : (
@@ -37,7 +37,7 @@ export default async function ExamsPage() {
                 <span className="flex-1">
                   <span className="block font-extrabold text-ink-strong">{e.title}</span>
                   <span className="block text-sm text-muted">
-                    {b != null ? `Най-добро: ${b} точки` : 'Пробна матура с таймер'}
+                    {b != null ? `Най-добро: ${b} точки` : 'Пробен изпит с таймер'}
                   </span>
                 </span>
                 <ChevronRight className="size-5 text-muted" />

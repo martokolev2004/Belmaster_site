@@ -8,7 +8,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
         <h1 className="text-2xl font-black md:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-2 font-semibold text-muted">{subtitle}</p>}
       </div>
       {action}
     </div>

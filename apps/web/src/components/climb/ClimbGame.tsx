@@ -59,10 +59,10 @@ export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: W
         <p className="py-10 text-center font-bold text-muted">Свързване…</p>
       ) : !state ? (
         <Hub socket={socket} quick={quick} weapons={weapons} selected={selected} diamonds={diamonds} isGuest={isGuest} />
-      ) : state.phase === 'lobby' ? (
-        <Lobby socket={socket} state={state} />
       ) : (
-        <Match socket={socket} state={state} offset={offset} chat={chat} />
+        <div data-game className="contents">
+          {state.phase === 'lobby' ? <Lobby socket={socket} state={state} /> : <Match socket={socket} state={state} offset={offset} chat={chat} />}
+        </div>
       )}
     </div>
   );

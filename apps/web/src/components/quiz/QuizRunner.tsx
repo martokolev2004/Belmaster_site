@@ -109,7 +109,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
 
   const submit = () => {
     const missing = questions.length - answeredCount;
-    if (missing > 0 && !window.confirm(`Имаш ${missing} задачи без отговор. Да предам ли матурата?`)) return;
+    if (missing > 0 && !window.confirm(`Имаш ${missing} задачи без отговор. Да предам ли изпита?`)) return;
     finish();
   };
 
@@ -150,7 +150,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
           <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-purple/20 text-purple-dark">
             <Timer className="size-9" />
           </span>
-          <h2 className="mt-3 text-2xl font-black">Пробна матура</h2>
+          <h2 className="mt-3 text-2xl font-black">Пробен изпит</h2>
           <p className="mt-1 text-muted">{title}</p>
           <ul className="mt-5 space-y-1.5 text-left text-sm">
             <li>📝 {questions.length} задачи · <b>{maxPoints} точки</b> (по ключа, с частични точки)</li>
@@ -168,7 +168,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
               Без таймер
             </Button>
           </div>
-          {timeLimitMin ? <p className="mt-3 text-xs text-muted">Времето е пропорционално на матурата (240 мин за 100 точки). Като изтече — матурата се предава сама.</p> : null}
+          {timeLimitMin ? <p className="mt-3 text-xs text-muted">Времето е пропорционално на истинския изпит (240 мин за 100 точки). Като изтече — изпитът се предава сам.</p> : null}
         </div>
       </div>
     );
@@ -356,7 +356,7 @@ function ResultScreen({
         <h1 className="text-3xl font-black">{pct >= 80 ? 'Страхотно!' : pct >= 50 ? 'Добра работа!' : 'Продължавай да учиш!'}</h1>
         {ex ? (
           <>
-            {ex.timedOut && <p className="mt-1 font-bold text-error">Времето изтече — матурата беше предадена автоматично.</p>}
+            {ex.timedOut && <p className="mt-1 font-bold text-error">Времето изтече — изпитът беше предаден автоматично.</p>}
             <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3">
               <div className="card3d rounded-2xl bg-surface p-4">
                 <p className="text-xs font-extrabold uppercase text-muted">Точки</p>
