@@ -248,3 +248,20 @@ html:has(.nx) body { background: #090d1e; }
 .stg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
 .stg-bar button:disabled { opacity: 0.4; pointer-events: none; }
 @media (max-width: 640px) { .stg-top { grid-template-columns: 1fr 1fr; } .stg-vs { display: none; } .stg-plate { grid-template-columns: 1fr auto; } .stg-pips { grid-column: 1 / -1; order: 3; } }
+
+/* ── начален екран на „Към върха“ ── */
+.ch-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 27rem); gap: clamp(1.2rem, 3vw, 2.4rem); align-items: center; padding: clamp(1.3rem, 3vw, 2.2rem); background: linear-gradient(120deg, rgb(var(--acc) / 0.22), rgba(255, 255, 255, 0.03) 60%); }
+.ch-hero .ln-frame { border-radius: 18px; }
+.ch-hero .nx-sub { margin-top: 0.9rem; }
+.ch-hero .ln-frame-in { border-radius: 16px; }
+.ch-weapons { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.6rem; }
+.ch-weapon { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0.9rem 0.4rem; min-height: 7.2rem; cursor: pointer; transition: transform 0.2s, background 0.2s, box-shadow 0.2s; }
+.ch-weapon:hover:not(:disabled) { transform: translateY(-3px); }
+.ch-weapon[data-on='true'] { background: linear-gradient(160deg, rgb(var(--acc) / 0.35), rgba(255, 255, 255, 0.03)); box-shadow: inset 0 0 0 2px rgb(var(--acc)); }
+.ch-weapon[data-locked='true'] { opacity: 0.5; cursor: not-allowed; }
+.ch-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; }
+.ch-rules > div { display: grid; grid-template-columns: auto 1fr; gap: 0.8rem; padding: 0.95rem 1.05rem; }
+.ch-rules > div > span { font-size: 1.5rem; line-height: 1.2; }
+.ch-rules b { display: block; font-size: 0.78rem; color: #fff; }
+.ch-rules p { margin-top: 0.3rem; font-size: 0.82rem; font-weight: 600; line-height: 1.45; color: var(--muted); }
+@media (max-width: 900px) { .ch-hero { grid-template-columns: 1fr; } .ch-weapons { grid-template-columns: repeat(4, 1fr); } .ch-rules { grid-template-columns: 1fr; } }

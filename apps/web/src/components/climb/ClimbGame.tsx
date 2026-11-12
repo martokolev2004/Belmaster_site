@@ -71,85 +71,114 @@ export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: W
 // ───────────── начало ─────────────
 function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: ClimbSocket; quick: { searching: boolean; offerBot: boolean }; weapons: WeaponView[]; selected: string; diamonds: number; isGuest: boolean }) {
   const [code, setCode] = useState('');
+  const RULES: [string, string, string][] = [
+    ['❓', 'Един въпрос за двамата', 'Само най-бързият верен избира какво да направи.'],
+    ['⬆️', 'Качи се', '+1 стъпало. Ако другият е на земята, се качваш направо.'],
+    ['🎯', 'Хвърли', 'Натисни, когато маркерът е в зеленото. Уцелиш ли — другият пада стъпало; не уцелиш ли — падаш ти.'],
+    ['🛡️', 'Щит — веднъж за игра', 'Пази стъпалото, на което си, и другият не го вижда. Целят ли те — ударът се връща. Качиш ли се — изчезва.'],
+    ['🃏', 'Жокери', '50/50 и +5 секунди, по веднъж за игра.'],
+    ['🏁', 'Победа', `Пръв до ${CLIMB.STEPS} стъпала, или по-високият след ${CLIMB.MAX_QUESTIONS} въпроса. Колкото по-високо си, толкова по-тясна е зелената зона.`],
+  ];
   return (
-    <div className="space-y-6">
-      <div className="relative grid gap-5 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1cb0f6] to-[#58cc02] p-6 text-white md:p-8 lg:grid-cols-[1fr_380px] lg:items-center">
-        <div>
-        <p className="text-sm font-extrabold uppercase tracking-wide text-white/80">Игра за двама</p>
-        <h1 className="mt-1 text-3xl font-black text-white md:text-4xl">⛰️ Към върха</h1>
-        <p className="mt-2 max-w-xl text-white/90">
-          Отговори пръв вярно и избери: качи се едно стъпало или хвърли по стъпалото на другия. Пръв до 10-ото стъпало печели!
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={() => socket.emit('climb:quick')} disabled={quick.searching} className="btn3d inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 font-extrabold uppercase text-secondary [--btn-shadow:rgba(0,0,0,.2)]">
-            <Zap className="size-5" /> {quick.searching ? 'Търсим противник…' : 'Бърза игра'}
-          </button>
-          <button onClick={() => socket.emit('climb:bot')} className="btn3d inline-flex items-center gap-2 rounded-2xl bg-white/20 px-5 py-3 font-extrabold uppercase text-white [--btn-shadow:rgba(0,0,0,.2)]">
-            <Bot className="size-5" /> Срещу бот
-          </button>
-          <button onClick={() => socket.emit('climb:create')} className="btn3d inline-flex items-center gap-2 rounded-2xl bg-white/20 px-5 py-3 font-extrabold uppercase text-white [--btn-shadow:rgba(0,0,0,.2)]">
-            <Users className="size-5" /> С приятел
-          </button>
+    <div className="nx-stack" style={{ gap: '1.6rem' }}>
+      <header className="nx-panel ch-hero animate-rise">
+        <div className="min-w-0">
+          <p className="ln-eyebrow">Дуел · 1 на 1</p>
+          <h1 className="ln-display nx-h1">
+            Към <span className="ln-grad">върха</span>
+          </h1>
+          <p className="nx-sub" style={{ color: '#c5cfee' }}>
+            Отговори пръв вярно и избери: качи се едно стъпало или хвърли по другия. Пръв до {CLIMB.STEPS}-ото стъпало печели.
+          </p>
+        </div>
+        <div className="ln-frame">
+          <div className="ln-frame-in">
+            <div className="ln-frame-bar">
+              <span className="ln-live" /> Как изглежда играта
+            </div>
+            <ClimbDemo />
+          </div>
+        </div>
+      </header>
+
+      <section>
+        <p className="ln-eyebrow mb-3">Как ще играеш</p>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="nx-panel ph-act" style={{ '--c': '#6ea2ff' } as React.CSSProperties}>
+            <span className="nx-tile-ic"><Zap className="size-6" /></span>
+            <p className="ln-display nx-tile-t mt-4">Бърза игра</p>
+            <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">Срещу случаен съперник от твоя клас.</p>
+            <Button block disabled={quick.searching} onClick={() => socket.emit('climb:quick')}>
+              {quick.searching ? 'Търсим съперник…' : 'Търси съперник'}
+            </Button>
+          </div>
+          <div className="nx-panel ph-act" style={{ '--c': '#5fe0d0' } as React.CSSProperties}>
+            <span className="nx-tile-ic"><Users className="size-6" /></span>
+            <p className="ln-display nx-tile-t mt-4">С приятел</p>
+            <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">Създай стая и прати кода или линка.</p>
+            <Button variant="outline" block onClick={() => socket.emit('climb:create')}>
+              Създай стая
+            </Button>
+          </div>
+          <div className="nx-panel ph-act" style={{ '--c': '#c59bff' } as React.CSSProperties}>
+            <span className="nx-tile-ic"><Bot className="size-6" /></span>
+            <p className="ln-display nx-tile-t mt-4">Срещу бот</p>
+            <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">За загрявка, без рейтинг.</p>
+            <Button variant="outline" block onClick={() => socket.emit('climb:bot')}>
+              Играй с бота
+            </Button>
+          </div>
         </div>
         {quick.searching && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
-            <span>Търсим противник от твоя клас…</span>
-            <button onClick={() => socket.emit('climb:quick_leave')} className="underline">
+          <p className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold text-muted">
+            Търсим противник от твоя клас…
+            <button onClick={() => socket.emit('climb:quick_leave')} className="text-secondary underline">
               Откажи
             </button>
-          </div>
+          </p>
         )}
         {!quick.searching && quick.offerBot && (
-          <div className="mt-3 rounded-2xl bg-black/20 p-3 text-sm font-bold">
-            <p>😴 Няма свободен противник в момента. Опитай пак след малко или играй с бота.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button onClick={() => socket.emit('climb:bot')} className="rounded-xl bg-white px-3 py-1.5 font-extrabold text-secondary">
-                Играй с бота
-              </button>
-              <button onClick={() => socket.emit('climb:quick')} className="rounded-xl bg-white/20 px-3 py-1.5 font-extrabold">
-                Опитай пак
-              </button>
-              <button onClick={() => socket.emit('climb:quick_leave')} className="px-2 underline">
-                Затвори
-              </button>
-            </div>
+          <div className="nx-panel mt-3 flex flex-wrap items-center gap-3 p-4 text-sm font-bold">
+            <span className="flex-1">😴 Няма свободен противник в момента. Опитай пак след малко или играй с бота.</span>
+            <Button size="sm" onClick={() => socket.emit('climb:bot')}>Играй с бота</Button>
+            <Button size="sm" variant="outline" onClick={() => socket.emit('climb:quick')}>Опитай пак</Button>
+            <button onClick={() => socket.emit('climb:quick_leave')} className="px-2 text-muted underline">Затвори</button>
           </div>
         )}
-        </div>
-        <div className="overflow-hidden rounded-2xl border-4 border-white/30 shadow-xl" aria-label="Как изглежда играта">
-          <ClimbDemo />
-        </div>
-      </div>
+      </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="card3d rounded-2xl bg-surface p-5">
-          <h2 className="mb-3 text-lg font-black">Влез с код</h2>
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (code.trim()) socket.emit('climb:join', { code });
-            }}
-          >
-            <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder="КОД" className="font-mono tracking-[0.3em]" />
-            <Button type="submit" variant="secondary">
-              Влез
-            </Button>
-          </form>
-          <h2 className="mb-2 mt-6 text-lg font-black">Правила</h2>
-          <ul className="space-y-1.5 text-sm">
-            <li>❓ Двамата отговаряте на един въпрос. <b>Само най-бързият верен</b> избира.</li>
-            <li>⬆️ <b>Качи се</b> — +1 стъпало.</li>
-            <li>🎯 <b>Хвърли</b> — натисни, когато маркерът е в зеленото. Уцелиш ли, другият пада стъпало. Не уцелиш ли — пада твоето.</li>
-            <li>🃏 <b>Жокери</b> — 50/50 и +5 секунди, по веднъж за игра.</li>
-            <li>⛳ Ако другият е на земята, няма какво да целиш — направо се качваш.</li>
-            <li>🛡️ <b>Щит</b> — веднъж за игра. Пази стъпалото, на което си, и другият не го вижда: ако те цели, ударът се връща към него; ако ти не уцелиш, не падаш. Щом се качиш на следващото стъпало, щитът изчезва.</li>
-            <li>🧗 Колкото по-високо си, толкова по-тясна е зелената зона.</li>
-            <li>🏁 Пръв до 10 стъпала, или по-високият след {CLIMB.MAX_QUESTIONS} въпроса.</li>
-          </ul>
+      <section className="nx-panel ph-code">
+        <p className="ln-display nx-tile-t">Имаш код?</p>
+        <form
+          className="flex flex-1 gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (code.trim()) socket.emit('climb:join', { code });
+          }}
+        >
+          <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder="НАПР. K7Q2MX" className="font-mono tracking-widest" />
+          <Button type="submit" variant="outline" disabled={code.trim().length < 4}>
+            Влез
+          </Button>
+        </form>
+      </section>
+
+      <WeaponPicker weapons={weapons} selected={selected} diamonds={diamonds} isGuest={isGuest} />
+
+      <section>
+        <p className="ln-eyebrow mb-3">Правила</p>
+        <div className="ch-rules">
+          {RULES.map(([icon, title, text]) => (
+            <div key={title} className="nx-panel">
+              <span>{icon}</span>
+              <div>
+                <b className="ln-display">{title}</b>
+                <p>{text}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <WeaponPicker weapons={weapons} selected={selected} diamonds={diamonds} isGuest={isGuest} />
-      </div>
+      </section>
     </div>
   );
 }
@@ -160,15 +189,17 @@ function WeaponPicker({ weapons, selected, diamonds, isGuest }: { weapons: Weapo
   const [pending, start] = useTransition();
   const router = useRouter();
   return (
-    <div className="card3d rounded-2xl bg-surface p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-black">Оръжие</h2>
+    <section>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="ln-eyebrow">Оръжие</p>
+          <p className="mt-2 text-sm font-semibold text-muted">Всички удрят еднакво — разликата е само във вида. Отключват се с нива, а ракетата — с диаманти.</p>
+        </div>
         <span className="flex items-center gap-1 text-sm font-black text-secondary">
           <Gem className="size-4" /> {diamonds}
         </span>
       </div>
-      <p className="mb-3 text-xs text-muted">Всички удрят еднакво — разликата е само във вида. Отключват се с нива, а ракетата — с диаманти.</p>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="ch-weapons">
         {weapons.map((w) => {
           const shop = !w.open && w.rule?.kind === 'shop';
           return (
@@ -176,6 +207,8 @@ function WeaponPicker({ weapons, selected, diamonds, isGuest }: { weapons: Weapo
               key={w.id}
               disabled={pending || (!w.open && !shop)}
               title={w.open ? w.name : `${w.name} — ${ruleText(w.rule!)}`}
+              data-on={cur === w.id}
+              data-locked={!w.open && !shop}
               onClick={() =>
                 start(async () => {
                   setErr(null);
@@ -192,26 +225,24 @@ function WeaponPicker({ weapons, selected, diamonds, isGuest }: { weapons: Weapo
                   router.refresh();
                 })
               }
-              className={cn(
-                'card3d relative flex flex-col items-center rounded-xl bg-surface p-2 text-center',
-                cur === w.id && 'border-secondary! bg-secondary/10',
-                !w.open && !shop && 'cursor-not-allowed opacity-50',
-              )}
+              className="nx-panel ch-weapon"
             >
-              <span className={cn('text-3xl', !w.open && 'grayscale')}>{w.emoji}</span>
-              <span className="mt-1 text-[11px] font-extrabold leading-tight">{w.name}</span>
-              {!w.open && (
-                <span className={cn('mt-1 inline-flex items-center gap-0.5 rounded px-1 text-[10px] font-black', shop ? 'bg-secondary text-white' : 'bg-ink-strong/80 text-bg')}>
+              <span className={cn('text-4xl', !w.open && 'grayscale')}>{w.emoji}</span>
+              <span className="mt-2 text-xs font-extrabold leading-tight text-white">{w.name}</span>
+              {!w.open ? (
+                <span className={cn('mt-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-black', shop ? 'bg-secondary text-white' : 'bg-white/15 text-muted')}>
                   {!shop && <Lock className="size-2.5" />}
                   {ruleText(w.rule!)}
                 </span>
+              ) : (
+                cur === w.id && <span className="mt-1.5 text-[10px] font-black uppercase tracking-widest text-secondary">избрано</span>
               )}
             </button>
           );
         })}
       </div>
       {err && <p className="mt-2 text-sm font-bold text-error">{err}</p>}
-    </div>
+    </section>
   );
 }
 
