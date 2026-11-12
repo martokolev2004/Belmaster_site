@@ -5,7 +5,7 @@
  * Управлява се от състоянието на играта (ClimbState) — правилата са на сървъра, тук са само анимациите.
  * Старата сцена е запазена в ClimbScene.tsx (резервен вариант).
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { CLIMB, CLIMB_CHAT, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState, type ClimbTheme } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';
 
@@ -61,13 +61,49 @@ interface StageApi {
   busy: () => boolean;
 }
 
-const SKIES: Record<ClimbTheme, { sky: string[]; sun: string; glow: string }> = {
-  dusk: { sky: ['#070b25', '#1c2763', '#5a4d9c', '#e58a6b', '#ffc48a'], sun: '#fff4d6', glow: '#ffb27a' },
-  night: { sky: ['#03061a', '#0d1740', '#1d2f6b', '#2f4a8e', '#5f7fc0'], sun: '#f3f7ff', glow: '#9fc2ff' },
-  canyon: { sky: ['#1a1038', '#4a2466', '#a8456e', '#f08a4b', '#ffd08a'], sun: '#fff1c9', glow: '#ff9a5a' },
+type StepKind = 'stone' | 'wood' | 'basalt';
+interface Look {
+  sky: string[]; sun: string; glow: string; sunAt: [number, number]; disc: number; rays: boolean; stars: boolean;
+  far2: string; tip: string | null; far1: string; cloud2: string; cloud1: string;
+  mtL: [string, string]; mtR: [string, string, string]; rim: string; crack: string; crackW: number; crackO: number;
+  cap: string; capShade: string; plat: [string, string]; flag: string;
+  flora: 'pine' | 'cactus' | 'dead'; treeMid: string; treeFg: string; ground: string; mist: string; vig: string;
+  step: StepKind; shard: string; embers: boolean; strata: boolean;
+}
+/** Трите карти: „Снежният връх“ (залез), „Червеният каньон“ и „Вулканът“ (нощ). */
+const LOOKS: Record<ClimbTheme, Look> = {
+  dusk: {
+    sky: ['#070b25', '#1c2763', '#5a4d9c', '#e58a6b', '#ffc48a'], sun: '#fff4d6', glow: '#ffb27a', sunAt: [1010, 520], disc: 54, rays: true, stars: true,
+    far2: '#2b2f70', tip: '#c9cdf2', far1: '#1d2157', cloud2: '#ffffff', cloud1: '#ffe6d6',
+    mtL: ['#4b4f93', '#262a5e'], mtR: ['#b08fb4', '#6a639f', '#353a75'], rim: '#ffd0a8', crack: '#0d1136', crackW: 3, crackO: 0.22,
+    cap: '#f4f6ff', capShade: '#b9c0ee', plat: ['#e6e9fb', '#8f96c4'], flag: '#ffd84d',
+    flora: 'pine', treeMid: '#141a52', treeFg: '#070a24', ground: '#090c2b', mist: '#ffd9c2', vig: '#060918',
+    step: 'stone', shard: '#c9cdee', embers: false, strata: false,
+  },
+  canyon: {
+    sky: ['#3b2a6e', '#8a4a8e', '#e0707a', '#ffa868', '#ffe0a8'], sun: '#fff6d8', glow: '#ffc27a', sunAt: [300, 250], disc: 46, rays: true, stars: false,
+    far2: '#b0566a', tip: null, far1: '#7c3655', cloud2: '#ffe9d2', cloud1: '#ffd9bd',
+    mtL: ['#c2603f', '#7a3238'], mtR: ['#f3a569', '#cf6c42', '#86383c'], rim: '#ffe2ae', crack: '#4a1620', crackW: 3, crackO: 0.3,
+    cap: '#f6c890', capShade: '#d98f58', plat: ['#f6dcae', '#b9814f'], flag: '#4f8cff',
+    flora: 'cactus', treeMid: '#5a2440', treeFg: '#2a1026', ground: '#2a1026', mist: '#ffd2a0', vig: '#1a0a1c',
+    step: 'wood', shard: '#b9814f', embers: false, strata: true,
+  },
+  night: {
+    sky: ['#04030c', '#120c24', '#34122c', '#7a2420', '#e0602c'], sun: '#ffd27a', glow: '#ff6a2a', sunAt: [640, 236], disc: 0, rays: false, stars: true,
+    far2: '#1c1328', tip: null, far1: '#110b1b', cloud2: '#4a3040', cloud1: '#3a2634',
+    mtL: ['#33263d', '#17111f'], mtR: ['#55343c', '#2c1d2c', '#15101c'], rim: '#ff8a4a', crack: '#ff7a2a', crackW: 4, crackO: 0.95,
+    cap: '#ffb347', capShade: '#e0431f', plat: ['#6a5868', '#2c2230'], flag: '#ffd84d',
+    flora: 'dead', treeMid: '#0d0813', treeFg: '#050308', ground: '#07040d', mist: '#ff7a3a', vig: '#040208',
+    step: 'basalt', shard: '#4a3f52', embers: true, strata: false,
+  },
+};
+const STEP_ART: Record<StepKind, string> = {
+  stone: `<path d="M-40 4h80v9q0 7-7 7h-66q-7 0-7-7z" fill="#8f96c4" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#e6e9fb" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-34 -2h40" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M-12 8v9M18 8v9" stroke="${INK}" stroke-opacity=".35" stroke-width="2"/>`,
+  wood: `<path d="M-30 6l-8 22M30 6l8 22" stroke="#5a3520" stroke-width="7" stroke-linecap="round"/><path d="M-30 6l-8 22M30 6l8 22" stroke="#8a5a34" stroke-width="3" stroke-linecap="round"/><rect x="-44" y="-6" width="88" height="15" rx="4" fill="#d9a066" stroke="#2a1420" stroke-width="3"/><path d="M-44 2h88" stroke="#2a1420" stroke-opacity=".3" stroke-width="2"/><path d="M-16 -6v15M14 -6v15" stroke="#2a1420" stroke-opacity=".45" stroke-width="2"/><path d="M-38 -2h18M20 -2h14" stroke="#ffe0b0" stroke-width="2.5" stroke-linecap="round"/><circle cx="-34" cy="5" r="1.8" fill="#2a1420"/><circle cx="34" cy="5" r="1.8" fill="#2a1420"/>`,
+  basalt: `<path d="M-40 4h80v10q0 7-7 7h-66q-7 0-7-7z" fill="#231b2b" stroke="#07040d" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#51455a" stroke="#07040d" stroke-width="3" stroke-linejoin="round"/><path d="M-30 12l12-6 10 7 14-8 12 6 14-5" fill="none" stroke="#ff8a3a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M-30 12l12-6 10 7 14-8 12 6 14-5" fill="none" stroke="#ffe08a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M-34 -2h30" stroke="#8a7a94" stroke-width="2.5" stroke-linecap="round"/>`,
 };
 
-function Doll({ id, color, uri, label }: { id: string; color: string; uri: string; label: string }) {
+function Doll({ id, color, uri, label, gid }: { id: string; color: string; uri: string; label: string; gid: string }) {
   const limb = { fill: color, stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const };
   const dark = { fill: '#232a55', stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const };
   const arm = (k: string) => (
@@ -130,7 +166,7 @@ function Doll({ id, color, uri, label }: { id: string; color: string; uri: strin
         </text>
       </g>
       <g data-j="shield" opacity="0">
-        <circle cx="0" cy="-78" r="92" fill="url(#st-shield)" stroke="#9fe8ff" strokeWidth="3" strokeDasharray="14 9" className="st-spin" />
+        <circle cx="0" cy="-78" r="92" fill={`url(#st-shield-${gid})`} stroke="#9fe8ff" strokeWidth="3" strokeDasharray="14 9" className="st-spin" />
         <circle cx="0" cy="-78" r="92" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5" />
       </g>
     </g>
@@ -139,9 +175,10 @@ function Doll({ id, color, uri, label }: { id: string; color: string; uri: strin
 
 export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { uid: string; key: string; at: number }[] }) {
   const svg = useRef<SVGSVGElement>(null);
+  const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const api = useRef<StageApi | null>(null);
   const players = state.players;
-  const theme = SKIES[state.theme] ?? SKIES.dusk;
+  const theme = LOOKS[state.theme] ?? LOOKS.dusk;
   const heights = players.map((p) => p.height);
   const me = Math.max(0, players.findIndex((p) => p.uid === state.you));
   const [shown, setShown] = useState<number[]>(heights);
@@ -150,8 +187,8 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [players.map((p) => `${p.uid}:${JSON.stringify(p.avatar)}`).join('|')],
   );
-  const live = useRef({ players, setShown });
-  live.current = { players, setShown };
+  const live = useRef({ players, setShown, look: theme });
+  live.current = { players, setShown, look: theme };
 
   useEffect(() => {
     const root = svg.current!;
@@ -240,7 +277,7 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
     const addStep = (h: Hero, n: number) => {
       const [x, y] = spot(h.side, n);
       const g = mk('g', {}) as SVGGElement;
-      g.innerHTML = `<path d="M-40 4h80v9q0 7-7 7h-66q-7 0-7-7z" fill="#8f96c4" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#e6e9fb" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-34 -2h40" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M-12 8v9M18 8v9" stroke="${INK}" stroke-opacity=".35" stroke-width="2"/>`;
+      g.innerHTML = STEP_ART[live.current.look.step];
       g.dataset.x = String(x);
       g.dataset.y = String(y);
       g.setAttribute('transform', `translate(${x} ${y}) scale(0)`);
@@ -346,7 +383,7 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
       }
       const step = h.steps.pop();
       if (step) {
-        shards(Number(step.dataset.x), Number(step.dataset.y), 9, '#c9cdee');
+        shards(Number(step.dataset.x), Number(step.dataset.y), 9, live.current.look.shard);
         puff(Number(step.dataset.x), Number(step.dataset.y), 10, '#e8e3f5', 150, 7, 0.7, 200);
         step.remove();
       }
@@ -625,112 +662,135 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
   }, [finished, state.winnerUid]);
 
   const stars = useMemo(() => Array.from({ length: 46 }, (_, i) => ({ x: (i * 173.3) % W, y: (i * 97.7) % 330, r: 0.8 + ((i * 7) % 5) * 0.35, d: (i % 7) * 0.5 })), []);
-  const pines = (xs: number[], y: number, s: number, fill: string) => xs.map((x, i) => <path key={i} d={`M${x} ${y}l${-26 * s} 0 ${14 * s} ${-26 * s}h${-9 * s}l${13 * s} ${-26 * s}h${-7 * s}l${15 * s} ${-34 * s} ${15 * s} ${34 * s}h${-7 * s}l${13 * s} ${26 * s}h${-9 * s}l${14 * s} ${26 * s}z`} fill={fill} />);
+  const flora = (kind: Look['flora'], xs: number[], y: number, s: number, fill: string) =>
+    xs.map((x, i) => {
+      if (kind === 'cactus') return <path key={i} d={`M${x - 7 * s} ${y}v${-70 * s}q0${-8 * s} ${7 * s}${-8 * s}t${7 * s} ${8 * s}v${22 * s}h${10 * s}v${-16 * s}q0${-6 * s} ${5 * s}${-6 * s}t${5 * s} ${6 * s}v${22 * s}q0 ${6 * s}${-6 * s} ${6 * s}h${-14 * s}v${14 * s}h${-24 * s}v${-8 * s}h${-12 * s}q${-6 * s} 0${-6 * s}${-6 * s}v${-18 * s}q0${-6 * s} ${5 * s}${-6 * s}t${5 * s} ${6 * s}v${12 * s}h${8 * s}v${50 * s}z`} fill={fill} />;
+      if (kind === 'dead') return <path key={i} d={`M${x - 5 * s} ${y}l${3 * s}${-48 * s}${-20 * s}${-22 * s} ${4 * s}${-3 * s} ${17 * s} ${15 * s} ${2 * s}${-34 * s}${-12 * s}${-18 * s} ${4 * s}${-3 * s} ${10 * s} ${13 * s} ${6 * s}${-20 * s} ${5 * s} ${1 * s}${-4 * s} ${30 * s} ${16 * s}${-16 * s} ${4 * s} ${4 * s}${-18 * s} ${22 * s} ${2 * s} ${59 * s}z`} fill={fill} />;
+      return <path key={i} d={`M${x} ${y}l${-26 * s} 0 ${14 * s} ${-26 * s}h${-9 * s}l${13 * s} ${-26 * s}h${-7 * s}l${15 * s} ${-34 * s} ${15 * s} ${34 * s}h${-7 * s}l${13 * s} ${26 * s}h${-9 * s}l${14 * s} ${26 * s}z`} fill={fill} />;
+    });
 
   return (
     <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full select-none" role="img" aria-label="Към върха">
       <defs>
-        <linearGradient id="st-skyg" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`st-skyg-${gid}`} x1="0" y1="0" x2="0" y2="1">
           {[0, 0.42, 0.72, 0.9, 1].map((o, i) => (
             <stop key={o} offset={o} stopColor={theme.sky[i]} />
           ))}
         </linearGradient>
-        <radialGradient id="st-sun">
+        <radialGradient id={`st-sun-${gid}`}>
           <stop offset="0" stopColor={theme.sun} />
           <stop offset=".18" stopColor={theme.sun} stopOpacity=".85" />
           <stop offset=".4" stopColor={theme.glow} stopOpacity=".5" />
           <stop offset="1" stopColor={theme.glow} stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="st-mtL" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#4b4f93" />
-          <stop offset="1" stopColor="#262a5e" />
+        <linearGradient id={`st-mtL-${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={theme.mtL[0]} />
+          <stop offset="1" stopColor={theme.mtL[1]} />
         </linearGradient>
-        <linearGradient id="st-mtR" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#b08fb4" />
-          <stop offset=".45" stopColor="#6a639f" />
-          <stop offset="1" stopColor="#353a75" />
+        <linearGradient id={`st-mtR-${gid}`} x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={theme.mtR[0]} />
+          <stop offset=".45" stopColor={theme.mtR[1]} />
+          <stop offset="1" stopColor={theme.mtR[2]} />
         </linearGradient>
-        <linearGradient id="st-mist" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`st-mist-${gid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#fff" stopOpacity="0" />
-          <stop offset=".6" stopColor="#ffd9c2" stopOpacity=".22" />
-          <stop offset="1" stopColor="#ffd9c2" stopOpacity="0" />
+          <stop offset=".6" stopColor={theme.mist} stopOpacity=".22" />
+          <stop offset="1" stopColor={theme.mist} stopOpacity="0" />
         </linearGradient>
-        <radialGradient id="st-shield">
+        <radialGradient id={`st-shield-${gid}`}>
           <stop offset=".55" stopColor="#9fe8ff" stopOpacity=".05" />
           <stop offset="1" stopColor="#9fe8ff" stopOpacity=".38" />
         </radialGradient>
-        <radialGradient id="st-vig">
-          <stop offset=".6" stopColor="#060918" stopOpacity="0" />
-          <stop offset="1" stopColor="#060918" stopOpacity=".55" />
+        <radialGradient id={`st-vig-${gid}`}>
+          <stop offset=".6" stopColor={theme.vig} stopOpacity="0" />
+          <stop offset="1" stopColor={theme.vig} stopOpacity=".55" />
         </radialGradient>
-        <clipPath id="st-clip">
+        <clipPath id={`st-mtclip-${gid}`}>
+          <path d="M640 206 545 222 10 690H1270L735 222z" />
+        </clipPath>
+        <clipPath id={`st-clip-${gid}`}>
           <rect width={W} height={H} rx="22" />
         </clipPath>
       </defs>
-      <style>{`.st-tw{animation:st-tw 3.2s ease-in-out infinite}.st-drift{animation:st-drift 90s linear infinite}.st-drift2{animation:st-drift 140s linear infinite reverse}.st-spin{animation:st-spin 9s linear infinite;transform-box:fill-box;transform-origin:center}.st-font{font-family:'Unbounded Variable','Nunito Variable',sans-serif}.st-ray{animation:st-ray 7s ease-in-out infinite alternate;transform-origin:1010px 520px}@keyframes st-tw{50%{opacity:.25}}@keyframes st-drift{to{transform:translateX(-1280px)}}@keyframes st-spin{to{transform:rotate(360deg)}}@keyframes st-ray{to{transform:rotate(4deg);opacity:.5}}`}</style>
-      <g clipPath="url(#st-clip)">
+      <style>{`.st-tw{animation:st-tw 3.2s ease-in-out infinite}.st-drift{animation:st-drift 90s linear infinite}.st-drift2{animation:st-drift 140s linear infinite reverse}.st-spin{animation:st-spin 9s linear infinite;transform-box:fill-box;transform-origin:center}.st-font{font-family:'Unbounded Variable','Nunito Variable',sans-serif}.st-ray{animation:st-ray 7s ease-in-out infinite alternate}.st-ember{animation:st-ember 9s linear infinite}.st-lava{animation:st-lava 2.4s ease-in-out infinite alternate}@keyframes st-tw{50%{opacity:.25}}@keyframes st-drift{to{transform:translateX(-1280px)}}@keyframes st-spin{to{transform:rotate(360deg)}}@keyframes st-ray{to{transform:rotate(4deg);opacity:.5}}@keyframes st-ember{0%{transform:translate(0,0);opacity:0}12%{opacity:.9}100%{transform:translate(60px,-560px);opacity:0}}@keyframes st-lava{to{stroke-opacity:.7}}`}</style>
+      <g clipPath={`url(#st-clip-${gid})`}>
         <g id="st-cam">
           <g id="st-sky">
-            <rect x="-200" y="-300" width={W + 400} height={H + 500} fill="url(#st-skyg)" />
-            {stars.map((s, i) => (
-              <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" className="st-tw" style={{ animationDelay: `${s.d}s` }} />
-            ))}
-            <circle cx="1010" cy="520" r="330" fill="url(#st-sun)" />
-            <g className="st-ray" opacity=".3">
-              {[-58, -34, -12, 10, 30].map((a) => (
-                <path key={a} d="M1010 520l-40 -900h80z" fill="#ffe2b0" opacity=".16" transform={`rotate(${a} 1010 520)`} />
-              ))}
-            </g>
-            <circle cx="1010" cy="520" r="54" fill={theme.sun} />
+            <rect x="-200" y="-300" width={W + 400} height={H + 500} fill={`url(#st-skyg-${gid})`} />
+            {theme.stars && stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" className="st-tw" style={{ animationDelay: `${s.d}s` }} />)}
+            <circle cx={theme.sunAt[0]} cy={theme.sunAt[1]} r="330" fill={`url(#st-sun-${gid})`} />
+            {theme.rays && (
+              <g className="st-ray" opacity=".3" style={{ transformOrigin: `${theme.sunAt[0]}px ${theme.sunAt[1]}px` }}>
+                {[-58, -34, -12, 10, 30].map((a) => (
+                  <path key={a} d={`M${theme.sunAt[0]} ${theme.sunAt[1]}l-40 -900h80z`} fill={theme.sun} opacity=".16" transform={`rotate(${a + (theme.sunAt[0] < 640 ? 150 : 0)} ${theme.sunAt[0]} ${theme.sunAt[1]})`} />
+                ))}
+              </g>
+            )}
+            {theme.disc > 0 && <circle cx={theme.sunAt[0]} cy={theme.sunAt[1]} r={theme.disc} fill={theme.sun} />}
           </g>
           <g id="st-far2">
-            <path d="M-80 600 90 380l70 70 120-190 110 150 80-70 150 190 120-150 110 110 130-230 120 170 90-90 170 240V760H-80z" fill="#2b2f70" />
-            <path d="M280 260l-34 54 26-10 14 20 18-22 22 8zM1000 330l-36 64 30-12 12 18 16-20 24 10z" fill="#c9cdf2" opacity=".7" />
+            <path d="M-80 600 90 380l70 70 120-190 110 150 80-70 150 190 120-150 110 110 130-230 120 170 90-90 170 240V760H-80z" fill={theme.far2} />
+            {theme.tip && <path d="M280 260l-34 54 26-10 14 20 18-22 22 8zM1000 330l-36 64 30-12 12 18 16-20 24 10z" fill={theme.tip} opacity=".7" />}
             <g className="st-drift" opacity=".5">
               {[60, 520, 980, 1340, 1800, 2260].map((x, i) => (
-                <path key={i} d={`M${x} ${150 + (i % 3) * 46}q28-30 62-10 30-26 62 2 36-6 44 22h-190q-6-14 22-14z`} fill="#fff" opacity=".5" />
+                <path key={i} d={`M${x} ${150 + (i % 3) * 46}q28-30 62-10 30-26 62 2 36-6 44 22h-190q-6-14 22-14z`} fill={theme.cloud2} opacity=".5" />
               ))}
             </g>
           </g>
           <g id="st-far1">
-            <path d="M-80 660 60 500l90 60 110-150 120 130 90-60 130 180H-80zM700 660l150-190 100 90 120-170 130 150 160 120z" fill="#1d2157" />
+            <path d="M-80 660 60 500l90 60 110-150 120 130 90-60 130 180H-80zM700 660l150-190 100 90 120-170 130 150 160 120z" fill={theme.far1} />
             <g className="st-drift2" opacity=".65">
               {[200, 760, 1300, 1860, 2400].map((x, i) => (
-                <path key={i} d={`M${x} ${300 + (i % 2) * 70}q34-34 76-12 36-30 74 2 42-6 52 26h-226q-8-16 24-16z`} fill="#ffe6d6" opacity=".55" />
+                <path key={i} d={`M${x} ${300 + (i % 2) * 70}q34-34 76-12 36-30 74 2 42-6 52 26h-226q-8-16 24-16z`} fill={theme.cloud1} opacity=".55" />
               ))}
             </g>
           </g>
           {/* планината */}
-          <path d="M640 206 545 222 10 690H640z" fill="url(#st-mtL)" />
-          <path d="M640 206 735 222 1270 690H640z" fill="url(#st-mtR)" />
-          <path d="M545 222q14-12 36-12h118q22 0 36 12l68 60-34-10-26 26-34-22-38 30-32-28-34 24-30-26-30 12z" fill="#f4f6ff" />
-          <path d="M545 222q14-12 36-12h59v74l-34 24-30-26-30 12-69-12z" fill="#b9c0ee" opacity=".55" />
-          <path d="M735 222 1270 690" stroke="#ffd0a8" strokeOpacity=".75" strokeWidth="4" fill="none" />
-          <g stroke="#0d1136" strokeOpacity=".22" strokeWidth="3" fill="none" strokeLinecap="round">
+          <path d="M640 206 545 222 10 690H640z" fill={`url(#st-mtL-${gid})`} />
+          <path d="M640 206 735 222 1270 690H640z" fill={`url(#st-mtR-${gid})`} />
+          {theme.strata && (
+            <g clipPath={`url(#st-mtclip-${gid})`}>
+              {[300, 372, 450, 520, 596].map((y, i) => (
+                <path key={y} d={`M0 ${y}q320 ${i % 2 ? 14 : -14} 640 0t640 0v${i % 2 ? 16 : 26}q-320 12-640 0t-640 0z`} fill={i % 2 ? '#fff' : '#3a0f1c'} opacity={i % 2 ? 0.1 : 0.16} />
+              ))}
+            </g>
+          )}
+          <path d="M545 222q14-12 36-12h118q22 0 36 12l68 60-34-10-26 26-34-22-38 30-32-28-34 24-30-26-30 12z" fill={theme.cap} />
+          <path d="M545 222q14-12 36-12h59v74l-34 24-30-26-30 12-69-12z" fill={theme.capShade} opacity=".55" />
+          <path d="M735 222 1270 690" stroke={theme.rim} strokeOpacity=".75" strokeWidth="4" fill="none" />
+          {theme.embers && <path d="M420 400l70 30 40-26M300 520l90 34 60-30 70 40M640 330v90l-40 60 30 80M800 420l-60 34 30 70M940 560l-80 20-50-40M520 610l80 20" stroke="#ff5a1a" strokeOpacity=".35" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" className="st-lava" />}
+          <g stroke={theme.crack} strokeOpacity={theme.crackO} strokeWidth={theme.crackW} fill="none" strokeLinecap="round" strokeLinejoin="round">
             <path d="M420 400l70 30 40-26M300 520l90 34 60-30 70 40M640 330v90l-40 60 30 80M800 420l-60 34 30 70M940 560l-80 20-50-40M520 610l80 20" />
           </g>
           <g fill="#fff" opacity=".07">
             <path d="M640 206 735 222 900 370 760 340 700 420z" />
           </g>
-          <rect x="560" y="198" width="160" height="16" rx="7" fill="#e6e9fb" stroke={INK} strokeWidth="3" />
-          <rect x="560" y="212" width="160" height="9" fill="#8f96c4" stroke={INK} strokeWidth="3" />
+          <rect x="560" y="198" width="160" height="16" rx="7" fill={theme.plat[0]} stroke={INK} strokeWidth="3" />
+          <rect x="560" y="212" width="160" height="9" fill={theme.plat[1]} stroke={INK} strokeWidth="3" />
           <path d="M640 198V104" stroke="#3a2a1c" strokeWidth="6" strokeLinecap="round" />
           <circle cx="640" cy="100" r="6" fill="#ffd84d" stroke={INK} strokeWidth="2.5" />
           <g transform="translate(643 108)">
-            <path id="st-flag" fill="#ffd84d" stroke={INK} strokeWidth="3" strokeLinejoin="round" />
+            <path id="st-flag" fill={theme.flag} stroke={INK} strokeWidth="3" strokeLinejoin="round" />
           </g>
           <g id="st-steps" />
-          {pines([215, 1065], 668, 1.05, '#141a52')}
+          {flora(theme.flora, [215, 1065], 668, 1.05, theme.treeMid)}
           {players.slice(0, 2).map((p, i) => (
-            <Doll key={i} id={`h${i}`} color={p.color} uri={uris[i]} label={`${p.name.slice(0, 16)}${p.uid === state.you ? ' (ти)' : ''}`} />
+            <Doll key={i} id={`h${i}`} gid={gid} color={p.color} uri={uris[i]} label={`${p.name.slice(0, 16)}${p.uid === state.you ? ' (ти)' : ''}`} />
           ))}
           <g id="st-fx" />
           <Bubbles chat={chat} players={players} shown={shown} />
-          <rect x="-200" y="520" width={W + 400} height="180" fill="url(#st-mist)" />
-          <path d="M-200 668q340-30 640 4t880-10v200H-200z" fill="#090c2b" />
-          {pines([-40, 20, 1262, 1322], 706, 1.7, '#070a24')}
+          <rect x="-200" y="520" width={W + 400} height="180" fill={`url(#st-mist-${gid})`} />
+          {theme.embers && (
+            <g>
+              {Array.from({ length: 16 }, (_, i) => (
+                <circle key={i} cx={120 + ((i * 197) % 1040)} cy={690} r={2 + (i % 3)} fill={i % 2 ? '#ffb347' : '#ff6a2a'} className="st-ember" style={{ animationDelay: `${-(i * 0.9)}s`, animationDuration: `${7 + (i % 5)}s` }} />
+              ))}
+            </g>
+          )}
+          <path d="M-200 668q340-30 640 4t880-10v200H-200z" fill={theme.ground} />
+          {flora(theme.flora, [-40, 20, 1262, 1322], 706, 1.7, theme.treeFg)}
         </g>
-        <rect width={W} height={H} fill="url(#st-vig)" pointerEvents="none" />
+        <rect width={W} height={H} fill={`url(#st-vig-${gid})`} pointerEvents="none" />
         {players.slice(0, 2).map((p, i) => (
           <g key={p.uid} transform={`translate(${i === 0 ? 66 : W - 66} 40)`}>
             <rect x="-42" y="-19" width="84" height="38" rx="19" fill="#0b1030" fillOpacity=".72" stroke={p.color} strokeWidth="2.5" />
