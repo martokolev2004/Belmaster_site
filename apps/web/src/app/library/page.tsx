@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { BookOpen, Search } from 'lucide-react';
+import { BookOpen, ChevronRight, Search } from 'lucide-react';
+import '@/components/landing/landing-next.css';
 import { gradeLabel } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { slugify } from '@/lib/slug';
-import { EmptyState, Input, PageHeader } from '@/components/ui';
+import { EmptyState } from '@/components/ui';
 
 export const metadata = {
   title: 'Библиотека — резюмета и анализи на произведенията по литература',
@@ -12,7 +13,7 @@ export const metadata = {
   alternates: { canonical: '/library' },
 };
 
-const SPINE = ['#58cc02', '#1cb0f6', '#ffc800', '#ff4b4b', '#ce82ff', '#ff9600'];
+const SPINE = ['#6ea2ff', '#5fe0d0', '#ffd166', '#ff7a8a', '#c59bff', '#ff9d3c'];
 
 export default async function LibraryPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const user = await getCurrentUser();
@@ -33,24 +34,37 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
 
   return (
     <div>
-      <PageHeader title="Библиотека" subtitle={`Произведенията за ${gradeLabel(grade)} — резюме, герои, теми и идеи`} />
-      <form className="relative mb-6">
-        <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
-        <Input name="q" defaultValue={term} placeholder="Търси заглавие или автор…" className="pl-12" />
+      <header className="nx-head animate-rise">
+        <p className="ln-eyebrow">{gradeLabel(grade)}</p>
+        <h1 className="ln-display nx-h1">
+          Библио<span className="ln-grad">тека</span>
+        </h1>
+        <p className="nx-sub">
+          {works.length} {works.length === 1 ? 'произведение' : 'произведения'} от {authors.size} {authors.size === 1 ? 'автор' : 'автори'} — резюме, герои, теми и идеи.
+        </p>
+      </header>
+      <form className="lb-search">
+        <Search className="size-5" />
+        <input name="q" defaultValue={term} placeholder="Търси заглавие или автор…" aria-label="Търсене" />
+        {term && (
+          <Link href="/library" className="text-sm font-bold text-muted hover:text-white">
+            Изчисти
+          </Link>
+        )}
       </form>
       {works.length === 0 ? (
         <EmptyState title={term ? 'Нищо не е намерено' : 'Библиотеката още е празна'} icon={<BookOpen className="size-12" />} />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="lb-grid">
           {works.map((w, i) => (
-            <Link key={w.id} href={`/library/${slugify(w.title)}`} className="card3d group flex gap-4 rounded-2xl bg-surface p-4 transition hover:-translate-y-0.5 hover:bg-surface-2">
-              <span className="w-3 shrink-0 rounded-full" style={{ background: SPINE[i % SPINE.length] }} />
-              <span className="min-w-0">
-                <span className="block font-extrabold leading-tight text-ink-strong">{w.title}</span>
-                <span className="mt-0.5 block text-sm text-muted">{w.author}</span>
-                <span className="mt-2 flex flex-wrap gap-1.5 text-xs font-extrabold">
-                  {w.period && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{w.period}</span>}
-                  {w._count.questions > 0 && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-primary-dark">{w._count.questions} {w._count.questions === 1 ? 'въпрос' : 'въпроса'}</span>}
+            <Link key={w.id} href={`/library/${slugify(w.title)}`} className="nx-panel lb-card" style={{ '--c': SPINE[i % SPINE.length] } as React.CSSProperties}>
+              <span className="lb-no ln-display">{String(i + 1).padStart(2, '0')}</span>
+              <span className="lb-author">{w.author}</span>
+              <span className="lb-title">{w.title.replace(/\.\.\.$/, '…')}</span>
+              <span className="lb-foot">
+                {w.period && <span className="lb-chip">{w.period}</span>}
+                <span className="lb-q">
+                  {w._count.questions > 0 ? `${w._count.questions} ${w._count.questions === 1 ? 'въпрос' : 'въпроса'}` : 'четиво'} <ChevronRight className="size-4" />
                 </span>
               </span>
             </Link>

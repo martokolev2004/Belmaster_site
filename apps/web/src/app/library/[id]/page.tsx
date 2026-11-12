@@ -6,7 +6,8 @@ import type { Metadata } from 'next';
 import { isAdmin, getCurrentUser } from '@/lib/auth';
 import { slugify } from '@/lib/slug';
 import type { Work } from '@belmaster/db';
-import { ButtonLink, Card, EmptyState } from '@/components/ui';
+import { ButtonLink, EmptyState } from '@/components/ui';
+import '@/components/landing/landing-next.css';
 
 const FIELDS = [
   { key: 'summary', title: 'Резюме' },
@@ -63,25 +64,28 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   if (!work) notFound();
   const filled = FIELDS.filter((f) => work[f.key]);
 
+  const ICON: Record<string, string> = { summary: '📖', themes: '💡', characters: '🎭', authorInfo: '✍️', quotes: '❝', extra: '📝' };
   return (
-    <article className="mx-auto max-w-3xl">
+    <article className="mx-auto max-w-4xl">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(work)) }} />
-      <Link href="/library" className="mb-4 inline-flex items-center gap-1 font-bold text-secondary">
+      <Link href="/library" className="mb-4 inline-flex items-center gap-1 text-sm font-bold text-secondary">
         <ArrowLeft className="size-4" /> Библиотека
       </Link>
-      <header className="mb-6">
-        <h1 className="text-3xl font-black leading-tight">{work.title}</h1>
-        <p className="mt-1 text-lg text-muted">{work.author}</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-sm font-extrabold">
+      <header className="nx-panel wk-hero animate-rise">
+        <p className="ln-eyebrow">{work.author}</p>
+        <h1 className="ln-display wk-title">{work.title.replace(/\.\.\.$/, '…')}</h1>
+        <div className="mt-4 flex flex-wrap gap-2">
           {[work.period, work.genre, work.year].filter(Boolean).map((t) => (
-            <span key={t} className="rounded-full bg-surface-2 px-3 py-1 text-muted">
+            <span key={t} className="lb-chip">
               {t}
             </span>
           ))}
         </div>
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {work._count.questions > 0 && (
-            <ButtonLink href={user ? `/tests/literature?work=${work.id}` : '/login?tab=register'}>Тествай се ({work._count.questions} {work._count.questions === 1 ? 'въпрос' : 'въпроса'} от матури)</ButtonLink>
+            <ButtonLink href={user ? `/tests/literature?work=${work.id}` : '/login?tab=register'}>
+              Тествай се · {work._count.questions} {work._count.questions === 1 ? 'въпрос' : 'въпроса'}
+            </ButtonLink>
           )}
           {admin && (
             <ButtonLink href={`/admin/works/${work.id}`} variant="outline" icon={<Pencil className="size-4" />}>
@@ -89,28 +93,49 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             </ButtonLink>
           )}
         </div>
+        {filled.length > 1 && (
+          <nav className="wk-nav">
+            {filled.map((f) => (
+              <a key={f.key} href={`#${f.key}`}>
+                {f.title}
+              </a>
+            ))}
+          </nav>
+        )}
       </header>
       {filled.length === 0 ? (
         <EmptyState title="Информацията за произведението се подготвя" icon={<span className="text-5xl">✍️</span>}>
           Скоро тук ще има резюме, анализ, герои и цитати.
         </EmptyState>
       ) : (
-        <div className="space-y-4">
+        <div className="nx-stack mt-4">
           {filled.map((f) => (
-            <Card key={f.key}>
-              <h2 className="mb-2 text-lg font-black">{f.title}</h2>
+            <section key={f.key} id={f.key} className="nx-panel wk-sec">
+              <h2 className="ln-display">
+                <span aria-hidden>{ICON[f.key]}</span> {f.title}
+              </h2>
               {f.key === 'quotes' ? (
                 <ul className="space-y-2">
                   {work.quotes!.split('\n').filter(Boolean).map((line, i) => (
-                    <li key={i} className="border-l-4 border-accent pl-3 italic">
+                    <li key={i} className="wk-quote">
                       {line}
                     </li>
                   ))}
                 </ul>
+              ) : work[f.key]!.includes('•') ? (
+                <ul className="wk-list">
+                  {work[f.key]!.split('\n').map((l) => l.replace(/^\s*•\s*/, '').trim()).filter(Boolean).map((l, i) => (
+                    <li key={i}>{l}</li>
+                  ))}
+                </ul>
               ) : (
-                <div className="whitespace-pre-line leading-relaxed">{work[f.key]}</div>
+                <div className="wk-text">
+                  {work[f.key]!.split(/\n\s*\n/).map((par, i) => (
+                    <p key={i}>{par}</p>
+                  ))}
+                </div>
               )}
-            </Card>
+            </section>
           ))}
         </div>
       )}

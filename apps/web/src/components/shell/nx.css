@@ -285,3 +285,32 @@ html:has(.nx) body { background: #090d1e; }
 .tw-top li > span:first-child { width: 1.4rem; text-align: center; font-size: 0.8rem; color: var(--muted); }
 .tw-top li > b { font-size: 0.95rem; color: rgb(var(--acc-hi)); }
 @media (max-width: 700px) { .tw-hero { grid-template-columns: 1fr; } .tw-hero-art { inset: 0; opacity: 0.3; } .tw-hero::before { background: linear-gradient(180deg, rgb(15 22 52 / 0.6), #0f1634); } .tw-score { justify-self: start; } }
+
+/* ── библиотека ── */
+.lb-search { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.4rem; padding: 0 1.1rem; height: 3.4rem; color: var(--muted); background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px var(--ln-line); clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); transition: box-shadow 0.2s; }
+.lb-search:focus-within { box-shadow: inset 0 0 0 2px rgb(var(--acc)); color: #fff; }
+.nx .lb-search input { flex: 1; min-width: 0; height: 100%; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; outline: none; font-weight: 700; color: #fff; }
+.lb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
+@media (max-width: 1000px) { .lb-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .lb-grid { grid-template-columns: 1fr; } }
+.lb-card { position: relative; display: flex; flex-direction: column; min-height: 9.6rem; padding: 1.15rem 1.2rem 1rem; overflow: hidden; box-shadow: inset 0 0 0 1px var(--ln-line), inset 4px 0 0 var(--c); transition: transform 0.25s, background 0.25s; }
+.lb-card:hover { transform: translateY(-4px); background: linear-gradient(140deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(255, 255, 255, 0.03) 70%); }
+.lb-no { position: absolute; right: 0.9rem; top: 0.6rem; font-size: 2.2rem; color: transparent; -webkit-text-stroke: 1.2px color-mix(in srgb, var(--c) 55%, transparent); opacity: 0.6; }
+.lb-author { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c); padding-right: 3rem; }
+.lb-title { margin-top: 0.45rem; font-size: 1.12rem; font-weight: 900; line-height: 1.2; color: #fff; padding-right: 2rem; }
+.lb-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-top: auto; padding-top: 0.9rem; }
+.lb-chip { padding: 0.25rem 0.6rem; font-size: 0.7rem; font-weight: 800; color: var(--ink); background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px var(--ln-line); }
+.lb-q { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.74rem; font-weight: 800; color: var(--muted); white-space: nowrap; transition: color 0.2s, transform 0.2s; }
+.lb-card:hover .lb-q { color: #fff; transform: translateX(3px); }
+.wk-hero { padding: clamp(1.4rem, 3.5vw, 2.4rem); background: linear-gradient(120deg, rgb(var(--acc) / 0.22), rgba(255, 255, 255, 0.03) 60%); }
+.wk-title { margin-top: 0.8rem; font-size: clamp(1.6rem, 4.2vw, 3rem); overflow-wrap: anywhere; }
+.wk-nav { display: flex; flex-wrap: wrap; gap: 0.3rem 1.3rem; margin-top: 1.6rem; padding-top: 1.1rem; border-top: 1px solid var(--ln-line); font-size: 0.8rem; font-weight: 800; color: var(--muted); }
+.wk-nav a:hover { color: #fff; }
+.wk-sec { padding: clamp(1.2rem, 3vw, 1.8rem); scroll-margin-top: 5.5rem; }
+.nx main .wk-sec h2 { font-size: 0.95rem; color: #fff; margin-bottom: 1rem; }
+.wk-text p { font-size: 1.02rem; line-height: 1.75; color: var(--ink); }
+.wk-text p + p { margin-top: 0.9rem; }
+.wk-list { display: grid; gap: 0.6rem; }
+.wk-list li { position: relative; padding: 0.75rem 0.9rem 0.75rem 2.1rem; font-size: 0.98rem; line-height: 1.6; color: var(--ink); background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--ln-line); }
+.wk-list li::before { content: ''; position: absolute; left: 0.9rem; top: 1.3rem; width: 0.45rem; height: 0.45rem; background: rgb(var(--acc)); transform: rotate(45deg); }
+.wk-quote { padding: 0.7rem 1rem; font-style: italic; border-left: 3px solid rgb(var(--acc)); background: rgba(255, 255, 255, 0.04); }
