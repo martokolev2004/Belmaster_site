@@ -553,47 +553,50 @@ function StartScreen({
     if (screen === 'over' && runId) towerReviewAction(runId).then(setReview);
   }, [screen, runId]);
   const mb = useMemo(() => Math.max(monthBest, finish?.floors ?? 0), [monthBest, finish]);
+  const over = screen === 'over' && !!finish;
+  const RULES: [string, string, string][] = [
+    ['❓', 'Отговори вярно', `Имаш ${TOWER.QUESTION_MS / 1000} секунди за въпрос. Верен отговор = нов етаж на крана.`],
+    ['🏗️', 'Пусни го точно', 'Етажът се люлее наляво-надясно. Натисни, когато е над кулата.'],
+    ['❤️', `${TOWER.LIVES} сърца`, 'Губиш сърце при грешен отговор, изтекло време или паднал етаж.'],
+    ['✨', 'Перфектно пускане', `${TOWER.PERFECT_STREAK} перфектни поред изправят кулата наполовина.`],
+    ['🌪️', 'Кулата се люлее', 'Колкото по-криво строиш, толкова повече се клати. Наклони ли се твърде много — срутва се.'],
+    ['⭐', 'Точки', `${TOWER.XP_PER_CORRECT} XP за верен отговор, до ${TOWER.XP_DAILY_QUESTIONS} въпроса на ден. На всеки 10 етажа става по-трудно.`],
+  ];
   return (
-    <div className="mx-auto max-w-lg space-y-5">
+    <div className="nx-stack mx-auto max-w-4xl" style={{ gap: '1.6rem' }}>
       {finish?.record && <Confetti />}
-      <div className="card3d overflow-hidden rounded-3xl bg-surface">
-        <div className="relative h-40 bg-cover bg-bottom" style={{ backgroundImage: 'url(/tower/town.webp)' }}>
-          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/30 to-transparent" />
-          <p className="absolute bottom-2 left-5 text-3xl font-black text-ink-strong">🏛️ Кула на Словото</p>
-        </div>
-        <div className="p-5 pt-2 text-center">
-          {screen === 'over' && finish ? (
-            <>
-              <p className="text-sm font-extrabold uppercase text-muted">{finish.record ? 'Нов рекорд!' : 'Кулата ти'}</p>
-              <p className="text-7xl font-black tabular-nums text-secondary">{finish.floors}</p>
-              <p className="font-bold text-muted">етажа</p>
-              <div className="mt-3 flex justify-center gap-2">
-                <Badge tone="yellow">
-                  <Trophy className="mr-1 inline size-4" />
-                  Рекорд: {finish.best}
-                </Badge>
-                {finish.xpEarned > 0 && <Badge tone="green">+{finish.xpEarned} XP</Badge>}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-extrabold uppercase text-muted">Твоят рекорд</p>
-              <p className="text-7xl font-black tabular-nums text-secondary">{best}</p>
-              <p className="font-bold text-muted">етажа · този месец: {mb}</p>
-              <p className="mt-3 text-sm text-muted">Отговори вярно, за да получиш етаж, после го пусни точно върху кулата. 3 сърца за цялата игра — губиш сърце при грешка, изтекло време или паднал етаж. Колкото по-криво строиш, толкова повече се люлее кулата!</p>
-            </>
-          )}
-          <Button block size="lg" className="mt-5" onClick={onStart} disabled={busy}>
-            {busy ? '…' : screen === 'over' ? 'Още една кула' : 'Строй!'}
-          </Button>
-          {isGuest && <p className="mt-2 text-xs text-muted">Като гост можеш да играеш, но не влизаш в класацията.</p>}
+      <header className="nx-panel tw-hero animate-rise">
+        <div className="tw-hero-art" style={{ backgroundImage: 'url(/landing/tower.webp)' }} />
+        <div className="tw-hero-copy">
+          <p className="ln-eyebrow">Аркада · сам</p>
+          <h1 className="ln-display nx-h1">
+            Кула на <span className="ln-grad">Словото</span>
+          </h1>
+          <p className="nx-sub" style={{ color: '#c5cfee' }}>
+            Всеки верен отговор е нов етаж. Пусни го точно върху кулата — колко високо ще стигнеш?
+          </p>
+          <div className="tw-cta">
+            <Button size="lg" onClick={onStart} disabled={busy}>
+              {busy ? '…' : over ? 'Още една кула' : 'Строй!'}
+            </Button>
+            {isGuest && <span className="text-xs font-semibold text-muted">Като гост играеш, но не влизаш в класацията.</span>}
+          </div>
           {error && <p className="mt-2 text-sm font-bold text-error">{error}</p>}
         </div>
-      </div>
+        <div className="tw-score">
+          <small>{over ? (finish!.record ? 'Нов рекорд!' : 'Кулата ти') : 'Твоят рекорд'}</small>
+          <b className="ln-display ln-grad">{over ? finish!.floors : best}</b>
+          <span>етажа</span>
+          <em>
+            {over ? `рекорд: ${finish!.best}` : `този месец: ${mb}`}
+            {over && finish!.xpEarned > 0 && ` · +${finish!.xpEarned} XP`}
+          </em>
+        </div>
+      </header>
 
       {screen === 'over' && review && review.length > 0 && (
-        <div className="card3d rounded-2xl bg-surface p-5">
-          <h2 className="mb-3 text-lg font-extrabold text-ink-strong">Разбор на въпросите</h2>
+        <div className="nx-panel pf-box">
+          <h2 className="ln-display mb-3 text-[0.95rem] text-white">Разбор на въпросите</h2>
           <ul className="space-y-2.5 text-sm">
             {review.map((r, i) => (
               <li key={i} className="flex gap-2">
@@ -613,31 +616,42 @@ function StartScreen({
         </div>
       )}
 
-      <div className="card3d rounded-2xl bg-surface p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-ink-strong">
-          <Trophy className="size-5 text-accent" /> Най-високите кули този месец
-        </h2>
-        {top.length ? (
-          <ol className="space-y-2">
-            {top.map((r, i) => (
-              <li key={r.userId} className={cn('flex items-center gap-3 rounded-xl px-2 py-1.5', r.userId === meId && 'bg-secondary/10')}>
-                <span className="w-6 text-center font-black text-muted">{i + 1}</span>
-                <Avatar name={r.name} avatar={r.avatar as never} seed={r.userId} size={32} />
-                <span className="flex-1 truncate font-bold">{r.name}</span>
-                <span className="font-black tabular-nums text-secondary">🏛️ {r.score}</span>
-              </li>
+      <div className="pf-two" style={{ alignItems: 'start' }}>
+        <div className="nx-panel pf-box">
+          <header>
+            <h2 className="ln-display">Най-високите кули</h2>
+            <Link href="/leaderboard?tab=tower" className="pf-more">Цялата класация →</Link>
+          </header>
+          {top.length ? (
+            <ol className="tw-top">
+              {top.map((r, i) => (
+                <li key={r.userId} data-me={r.userId === meId}>
+                  <span className="ln-display">{i + 1}</span>
+                  <Avatar name={r.name} avatar={r.avatar as never} seed={r.userId} size={32} />
+                  <span className="flex-1 truncate font-bold">{r.name}</span>
+                  <b className="ln-display">{r.score}</b>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm font-semibold text-muted">Още никой не е строил този месец. Бъди първият!</p>
+          )}
+        </div>
+        <div>
+          <p className="ln-eyebrow mb-3">Правила</p>
+          <div className="ch-rules" style={{ gridTemplateColumns: '1fr' }}>
+            {RULES.map(([icon, title, text]) => (
+              <div key={title} className="nx-panel">
+                <span>{icon}</span>
+                <div>
+                  <b className="ln-display">{title}</b>
+                  <p>{text}</p>
+                </div>
+              </div>
             ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-muted">Още никой не е строил този месец. Бъди първият!</p>
-        )}
-        <ButtonLink href="/leaderboard?tab=tower" variant="ghost" block className="mt-3">
-          Цялата класация
-        </ButtonLink>
+          </div>
+        </div>
       </div>
-      <Link href="/" className="block text-center text-sm font-bold text-muted">
-        Към началото
-      </Link>
     </div>
   );
 }
