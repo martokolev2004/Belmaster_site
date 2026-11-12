@@ -61,16 +61,16 @@ interface StageApi {
   busy: () => boolean;
 }
 
-type StepKind = 'stone' | 'wood' | 'basalt';
+type StepKind = 'stone' | 'wood' | 'ice';
 interface Look {
   sky: string[]; sun: string; glow: string; sunAt: [number, number]; disc: number; rays: boolean; stars: boolean;
   far2: string; tip: string | null; far1: string; cloud2: string; cloud1: string;
   mtL: [string, string]; mtR: [string, string, string]; rim: string; crack: string; crackW: number; crackO: number;
   cap: string; capShade: string; plat: [string, string]; flag: string;
   flora: 'pine' | 'cactus' | 'dead'; treeMid: string; treeFg: string; ground: string; mist: string; vig: string;
-  step: StepKind; shard: string; embers: boolean; strata: boolean;
+  step: StepKind; shard: string; aurora: boolean; strata: boolean;
 }
-/** Трите карти: „Снежният връх“ (залез), „Червеният каньон“ и „Вулканът“ (нощ). */
+/** Трите карти: „Снежният връх“ (залез), „Червеният каньон“ и „Леденият връх“ (нощ със северно сияние). */
 const LOOKS: Record<ClimbTheme, Look> = {
   dusk: {
     sky: ['#070b25', '#1c2763', '#5a4d9c', '#e58a6b', '#ffc48a'], sun: '#fff4d6', glow: '#ffb27a', sunAt: [1010, 520], disc: 54, rays: true, stars: true,
@@ -78,7 +78,7 @@ const LOOKS: Record<ClimbTheme, Look> = {
     mtL: ['#4b4f93', '#262a5e'], mtR: ['#b08fb4', '#6a639f', '#353a75'], rim: '#ffd0a8', crack: '#0d1136', crackW: 3, crackO: 0.22,
     cap: '#f4f6ff', capShade: '#b9c0ee', plat: ['#e6e9fb', '#8f96c4'], flag: '#ffd84d',
     flora: 'pine', treeMid: '#141a52', treeFg: '#070a24', ground: '#090c2b', mist: '#ffd9c2', vig: '#060918',
-    step: 'stone', shard: '#c9cdee', embers: false, strata: false,
+    step: 'stone', shard: '#c9cdee', aurora: false, strata: false,
   },
   canyon: {
     sky: ['#3b2a6e', '#8a4a8e', '#e0707a', '#ffa868', '#ffe0a8'], sun: '#fff6d8', glow: '#ffc27a', sunAt: [300, 250], disc: 46, rays: true, stars: false,
@@ -86,21 +86,21 @@ const LOOKS: Record<ClimbTheme, Look> = {
     mtL: ['#c2603f', '#7a3238'], mtR: ['#f3a569', '#cf6c42', '#86383c'], rim: '#ffe2ae', crack: '#4a1620', crackW: 3, crackO: 0.3,
     cap: '#f6c890', capShade: '#d98f58', plat: ['#f6dcae', '#b9814f'], flag: '#4f8cff',
     flora: 'cactus', treeMid: '#5a2440', treeFg: '#2a1026', ground: '#2a1026', mist: '#ffd2a0', vig: '#1a0a1c',
-    step: 'wood', shard: '#b9814f', embers: false, strata: true,
+    step: 'wood', shard: '#b9814f', aurora: false, strata: true,
   },
   night: {
-    sky: ['#04030c', '#120c24', '#34122c', '#7a2420', '#e0602c'], sun: '#ffd27a', glow: '#ff6a2a', sunAt: [640, 236], disc: 0, rays: false, stars: true,
-    far2: '#1c1328', tip: null, far1: '#110b1b', cloud2: '#4a3040', cloud1: '#3a2634',
-    mtL: ['#33263d', '#17111f'], mtR: ['#55343c', '#2c1d2c', '#15101c'], rim: '#ff8a4a', crack: '#ff7a2a', crackW: 4, crackO: 0.95,
-    cap: '#ffb347', capShade: '#e0431f', plat: ['#6a5868', '#2c2230'], flag: '#ffd84d',
-    flora: 'dead', treeMid: '#0d0813', treeFg: '#050308', ground: '#07040d', mist: '#ff7a3a', vig: '#040208',
-    step: 'basalt', shard: '#4a3f52', embers: true, strata: false,
+    sky: ['#020815', '#062035', '#0b3a52', '#14576a', '#2a8a8a'], sun: '#f2fbff', glow: '#7fe8d0', sunAt: [300, 190], disc: 38, rays: false, stars: true,
+    far2: '#0d2c4a', tip: '#d8f4ff', far1: '#081d36', cloud2: '#bfeee8', cloud1: '#9fd8e0',
+    mtL: ['#3f7fa8', '#143a5e'], mtR: ['#c4ecf7', '#5fa6c9', '#1d4f78'], rim: '#d6fbff', crack: '#062035', crackW: 3, crackO: 0.22,
+    cap: '#ffffff', capShade: '#a9dcf0', plat: ['#eafcff', '#7fc4dc'], flag: '#ff6b6b',
+    flora: 'pine', treeMid: '#0a2440', treeFg: '#03101f', ground: '#041426', mist: '#9ff0e0', vig: '#020a14',
+    step: 'ice', shard: '#bfeeff', aurora: true, strata: false,
   },
 };
 const STEP_ART: Record<StepKind, string> = {
   stone: `<path d="M-40 4h80v9q0 7-7 7h-66q-7 0-7-7z" fill="#8f96c4" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#e6e9fb" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M-34 -2h40" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M-12 8v9M18 8v9" stroke="${INK}" stroke-opacity=".35" stroke-width="2"/>`,
   wood: `<path d="M-30 6l-8 22M30 6l8 22" stroke="#5a3520" stroke-width="7" stroke-linecap="round"/><path d="M-30 6l-8 22M30 6l8 22" stroke="#8a5a34" stroke-width="3" stroke-linecap="round"/><rect x="-44" y="-6" width="88" height="15" rx="4" fill="#d9a066" stroke="#2a1420" stroke-width="3"/><path d="M-44 2h88" stroke="#2a1420" stroke-opacity=".3" stroke-width="2"/><path d="M-16 -6v15M14 -6v15" stroke="#2a1420" stroke-opacity=".45" stroke-width="2"/><path d="M-38 -2h18M20 -2h14" stroke="#ffe0b0" stroke-width="2.5" stroke-linecap="round"/><circle cx="-34" cy="5" r="1.8" fill="#2a1420"/><circle cx="34" cy="5" r="1.8" fill="#2a1420"/>`,
-  basalt: `<path d="M-40 4h80v10q0 7-7 7h-66q-7 0-7-7z" fill="#231b2b" stroke="#07040d" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#51455a" stroke="#07040d" stroke-width="3" stroke-linejoin="round"/><path d="M-30 12l12-6 10 7 14-8 12 6 14-5" fill="none" stroke="#ff8a3a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M-30 12l12-6 10 7 14-8 12 6 14-5" fill="none" stroke="#ffe08a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/><path d="M-34 -2h30" stroke="#8a7a94" stroke-width="2.5" stroke-linecap="round"/>`,
+  ice: `<path d="M-30 14l5 15 6-15M6 14l5 19 6-19M26 14l4 11 5-11" fill="#c9f3ff" stroke="#0a2a48" stroke-width="2.5" stroke-linejoin="round"/><path d="M-40 4h80v6q0 7-7 7h-66q-7 0-7-7z" fill="#6fc3e6" stroke="#0a2a48" stroke-width="3" stroke-linejoin="round"/><path d="M-43 -1q0-5 5-5h76q5 0 5 5v7h-86z" fill="#e6fbff" stroke="#0a2a48" stroke-width="3" stroke-linejoin="round"/><path d="M-34 -2h26M4 -2h10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M-20 9l10 5M12 8l12 6" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>`,
 };
 
 function Doll({ id, color, uri, label, gid }: { id: string; color: string; uri: string; label: string; gid: string }) {
@@ -712,12 +712,23 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
           <rect width={W} height={H} rx="22" />
         </clipPath>
       </defs>
-      <style>{`.st-tw{animation:st-tw 3.2s ease-in-out infinite}.st-drift{animation:st-drift 90s linear infinite}.st-drift2{animation:st-drift 140s linear infinite reverse}.st-spin{animation:st-spin 9s linear infinite;transform-box:fill-box;transform-origin:center}.st-font{font-family:'Unbounded Variable','Nunito Variable',sans-serif}.st-ray{animation:st-ray 7s ease-in-out infinite alternate}.st-ember{animation:st-ember 9s linear infinite}.st-lava{animation:st-lava 2.4s ease-in-out infinite alternate}@keyframes st-tw{50%{opacity:.25}}@keyframes st-drift{to{transform:translateX(-1280px)}}@keyframes st-spin{to{transform:rotate(360deg)}}@keyframes st-ray{to{transform:rotate(4deg);opacity:.5}}@keyframes st-ember{0%{transform:translate(0,0);opacity:0}12%{opacity:.9}100%{transform:translate(60px,-560px);opacity:0}}@keyframes st-lava{to{stroke-opacity:.7}}`}</style>
+      <style>{`.st-tw{animation:st-tw 3.2s ease-in-out infinite}.st-drift{animation:st-drift 90s linear infinite}.st-drift2{animation:st-drift 140s linear infinite reverse}.st-spin{animation:st-spin 9s linear infinite;transform-box:fill-box;transform-origin:center}.st-font{font-family:'Unbounded Variable','Nunito Variable',sans-serif}.st-ray{animation:st-ray 7s ease-in-out infinite alternate}.st-aur{animation:st-aur 9s ease-in-out infinite alternate;transform-origin:640px 0}@keyframes st-tw{50%{opacity:.25}}@keyframes st-drift{to{transform:translateX(-1280px)}}@keyframes st-spin{to{transform:rotate(360deg)}}@keyframes st-ray{to{transform:rotate(4deg);opacity:.5}}@keyframes st-aur{0%{transform:translateX(-30px) scaleY(.9)}100%{transform:translateX(40px) scaleY(1.15)}}`}</style>
       <g clipPath={`url(#st-clip-${gid})`}>
         <g id="st-cam">
           <g id="st-sky">
             <rect x="-200" y="-300" width={W + 400} height={H + 500} fill={`url(#st-skyg-${gid})`} />
             {theme.stars && stars.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#fff" className="st-tw" style={{ animationDelay: `${s.d}s` }} />)}
+            {theme.aurora && (
+              <g style={{ mixBlendMode: 'screen' }}>
+                {[
+                  ['M-120 250q260-150 520-40t470-70 560-30v-190h-1550z', '#4dffb0', 0, 0.5],
+                  ['M-120 330q300-110 560-10t520-90 470 10v-150q-240-70-470 0t-520 60-560-30z', '#5fd8ff', -3, 0.38],
+                  ['M100 210q240-90 420-20t400-80 480 30v-120h-1300z', '#b48cff', -6, 0.26],
+                ].map(([d, c, delay, o]) => (
+                  <path key={d as string} d={d as string} fill={c as string} opacity={o as number} className="st-aur" style={{ animationDelay: `${delay}s`, filter: 'blur(14px)' }} />
+                ))}
+              </g>
+            )}
             <circle cx={theme.sunAt[0]} cy={theme.sunAt[1]} r="330" fill={`url(#st-sun-${gid})`} />
             {theme.rays && (
               <g className="st-ray" opacity=".3" style={{ transformOrigin: `${theme.sunAt[0]}px ${theme.sunAt[1]}px` }}>
@@ -758,7 +769,6 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
           <path d="M545 222q14-12 36-12h118q22 0 36 12l68 60-34-10-26 26-34-22-38 30-32-28-34 24-30-26-30 12z" fill={theme.cap} />
           <path d="M545 222q14-12 36-12h59v74l-34 24-30-26-30 12-69-12z" fill={theme.capShade} opacity=".55" />
           <path d="M735 222 1270 690" stroke={theme.rim} strokeOpacity=".75" strokeWidth="4" fill="none" />
-          {theme.embers && <path d="M420 400l70 30 40-26M300 520l90 34 60-30 70 40M640 330v90l-40 60 30 80M800 420l-60 34 30 70M940 560l-80 20-50-40M520 610l80 20" stroke="#ff5a1a" strokeOpacity=".35" strokeWidth="12" fill="none" strokeLinecap="round" strokeLinejoin="round" className="st-lava" />}
           <g stroke={theme.crack} strokeOpacity={theme.crackO} strokeWidth={theme.crackW} fill="none" strokeLinecap="round" strokeLinejoin="round">
             <path d="M420 400l70 30 40-26M300 520l90 34 60-30 70 40M640 330v90l-40 60 30 80M800 420l-60 34 30 70M940 560l-80 20-50-40M520 610l80 20" />
           </g>
@@ -780,13 +790,6 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
           <g id="st-fx" />
           <Bubbles chat={chat} players={players} shown={shown} />
           <rect x="-200" y="520" width={W + 400} height="180" fill={`url(#st-mist-${gid})`} />
-          {theme.embers && (
-            <g>
-              {Array.from({ length: 16 }, (_, i) => (
-                <circle key={i} cx={120 + ((i * 197) % 1040)} cy={690} r={2 + (i % 3)} fill={i % 2 ? '#ffb347' : '#ff6a2a'} className="st-ember" style={{ animationDelay: `${-(i * 0.9)}s`, animationDuration: `${7 + (i % 5)}s` }} />
-              ))}
-            </g>
-          )}
           <path d="M-200 668q340-30 640 4t880-10v200H-200z" fill={theme.ground} />
           {flora(theme.flora, [-40, 20, 1262, 1322], 706, 1.7, theme.treeFg)}
         </g>
