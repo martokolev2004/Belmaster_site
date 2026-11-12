@@ -277,7 +277,7 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
     const addStep = (h: Hero, n: number) => {
       const [x, y] = spot(h.side, n);
       const g = mk('g', {}) as SVGGElement;
-      g.innerHTML = STEP_ART[live.current.look.step];
+      g.innerHTML = `<g transform="translate(0 8)">${STEP_ART[live.current.look.step]}</g>`; // горният ръб точно под подметките
       g.dataset.x = String(x);
       g.dataset.y = String(y);
       g.setAttribute('transform', `translate(${x} ${y}) scale(0)`);
@@ -555,7 +555,7 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
       const r = h.rig, e = h.el, w = h.idle ? 1 : 0, ph = t * 2.6 + h.side;
       const sy = r.sy + Math.sin(ph) * 0.016 * w, bob = Math.sin(ph) * 1.2 * w;
       J(e.g, `translate(${r.x.toFixed(1)} ${r.y.toFixed(1)})`);
-      J(e.root, `scale(${h.face * 0.98} 0.98) translate(0 ${(r.by + bob).toFixed(2)}) rotate(${r.rot.toFixed(1)} 0 -60) scale(${r.sx.toFixed(3)} ${sy.toFixed(3)})`);
+      J(e.root, `scale(${h.face * 0.98} 0.98) translate(0 ${(r.by + bob - 8).toFixed(2)}) rotate(${r.rot.toFixed(1)} 0 -60) scale(${r.sx.toFixed(3)} ${sy.toFixed(3)})`);
       J(e.head, `rotate(${(r.head + Math.sin(ph * 0.7) * 1.6 * w).toFixed(2)} 0 -88)`);
       J(e.afS, `rotate(${(r.afS + Math.sin(ph) * 3 * w).toFixed(1)})`);
       J(e.afE, `translate(0 24) rotate(${r.afE.toFixed(1)})`);
