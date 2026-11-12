@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CLIMB, type ClimbOutcome, type ClimbPlayer, type ClimbState, type ClimbTheme } from '@belmaster/shared';
-import { ClimbScene } from './ClimbScene';
+import { ClimbStage } from './ClimbStage';
 
 const base = (uid: string, name: string, color: string, height: number, weapon: string): ClimbPlayer => ({
   uid, name, avatar: null, frame: 'none', weapon, color, isBot: false, isGuest: false, height, shieldUsed: false, shieldArmed: false,
@@ -37,5 +37,5 @@ export function ClimbDemo({ theme = 'night' }: { theme?: ClimbTheme }) {
     outcome: cur ? { ...cur.o, id: step + 1, outcomes: [cur.o] } : null,
     deadline: null, winnerUid: null, draw: false, log: [], matchId: null, ratingDelta: null, rematchCode: null, serverNow: 0,
   };
-  return <ClimbScene state={state} />;
+  return <ClimbStage state={state} />;
 }

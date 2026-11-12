@@ -22,7 +22,7 @@ import { cn } from '@/lib/cn';
 import { play } from '@/lib/sound';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { buyWeaponAction, selectWeaponAction } from '@/app/(app)/climb/actions';
-import { ClimbScene } from './ClimbScene';
+import { ClimbStage } from './ClimbStage';
 import { ClimbDemo } from './ClimbDemo';
 import { useClimb, useLeft, type ClimbSocket } from './useClimb';
 
@@ -326,7 +326,7 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
       ) : (
       <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr] phone-landscape:min-h-0 phone-landscape:flex-1 phone-landscape:grid-cols-[1.1fr_1fr] phone-landscape:gap-2">
         <div className="card3d overflow-hidden rounded-2xl bg-surface phone-landscape:min-h-0">
-          <ClimbScene state={state} chat={chat} />
+          <ClimbStage state={state} chat={chat} />
           {other && (
             <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-muted phone-landscape:hidden">
               <span>
@@ -448,7 +448,7 @@ function DesktopLayout({
         </div>
       )}
       <div className="card3d relative overflow-hidden rounded-2xl bg-surface">
-        <ClimbScene state={state} chat={chat} />
+        <ClimbStage state={state} chat={chat} />
         {banner && (
           <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
             <span className="rounded-full bg-black/60 px-4 py-2 text-sm font-extrabold text-white backdrop-blur">{banner}</span>

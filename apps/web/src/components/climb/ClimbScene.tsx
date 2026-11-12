@@ -1,5 +1,8 @@
 'use client';
 
+// РЕЗЕРВЕН ВАРИАНТ: старата сцена на „Към върха“ (старите герои). Не се ползва —
+// за връщане смени ClimbStage с ClimbScene в ClimbGame.tsx и ClimbDemo.tsx.
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CLIMB, CLIMB_CHAT, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState, type ClimbTheme } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';

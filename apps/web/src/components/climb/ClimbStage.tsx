@@ -1,21 +1,20 @@
 'use client';
 
 /**
- * ТЕСТ (/test): нов вид на „Към върха“ — герои с тяло и стави, сцена на слоеве, камера и ефекти.
- * Без сървър и без въпроси: играта върви сама или с бутоните. Правилата на истинската игра не са пипани.
+ * Сцената на „Към върха“: герои с тяло и стави, планина на слоеве, камера и ефекти.
+ * Управлява се от състоянието на играта (ClimbState) — правилата са на сървъра, тук са само анимациите.
+ * Старата сцена е запазена в ClimbScene.tsx (резервен вариант).
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { sanitizeAvatar } from '@belmaster/shared';
+import { CLIMB, CLIMB_CHAT, sanitizeAvatar, weaponById, type ClimbOutcome, type ClimbPlayer, type ClimbState, type ClimbTheme } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';
 
 const W = 1280;
 const H = 720;
 const GROUND = 650;
-const N = 10;
+const N = CLIMB.STEPS;
 const NS = 'http://www.w3.org/2000/svg';
 const INK = '#141a33';
-const COLORS = ['#4f8cff', '#ff6b6b'];
-const WEAPONS = ['📕', '⚽'];
 
 /** Къде стъпва герой на височина h; side = -1 (ляво) / +1 (дясно). */
 function spot(side: number, h: number): [number, number] {
@@ -47,21 +46,28 @@ interface Hero {
   rig: Rig;
   height: number;
   idle: boolean;
+  /** щитът се вижда на екрана (своят — винаги; чуждият — само за миг, когато отбие удар) */
   shield: boolean;
-  shieldUsed: boolean;
   steps: SVGGElement[];
   el: Record<string, SVGElement>;
 }
 
-export interface StageHud {
-  heights: [number, number];
-  msg: string | null;
-  busy: boolean;
-  shieldUsed: boolean;
-  winner: number | null;
+/** Какво може да прави сцената — вика се от обвивката според състоянието на играта. */
+interface StageApi {
+  play: (outcomes: ClimbOutcome[], after: number[], sideOf: (uid: string) => number, me: number) => Promise<void>;
+  sync: (heights: number[]) => void;
+  shield: (side: number, on: boolean) => void;
+  finish: (side: number | null) => void;
+  busy: () => boolean;
 }
 
-function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
+const SKIES: Record<ClimbTheme, { sky: string[]; sun: string; glow: string }> = {
+  dusk: { sky: ['#070b25', '#1c2763', '#5a4d9c', '#e58a6b', '#ffc48a'], sun: '#fff4d6', glow: '#ffb27a' },
+  night: { sky: ['#03061a', '#0d1740', '#1d2f6b', '#2f4a8e', '#5f7fc0'], sun: '#f3f7ff', glow: '#9fc2ff' },
+  canyon: { sky: ['#1a1038', '#4a2466', '#a8456e', '#f08a4b', '#ffd08a'], sun: '#fff1c9', glow: '#ff9a5a' },
+};
+
+function Doll({ id, color, uri, label }: { id: string; color: string; uri: string; label: string }) {
   const limb = { fill: color, stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const };
   const dark = { fill: '#232a55', stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const };
   const arm = (k: string) => (
@@ -114,6 +120,15 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
         <g transform="translate(22 -75)">{arm('af')}</g>
         <path data-j="flash" d="M-34 -176h68v180h-68z" fill="#fff" opacity="0" style={{ mixBlendMode: 'screen' }} />
       </g>
+      <g data-j="tag" transform="translate(0 -196)">
+        <rect x={-(label.length * 4.6 + 14)} y="-13" width={label.length * 9.2 + 28} height="26" rx="13" fill="#0b1030" fillOpacity=".78" stroke={color} strokeWidth="2.5" />
+        <text x="0" y="5" textAnchor="middle" fontSize="15" fontWeight="800" fill="#fff">
+          {label}
+        </text>
+        <text data-j="crown" x="0" y="-22" textAnchor="middle" fontSize="34" opacity="0">
+          👑
+        </text>
+      </g>
       <g data-j="shield" opacity="0">
         <circle cx="0" cy="-78" r="92" fill="url(#st-shield)" stroke="#9fe8ff" strokeWidth="3" strokeDasharray="14 9" className="st-spin" />
         <circle cx="0" cy="-78" r="92" fill="none" stroke="#fff" strokeOpacity=".5" strokeWidth="1.5" />
@@ -122,30 +137,37 @@ function Doll({ id, color, uri }: { id: string; color: string; uri: string }) {
   );
 }
 
-export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; seed: string; onHud: (h: StageHud) => void; control: React.MutableRefObject<{ act: (k: 'climb' | 'throw' | 'shield') => void; setAuto: (v: boolean) => void; reset: () => void } | null> }) {
+export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { uid: string; key: string; at: number }[] }) {
   const svg = useRef<SVGSVGElement>(null);
-  const uris = useMemo(() => {
-    const mk = (a: unknown, s: string) => `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg(sanitizeAvatar(a, null, s), 'none', { noBg: true }))}`;
-    return [mk(avatar, seed), mk(null, 'bot')];
-  }, [avatar, seed]);
-  const hud = useRef(onHud);
-  hud.current = onHud;
+  const api = useRef<StageApi | null>(null);
+  const players = state.players;
+  const theme = SKIES[state.theme] ?? SKIES.dusk;
+  const heights = players.map((p) => p.height);
+  const me = Math.max(0, players.findIndex((p) => p.uid === state.you));
+  const [shown, setShown] = useState<number[]>(heights);
+  const uris = useMemo(
+    () => players.map((p) => `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg(sanitizeAvatar(p.avatar, null, p.isBot ? 'bot' : p.uid), 'none', { noBg: true }))}`),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [players.map((p) => `${p.uid}:${JSON.stringify(p.avatar)}`).join('|')],
+  );
+  const live = useRef({ players, setShown });
+  live.current = { players, setShown };
 
   useEffect(() => {
     const root = svg.current!;
     const q = <T extends SVGElement>(s: string, from: ParentNode = root) => from.querySelector(s) as T;
+    if (!root.querySelector('[data-hero="h1"]')) return;
     const cam = q<SVGGElement>('#st-cam'), fx = q<SVGGElement>('#st-fx'), stepsG = q<SVGGElement>('#st-steps'), flag = q<SVGPathElement>('#st-flag');
     const far = [q<SVGGElement>('#st-far1'), q<SVGGElement>('#st-far2'), q<SVGGElement>('#st-sky')];
-    let alive = true, auto = true, busy = false, turn = 0, wait = 1.2, timeScale = 1, hitstop = 0, shake = 0, raf = 0, last = performance.now(), clock = 0, winner: number | null = null;
+    let alive = true, busy = false, timeScale = 1, hitstop = 0, shake = 0, raf = 0, last = performance.now(), clock = 0, me = 0, cheer = 0;
     const camS = { y: 360, z: 1, ty: 360, tz: 1 };
 
     const heroes: Hero[] = [-1, 1].map((side, i) => {
       const g = q<SVGGElement>(`[data-hero="h${i}"]`);
       const el: Record<string, SVGElement> = { g };
       g.querySelectorAll('[data-j]').forEach((n) => (el[(n as SVGElement).dataset.j!] = n as SVGElement));
-      (el.item as SVGTextElement).textContent = WEAPONS[i];
       const [x, y] = spot(side, 0);
-      return { side, face: -side, rig: { ...REST, x, y }, height: 0, idle: true, shield: false, shieldUsed: false, steps: [], el };
+      return { side, face: -side, rig: { ...REST, x, y }, height: 0, idle: true, shield: false, steps: [], el };
     });
 
     // ── малки помощници за анимация ──
@@ -194,7 +216,7 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       }).then(() => (star.remove(), ring.remove()));
     };
     const pop = (x: number, y: number, text: string, color: string, size = 44) => {
-      const half = Math.min(W / 2 - 20, text.length * size * 0.42 + 30);
+      const half = Math.min(W / 2 - 20, text.length * size * 0.5 + 70);
       x = Math.max(half, Math.min(W - half, x));
       y = Math.max(70, y);
       const t = mk('text', { 'text-anchor': 'middle', 'font-size': size, 'font-weight': 900, fill: color, stroke: INK, 'stroke-width': 7, 'paint-order': 'stroke', 'stroke-linejoin': 'round', class: 'st-font' });
@@ -228,24 +250,35 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
     };
     const setStep = (g: SVGGElement, s: number, dy = 0) => g.setAttribute('transform', `translate(${g.dataset.x} ${Number(g.dataset.y) + dy}) scale(${s})`);
 
-    const emit = (msg: string | null = null) => hud.current({ heights: [heroes[0].height, heroes[1].height], msg, busy, shieldUsed: heroes[0].shieldUsed, winner });
+    const notify = () => live.current.setShown(heroes.map((h) => h.height));
+    const color = (i: number) => live.current.players[i]?.color ?? '#fff';
     /**
-     * Щитът пази само стъпалото, на което е вдигнат. Виждаш само своя (левия);
-     * чуждият е скрит и се показва чак когато отбие удар.
+     * Щитът пази само стъпалото, на което е вдигнат. Своя го виждаш; чуждият е скрит
+     * (сървърът изобщо не го праща) и се показва само за миг, когато отбие удар — reveal.
      */
     const setShield = (h: Hero, on: boolean, reveal = false) => {
+      const s = h.el.shield, was = h.shield;
       h.shield = on;
-      const s = h.el.shield, mine = h === heroes[0];
       if (on) {
-        if (mine) run(350, (k) => (s.setAttribute('opacity', String(k)), s.setAttribute('transform', `scale(${ease.back(k)})`)));
-      } else if (mine || reveal) {
-        // чуждият щит първо „светва“, после се пръсва
-        run(reveal && !mine ? 520 : 300, (k) => {
-          const show = reveal && !mine ? Math.min(1, k * 5) * (1 - Math.max(0, (k - 0.45) / 0.55)) : 1 - k;
-          s.setAttribute('opacity', String(show));
+        if (!was) run(350, (k) => (s.setAttribute('opacity', String(k)), s.setAttribute('transform', `scale(${ease.back(k)})`)));
+      } else if (was) {
+        run(300, (k) => (s.setAttribute('opacity', String(1 - k)), s.setAttribute('transform', `scale(${1 + ease.out(k) * 0.45})`)));
+      } else if (reveal) {
+        run(520, (k) => {
+          s.setAttribute('opacity', String(Math.min(1, k * 5) * (1 - Math.max(0, (k - 0.45) / 0.55))));
           s.setAttribute('transform', `scale(${1 + ease.out(k) * 0.45})`);
         });
-      } else s.setAttribute('opacity', '0');
+      }
+    };
+    /** Слага героя направо на дадена височина (начало, връщане в играта, нова игра). */
+    const place = (h: Hero, n: number) => {
+      h.steps.forEach((g) => g.remove());
+      h.steps = [];
+      for (let k = 1; k <= Math.min(n, N - 1); k++) setStep(addStep(h, k), 1);
+      const [x, y] = spot(h.side, n);
+      Object.assign(h.rig, REST, { x, y });
+      h.height = n;
+      h.idle = true;
     };
 
     // ── действия ──
@@ -268,13 +301,13 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       });
       r.rot = 0;
       h.height = n;
+      notify();
     }
     async function climb(i: number) {
       const h = heroes[i], r = h.rig, n = h.height + 1;
-      busy = true;
       h.idle = false;
-      emit();
-      if (h.shield) setShield(h, false);
+      // качва се → щитът остава на старото стъпало (чуждият и без това не се вижда)
+      setShield(h, false);
       camS.tz = 1.1;
       if (n < N) {
         const step = addStep(h, n);
@@ -300,9 +333,7 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       await hop(h, n, n >= N ? 96 : 74, 400);
       await land(h);
       pop(r.x, r.y - 190, n >= N ? 'ВРЪХ!' : '+1', '#fff', n >= N ? 54 : 38);
-      if (n >= N) return win(i);
       h.idle = true;
-      done();
     }
     async function knock(h: Hero, dir: number) {
       const r = h.rig;
@@ -341,61 +372,63 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
         }
       });
     }
-    async function throwAt(i: number) {
+    /** Хвърляне с резултата от сървъра: уцелен, пропуск или отбит от щит (saved = щитът на хвърлящия го е опазил). */
+    async function throwAt(i: number, kind: 'hit' | 'miss' | 'reflect', emoji: string, saved: boolean) {
       const a = heroes[i], b = heroes[1 - i], r = a.rig;
-      busy = true;
       a.idle = false;
-      emit();
-      const reflect = b.shield, hit = !reflect && Math.random() < 0.62;
       camS.tz = 1.06;
+      (a.el.item as SVGTextElement).textContent = emoji;
       r.item = 1;
-      await to(r, { rot: -16, afS: 150, afE: 40, abS: -50, lfH: -18, lbH: 20, by: 3, head: -8, sx: 0.96, sy: 1.03 }, 300, ease.out);
-      await sleep(70);
+      await to(r, { rot: -16, afS: 150, afE: 40, abS: -50, lfH: -18, lbH: 20, by: 3, head: -8, sx: 0.96, sy: 1.03 }, 280, ease.out);
+      await sleep(60);
       to(r, { rot: 14, afS: -95, afE: -8, abS: 60, lfH: 22, lbH: -16, head: 6 }, 95, ease.in);
       await sleep(70);
       r.item = 0;
       const p = mk('text', { 'text-anchor': 'middle', 'font-size': 40, 'dominant-baseline': 'central' });
-      p.textContent = WEAPONS[i];
+      p.textContent = emoji;
       fx.appendChild(p);
       const from: [number, number] = [r.x + a.face * 40, r.y - 120];
       const target: [number, number] = [b.rig.x, b.rig.y - 95];
       const missTo: [number, number] = [b.rig.x + a.face * 190, b.rig.y + 30];
       to(r, { ...REST }, 380, ease.elastic);
-      await fly(p, from, hit || reflect ? target : missTo, 520, 150, COLORS[i]);
-      if (reflect) {
+      await fly(p, from, kind === 'miss' ? missTo : target, 500, 150, color(i));
+      if (kind === 'reflect') {
         hitstop = 0.09;
         burst(target[0], target[1], '#bdf1ff');
         puff(target[0], target[1], 16, '#9fe8ff', 260, 5, 0.5, 100);
         shake = 0.3;
         setShield(b, false, true);
-        pop(target[0], target[1] - 120, i === 0 ? 'ИМАЛ Е ЩИТ!' : 'ОТБИТО!', '#9fe8ff');
+        pop(target[0], target[1] - 120, i === me ? 'ИМАЛ Е ЩИТ!' : 'ОТБИТО!', '#9fe8ff');
         const back: [number, number] = [r.x, r.y - 95];
-        await fly(p, target, back, 380, 110, '#9fe8ff');
+        await fly(p, target, back, 360, 110, '#9fe8ff');
         p.remove();
-        await impact(a, -a.face);
-        return done(i === 0 ? '🛡️ Ботът имаше щит — ударът се върна към теб' : '🛡️ Щитът ти върна удара');
-      }
-      if (hit) {
+        if (saved) {
+          // и хвърлящият е с щит — неговият поема върнатия удар
+          setShield(a, false, true);
+          burst(back[0], back[1], '#bdf1ff');
+          pop(r.x, r.y - 200, 'ЩИТ СРЕЩУ ЩИТ', '#9fe8ff', 28);
+          await sleep(450);
+        } else await impact(a, -a.face);
+      } else if (kind === 'hit') {
         p.remove();
         pop(target[0], target[1] - 90, 'УЦЕЛИ!', '#ffd84d');
         await impact(b, a.face);
-        return done();
-      }
-      p.remove();
-      puff(missTo[0], missTo[1], 6, '#e8e3f5', 90, 5, 0.4, 200);
-      pop(b.rig.x, b.rig.y - 170, 'ПРОПУСК', '#c9d0ee', 34);
-      if (a.shield) {
-        setShield(a, false, true);
-        pop(r.x, r.y - 190, i === 0 ? 'ЩИТЪТ ТЕ ОПАЗИ' : 'ИМАЛ Е ЩИТ', '#9fe8ff', 28);
-        await sleep(500);
       } else {
-        // загуба на равновесие
-        await to(r, { rot: 14, afS: -140, abS: 130, head: 10 }, 160, ease.out);
-        await to(r, { rot: -18, afS: 120, abS: -140, head: -12 }, 170, ease.io);
-        await knock(a, -a.face);
+        p.remove();
+        puff(missTo[0], missTo[1], 6, '#e8e3f5', 90, 5, 0.4, 200);
+        pop(b.rig.x, b.rig.y - 170, 'ПРОПУСК', '#c9d0ee', 34);
+        if (saved) {
+          setShield(a, false, true);
+          pop(r.x, r.y - 200, i === me ? 'ЩИТЪТ ТЕ ОПАЗИ' : 'ИМАЛ Е ЩИТ', '#9fe8ff', 28);
+          await sleep(450);
+        } else {
+          // загуба на равновесие
+          await to(r, { rot: 14, afS: -140, abS: 130, head: 10 }, 150, ease.out);
+          await to(r, { rot: -18, afS: 120, abS: -140, head: -12 }, 160, ease.io);
+          await knock(a, -a.face);
+        }
       }
       a.idle = true;
-      done();
     }
     async function impact(h: Hero, dir: number) {
       const r = h.rig;
@@ -408,77 +441,76 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       to(r, { flash: 0 }, 260, ease.out);
       await knock(h, dir);
     }
-    function shieldUp(i: number) {
-      const h = heroes[i];
-      if (busy || h.shieldUsed || h.height <= 0) return;
-      h.shieldUsed = true;
-      setShield(h, true);
-      if (i === 0) puff(h.rig.x, h.rig.y - 78, 12, '#9fe8ff', 170, 4, 0.5, 0);
-      emit(i === 0 ? '🛡️ Щитът пази това стъпало — другият не го вижда' : null);
-    }
-    async function win(i: number) {
-      winner = i;
-      const h = heroes[i], r = h.rig;
-      camS.tz = 1.28;
-      emit(i === 0 ? '🏆 Ти стигна върха!' : '🏆 Бот Перко стигна върха!');
-      for (let k = 0; k < 4; k++) {
+    async function cheerLoop(h: Hero, id: number) {
+      const r = h.rig;
+      h.idle = false;
+      h.el.crown.setAttribute('opacity', '1');
+      for (let k = 0; k < 4 && alive && cheer === id; k++) {
         confetti();
-        await to(r, { by: 8, sy: 0.84, sx: 1.12, afS: -40, abS: -40 }, 130);
-        to(r, { afS: -170, abS: -170, afE: -15, abE: -15 }, 120);
+        await to(r, { by: 8, sy: 0.84, sx: 1.12, afS: -40, abS: 40 }, 130);
+        to(r, { afS: -170, abS: 170, afE: -15, abE: 15 }, 120);
         await run(360, (t) => ((r.by = -46 * Math.sin(t * Math.PI)), (r.sy = 1.08), (r.sx = 0.95)));
         await to(r, { ...REST }, 200, ease.elastic);
+        await sleep(350);
       }
-      await sleep(1200);
-      reset();
+      h.idle = true;
     }
-    function done(msg: string | null = null) {
-      busy = false;
-      wait = 0.75;
-      camS.tz = 1;
-      emit(msg);
-    }
-    function reset() {
-      jobs.length = 0;
-      for (const p of parts) p.el.remove();
-      parts.length = 0;
-      fx.replaceChildren();
-      stepsG.replaceChildren();
-      heroes.forEach((h) => {
-        const [x, y] = spot(h.side, 0);
-        Object.assign(h.rig, REST, { x, y });
-        h.height = 0;
-        h.steps = [];
-        h.idle = true;
-        h.shield = h.shieldUsed = false;
-        h.el.shield.setAttribute('opacity', '0');
-      });
-      busy = false;
-      winner = null;
-      turn = 0;
-      wait = 1;
-      camS.tz = 1;
-      emit(null);
-    }
-    function bot(i: number) {
-      const h = heroes[i], o = heroes[1 - i];
-      if (!h.shieldUsed && h.height > 1 && Math.random() < 0.14) shieldUp(i);
-      if (o.height > 0 && Math.random() < (o.height > h.height ? 0.5 : 0.24)) void throwAt(i);
-      else void climb(i);
-    }
-    control.current = {
-      act: (k) => {
-        if (busy || winner != null) return;
-        if (k === 'shield') return shieldUp(0);
-        turn = 1;
-        if (k === 'climb') void climb(0);
-        else void throwAt(0);
+    let queue: Promise<void> = Promise.resolve();
+    api.current = {
+      busy: () => busy,
+      sync: (hs) => {
+        if (busy) return;
+        heroes.forEach((h, i) => {
+          if (hs[i] != null && h.height !== hs[i]) place(h, hs[i]);
+        });
+        notify();
       },
-      setAuto: (v) => ((auto = v), (turn = 0)),
-      reset,
+      shield: (side, on) => {
+        const h = heroes[side];
+        if (!h || h.shield === on) return;
+        if (on) puff(h.rig.x, h.rig.y - 78, 12, '#9fe8ff', 170, 4, 0.5, 0);
+        // свалянето по време на анимация го прави самата анимация (с правилния ефект)
+        if (on || !busy) setShield(h, on);
+      },
+      finish: (side) => {
+        const id = ++cheer;
+        heroes.forEach((h) => h.el.crown.setAttribute('opacity', '0'));
+        if (side == null) return void (camS.tz = 1);
+        queue = queue.then(async () => {
+          if (!alive || cheer !== id) return;
+          camS.tz = 1.2;
+          await cheerLoop(heroes[side], id);
+        });
+      },
+      play: (outcomes, after, sideOf, meIdx) => {
+        queue = queue.then(async () => {
+          if (!alive) return;
+          me = meIdx;
+          busy = true;
+          try {
+            for (const o of outcomes) {
+              const a = sideOf(o.actorUid);
+              if (a < 0) continue;
+              if (o.kind === 'climb') await climb(a);
+              else if (o.kind === 'hit' || o.kind === 'miss' || o.kind === 'reflect') await throwAt(a, o.kind, weaponById(o.weapon).emoji, o.kind !== 'hit' && !!o.saved);
+            }
+          } finally {
+            busy = false;
+            camS.tz = 1;
+            // за всеки случай — изравняване с истинското състояние
+            heroes.forEach((h, i) => {
+              const want = !!live.current.players[i]?.shieldArmed;
+              if (h.shield !== want) setShield(h, want);
+            });
+            heroes.forEach((h, i) => {
+              if (after[i] != null && h.height !== after[i]) place(h, after[i]);
+            });
+            notify();
+          }
+        });
+        return queue;
+      },
     };
-
-    // за автоматичните проверки на пробната страница
-    Object.assign(window, { __stg: { heroes, shieldUp, throwAt, climb, setAuto: (v: boolean) => (auto = v) } });
 
     // ── кадър ──
     const J = (el: SVGElement, t: string) => el.setAttribute('transform', t);
@@ -496,6 +528,7 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       J(e.lfK, `translate(0 17) rotate(${r.lfK.toFixed(1)})`);
       J(e.lbH, `rotate(${r.lbH.toFixed(1)})`);
       J(e.lbK, `translate(0 17) rotate(${r.lbK.toFixed(1)})`);
+      J(e.tag, `translate(0 ${(-196 + r.by * 0.98).toFixed(1)})`);
       e.flash.setAttribute('opacity', r.flash.toFixed(2));
       e.hammer.setAttribute('opacity', String(r.hammer));
       e.item.setAttribute('opacity', String(r.item));
@@ -534,15 +567,6 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
         p.el.setAttribute('opacity', (k * (p.grow < 0 ? 0.55 : 1)).toFixed(2));
       }
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) (parts[i].el.remove(), parts.splice(i, 1));
-      if (!busy && winner == null) {
-        wait -= dt;
-        if (wait <= 0 && (auto || turn === 1)) {
-          const i = turn;
-          turn = auto ? 1 - turn : 0;
-          wait = 0.6;
-          bot(i);
-        }
-      }
       heroes.forEach((h) => draw(h, clock));
       // знаме
       let d = 'M0 0';
@@ -569,14 +593,36 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
       J(far[1], `translate(0 ${(py * 0.35).toFixed(1)})`);
       J(far[2], `translate(0 ${(py * 0.8).toFixed(1)})`);
     }
-    emit(null);
     raf = requestAnimationFrame(frame);
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
-      control.current = null;
+      api.current = null;
     };
-  }, [control]);
+  }, []);
+
+  // ── връзка със състоянието на играта ──
+  const lastOutcome = useRef<number | null>(state.outcome?.id ?? null);
+  useEffect(() => {
+    const st = api.current;
+    if (!st) return;
+    const o = state.outcome;
+    if (!o || o.id === lastOutcome.current) return st.sync(heights);
+    lastOutcome.current = o.id;
+    void st.play(o.outcomes ?? [o], heights, (uid) => players.findIndex((p) => p.uid === uid), me);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.outcome?.id, heights.join(',')]);
+  // щитът: сървърът праща shieldArmed само за теб — затова чуждият никога не се рисува предварително
+  const armed = players.map((p) => !!p.shieldArmed).join(',');
+  useEffect(() => {
+    players.forEach((p, i) => api.current?.shield(i, !!p.shieldArmed));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [armed]);
+  const finished = state.phase === 'finished';
+  useEffect(() => {
+    api.current?.finish(finished && state.winnerUid ? players.findIndex((p) => p.uid === state.winnerUid) : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finished, state.winnerUid]);
 
   const stars = useMemo(() => Array.from({ length: 46 }, (_, i) => ({ x: (i * 173.3) % W, y: (i * 97.7) % 330, r: 0.8 + ((i * 7) % 5) * 0.35, d: (i % 7) * 0.5 })), []);
   const pines = (xs: number[], y: number, s: number, fill: string) => xs.map((x, i) => <path key={i} d={`M${x} ${y}l${-26 * s} 0 ${14 * s} ${-26 * s}h${-9 * s}l${13 * s} ${-26 * s}h${-7 * s}l${15 * s} ${-34 * s} ${15 * s} ${34 * s}h${-7 * s}l${13 * s} ${26 * s}h${-9 * s}l${14 * s} ${26 * s}z`} fill={fill} />);
@@ -585,17 +631,15 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
     <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full select-none" role="img" aria-label="Към върха">
       <defs>
         <linearGradient id="st-skyg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#070b25" />
-          <stop offset=".42" stopColor="#1c2763" />
-          <stop offset=".72" stopColor="#5a4d9c" />
-          <stop offset=".9" stopColor="#e58a6b" />
-          <stop offset="1" stopColor="#ffc48a" />
+          {[0, 0.42, 0.72, 0.9, 1].map((o, i) => (
+            <stop key={o} offset={o} stopColor={theme.sky[i]} />
+          ))}
         </linearGradient>
         <radialGradient id="st-sun">
-          <stop offset="0" stopColor="#fff7df" />
-          <stop offset=".18" stopColor="#ffe2a6" />
-          <stop offset=".4" stopColor="#ffb27a" stopOpacity=".55" />
-          <stop offset="1" stopColor="#ff9a6a" stopOpacity="0" />
+          <stop offset="0" stopColor={theme.sun} />
+          <stop offset=".18" stopColor={theme.sun} stopOpacity=".85" />
+          <stop offset=".4" stopColor={theme.glow} stopOpacity=".5" />
+          <stop offset="1" stopColor={theme.glow} stopOpacity="0" />
         </radialGradient>
         <linearGradient id="st-mtL" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#4b4f93" />
@@ -637,7 +681,7 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
                 <path key={a} d="M1010 520l-40 -900h80z" fill="#ffe2b0" opacity=".16" transform={`rotate(${a} 1010 520)`} />
               ))}
             </g>
-            <circle cx="1010" cy="520" r="54" fill="#fff4d6" />
+            <circle cx="1010" cy="520" r="54" fill={theme.sun} />
           </g>
           <g id="st-far2">
             <path d="M-80 600 90 380l70 70 120-190 110 150 80-70 150 190 120-150 110 110 130-230 120 170 90-90 170 240V760H-80z" fill="#2b2f70" />
@@ -677,69 +721,54 @@ export function ClimbStage({ avatar, seed, onHud, control }: { avatar: unknown; 
           </g>
           <g id="st-steps" />
           {pines([215, 1065], 668, 1.05, '#141a52')}
-          <Doll id="h0" color={COLORS[0]} uri={uris[0]} />
-          <Doll id="h1" color={COLORS[1]} uri={uris[1]} />
+          {players.slice(0, 2).map((p, i) => (
+            <Doll key={i} id={`h${i}`} color={p.color} uri={uris[i]} label={`${p.name.slice(0, 16)}${p.uid === state.you ? ' (ти)' : ''}`} />
+          ))}
           <g id="st-fx" />
+          <Bubbles chat={chat} players={players} shown={shown} />
           <rect x="-200" y="520" width={W + 400} height="180" fill="url(#st-mist)" />
           <path d="M-200 668q340-30 640 4t880-10v200H-200z" fill="#090c2b" />
           {pines([-40, 20, 1262, 1322], 706, 1.7, '#070a24')}
         </g>
         <rect width={W} height={H} fill="url(#st-vig)" pointerEvents="none" />
+        {players.slice(0, 2).map((p, i) => (
+          <g key={p.uid} transform={`translate(${i === 0 ? 66 : W - 66} 40)`}>
+            <rect x="-42" y="-19" width="84" height="38" rx="19" fill="#0b1030" fillOpacity=".72" stroke={p.color} strokeWidth="2.5" />
+            <text x="0" y="6" textAnchor="middle" fontSize="19" fontWeight="900" fill="#fff" className="st-font">
+              {shown[i] ?? 0}/{N}
+            </text>
+          </g>
+        ))}
       </g>
     </svg>
   );
 }
 
-export function ClimbStageDemo({ avatar, seed, name }: { avatar: unknown; seed: string; name: string }) {
-  const control = useRef<{ act: (k: 'climb' | 'throw' | 'shield') => void; setAuto: (v: boolean) => void; reset: () => void } | null>(null);
-  const [hud, setHud] = useState<StageHud>({ heights: [0, 0], msg: null, busy: false, shieldUsed: false, winner: null });
-  const [auto, setAuto] = useState(true);
-  const plate = (i: number, label: string) => (
-    <div className="stg-plate" data-side={i} style={{ '--c': COLORS[i] } as React.CSSProperties}>
-      <b className="ln-display">{label}</b>
-      <span className="stg-pips">
-        {Array.from({ length: N }, (_, k) => (
-          <i key={k} data-on={k < hud.heights[i]} />
-        ))}
-      </span>
-      <em className="ln-display">{hud.heights[i]}/{N}</em>
-    </div>
-  );
+/** Реплики от чата над главите. */
+function Bubbles({ chat, players, shown }: { chat: { uid: string; key: string; at: number }[]; players: ClimbPlayer[]; shown: number[] }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 300);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div className="stg">
-      <div className="stg-top">
-        {plate(0, name)}
-        <span className="ln-display stg-vs">VS</span>
-        {plate(1, 'Бот Перко')}
-      </div>
-      <div className="stg-frame">
-        <ClimbStage avatar={avatar} seed={seed} onHud={setHud} control={control} />
-        {hud.msg && <p className="stg-msg ln-display">{hud.msg}</p>}
-      </div>
-      <div className="stg-bar">
-        {auto ? (
-          <p className="text-sm font-bold text-muted">Играта върви сама, за да видиш анимациите.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <button disabled={hud.busy} onClick={() => control.current?.act('climb')} className="ln-btn ln-btn-primary ln-btn-sm">⛏ Качи се</button>
-            <button disabled={hud.busy} onClick={() => control.current?.act('throw')} className="ln-btn ln-btn-ghost ln-btn-sm">🎯 Хвърли</button>
-            <button disabled={hud.busy || hud.shieldUsed || hud.heights[0] === 0} onClick={() => control.current?.act('shield')} className="ln-btn ln-btn-ghost ln-btn-sm">🛡 Щит</button>
-          </div>
-        )}
-        <div className="ml-auto flex gap-2">
-          <button
-            onClick={() => {
-              const v = !auto;
-              setAuto(v);
-              control.current?.setAuto(v);
-            }}
-            className="ln-btn ln-btn-ghost ln-btn-sm"
-          >
-            {auto ? 'Играй сам' : 'Пусни автоматично'}
-          </button>
-          <button onClick={() => control.current?.reset()} className="ln-btn ln-btn-ghost ln-btn-sm">↻</button>
-        </div>
-      </div>
-    </div>
+    <g>
+      {players.slice(0, 2).map((p, i) => {
+        const c = [...chat].reverse().find((m) => m.uid === p.uid && now - m.at < 2600);
+        if (!c) return null;
+        const text = CLIMB_CHAT.find((m) => m.key === c.key)?.text ?? '';
+        const w = Math.max(60, text.length * 10 + 24);
+        const [px, py] = spot(i === 0 ? -1 : 1, shown[i] ?? 0);
+        const x = Math.max(w / 2 + 10, Math.min(W - w / 2 - 10, px + (i === 0 ? 70 : -70)));
+        return (
+          <g key={`${c.at}-${p.uid}`} transform={`translate(${x} ${Math.max(40, py - 250)})`}>
+            <rect x={-w / 2} y="-22" width={w} height="38" rx="19" fill="#fff" stroke={p.color} strokeWidth="2.5" />
+            <text x="0" y="4" textAnchor="middle" fontSize="17" fontWeight="800" fill="#1f1f1f">
+              {text}
+            </text>
+          </g>
+        );
+      })}
+    </g>
   );
 }
