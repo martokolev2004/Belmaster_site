@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Heart, Trophy, X } from 'lucide-react';
-import { craneX, floorSize, simulateDrop, swayX, TOWER, TOWER_BASE_W, TOWER_STYLE, towerHeight, type DropResult, type TowerTheme } from '@belmaster/shared';
+import { simulateDrop, TOWER, type DropKind } from '@belmaster/shared';
 import { Avatar, Badge, Button, ButtonLink } from '@/components/ui';
 import { AnswerInput } from '@/components/quiz/inputs';
 import { ContextBox } from '@/components/quiz/ContextBox';
@@ -14,29 +14,7 @@ import { play } from '@/lib/sound';
 import type { ClientQuestion } from '@/lib/quiz-types';
 import type { TowerState } from '@/lib/tower';
 import { answerTowerAction, beginTowerAction, dropTowerAction, quitTowerAction, startTowerAction, towerReviewAction, type TowerFinish } from '@/app/(app)/tower/actions';
-import { Floor, Roof } from './floors';
-
-const VW = 450;
-const VH = 800;
-const CX = VW / 2;
-const FH = TOWER.FLOOR_H;
-const HANG_Y = 172; // горният ръб на висящия етаж (на екрана)
-const BASE: Record<TowerTheme, number> = { town: 742, mountain: 742, library: 722 };
-/** цветът на небето в горния край на фона — продължава нагоре */
-const SKY: Record<TowerTheme, string> = { town: '#659fe1', mountain: '#4075b8', library: '#332d5e' };
-const SKY_WIDE: Record<TowerTheme, string> = { town: '#8ebbe4', mountain: '#407ecf', library: '#856ece' };
-/** широката сцена (компютър): 16:9, кулата остава в средата */
-const WIDE_W = (VH * 16) / 9;
-const WIDE_X = CX - WIDE_W / 2;
-
-// стабилни „звезди“ високо в небето
-const STARS = Array.from({ length: 140 }, (_, i) => {
-  const r = (n: number) => {
-    const v = Math.sin(i * 91.7 + n * 17.3) * 43758.5453;
-    return v - Math.floor(v);
-  };
-  return { x: r(1) * VW, y: -1800 - r(2) * 7000, s: 0.6 + r(3) * 1.6 };
-});
+import { TowerStage, type TowerStageApi } from './TowerStage';
 
 interface TopRow {
   userId: string;
@@ -45,8 +23,6 @@ interface TopRow {
   score: number;
 }
 
-type Anim = { res: DropResult; start: number; serverDone: boolean; fromX: number };
-
 export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { best: number; monthBest: number; top: TopRow[]; meId: string; isGuest: boolean }) {
   const [screen, setScreen] = useState<'start' | 'play' | 'over'>('start');
   const [st, setSt] = useState<TowerState | null>(null);
@@ -54,15 +30,17 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
   const [qStart, setQStart] = useState(0);
   const [dropStart, setDropStart] = useState(0);
   const [feedback, setFeedback] = useState<{ shown: number; correctIndex: number | null; ok: boolean } | null>(null);
-  const [anim, setAnim] = useState<Anim | null>(null);
-  const [shake, setShake] = useState(0);
+  /** върви анимация на пускане (видът му — за брояча) */
+  const [anim, setAnim] = useState<DropKind | null>(null);
+  const [ready, setReady] = useState(0);
+  const stage = useRef<TowerStageApi | null>(null);
+  const dropping = useRef(false);
   const [toast, setToast] = useState<{ text: string; tone: 'good' | 'bad' | 'info'; at: number } | null>(null);
   const [finish, setFinish] = useState<TowerFinish | null>(null);
   const [best, setBest] = useState(bestAll);
   const [now, setNow] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pending = useRef<Awaited<ReturnType<typeof dropTowerAction>> | null>(null);
   const desktop = useDesktop();
 
   // кадри
@@ -106,6 +84,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     setFinish(null);
     setFeedback(null);
     setAnim(null);
+    dropping.current = false;
     applyState(r.state, r.question);
     setScreen('play');
   };
@@ -131,7 +110,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
       say('Вярно! Пусни етажа', 'good');
     } else {
       play('wrong');
-      setShake((s) => s + 1);
+      stage.current?.hurt();
       say(shown < 0 ? 'Времето изтече! −1 ❤' : 'Грешно! −1 ❤', 'bad');
     }
     setTimeout(
@@ -148,44 +127,37 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
   };
 
   const drop = useCallback(() => {
-    if (!st || st.phase !== 'drop' || anim) return;
+    if (!st || st.phase !== 'drop' || dropping.current) return;
     const t = Math.min(TOWER.DROP_MS, performance.now() - dropStart);
     const sim = { xs: st.xs, lean: st.lean, streak: st.streak, lives: st.lives };
     const res = simulateDrop(sim, t, st.seed);
-    pending.current = null;
-    setAnim({ res, start: performance.now(), serverDone: false, fromX: res.craneX });
+    dropping.current = true;
+    setAnim(res.kind);
     play('tick');
-    dropTowerAction(st.runId, t).then((r) => {
-      pending.current = r;
-      setAnim((a) => (a ? { ...a, serverDone: true } : a));
+    // сцената и сървърът вървят заедно; състоянието идва от сървъра, когато и двете приключат
+    Promise.all([dropTowerAction(st.runId, t), stage.current?.play(res)]).then(([r]) => {
+      dropping.current = false;
+      setAnim(null);
+      if ('error' in r) return setError(r.error);
+      if (r.finish) {
+        setSt(r.state);
+        setQuestion(null);
+        end(r.finish, 300);
+      } else applyState(r.state, r.question);
     });
-  }, [st, anim, dropStart]);
+  }, [st, dropStart, applyState, end]);
 
-  // край на анимацията на пускането → състоянието от сървъра
-  const animDur = anim ? (anim.res.kind === 'collapse' ? 1700 : anim.res.kind === 'fall' ? 1100 : 380) : 0;
+  const onLand = useCallback((kind: DropKind) => play(kind === 'perfect' ? 'capture' : kind === 'ok' ? 'turn' : 'hit'), []);
+  const onReady = useCallback(() => setReady((n) => n + 1), []);
+
+  // сцената следва състоянието на играта
   useEffect(() => {
-    if (!anim || !anim.serverDone || now - anim.start < animDur) return;
-    const r = pending.current;
-    setAnim(null);
-    if (!r || 'error' in r) {
-      if (r && 'error' in r) setError(r.error);
-      return;
-    }
-    if (r.kind === 'perfect') {
-      play('capture');
-      say(r.steadied ? 'Перфектно! Кулата се успокои' : 'Перфектно!', 'good');
-    } else if (r.kind === 'ok') play('turn');
-    else if (r.kind === 'fall') {
-      play('hit');
-      setShake((s) => s + 1);
-      say('Етажът падна! −1 ❤', 'bad');
-    } else say('Кулата се срути!', 'bad');
-    if (r.finish) {
-      setSt(r.state);
-      setQuestion(null);
-      end(r.finish, 500);
-    } else applyState(r.state, r.question);
-  }, [anim, now, animDur, applyState, end]);
+    const api = stage.current;
+    if (!api || !st || screen !== 'play' || anim) return;
+    api.sync(st.seed, { xs: st.xs, lean: st.lean, streak: st.streak, lives: st.lives }, best);
+    if (st.phase === 'drop') api.aim(dropStart);
+    else api.hold();
+  }, [st, dropStart, anim, ready, screen, best]);
 
   // таймери: въпрос и пускане
   useEffect(() => {
@@ -217,10 +189,10 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
     return <StartScreen screen={screen} finish={finish} runId={st?.runId ?? null} best={best} monthBest={monthBest} top={top} meId={meId} isGuest={isGuest} busy={busy} error={error} onStart={start} />;
 
   if (desktop) {
-    const floorsShown = st.xs.length + (anim && anim.res.kind !== 'fall' ? 1 : 0);
+    const floorsShown = st.xs.length;
     return (
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#0b0f1a]">
-        <Scene wide st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+        <TowerStage theme={st.theme} api={stage} onReady={onReady} onLand={onLand} onTap={drop} />
         {st.phase === 'intro' && <TowerIntro onBegin={begin} busy={busy} best={best} />}
         {toast && now - toast.at < 1400 && (
           <div className="pointer-events-none absolute inset-x-0 top-[44%] flex justify-center">
@@ -229,7 +201,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
         )}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-between gap-6 p-6">
           {/* вляво: резултат */}
-          <aside className="pointer-events-auto w-60 shrink-0 space-y-4 text-white">
+          <div className="pointer-events-auto w-60 shrink-0 space-y-4 text-white">
             <button onClick={quit} className="inline-flex items-center gap-2 rounded-full bg-black/50 px-4 py-2 text-sm font-extrabold hover:bg-black/65">
               <X className="size-4" /> Край на играта
             </button>
@@ -250,13 +222,13 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
               {st.streak > 0 && <p className="mt-3 text-sm font-black text-accent">⭐ {st.streak}/3 перфектни поред</p>}
             </div>
             <p className="rounded-2xl bg-black/35 px-3 py-2 text-xs text-white/80 backdrop-blur">Пускане: клик върху кулата или интервал. 3 перфектни пускания поред успокояват люлеенето.</p>
-          </aside>
+          </div>
 
         </div>
 
         {/* пускане — малка подсказка горе, не пречи на клика */}
         {st.phase === 'drop' && !anim && (
-          <div className="pointer-events-none absolute inset-x-0 top-3 flex flex-col items-center gap-1.5">
+          <div className="pointer-events-none absolute right-6 top-1/2 flex w-64 -translate-y-1/2 flex-col items-center gap-2 text-center">
             <span className="animate-pulse rounded-full bg-black/55 px-5 py-2.5 text-lg font-black text-white">Пусни етажа! (клик или интервал)</span>
             <div className="h-2.5 w-64 overflow-hidden rounded-full bg-white/30">
               <div className="h-full bg-white" style={{ width: `${Math.max(0, 100 - ((now - dropStart) / TOWER.DROP_MS) * 100)}%` }} />
@@ -279,17 +251,18 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0b0f1a]">
-      <div className="relative overflow-hidden" style={{ width: 'min(100vw, calc(100dvh * 9 / 16))', height: 'min(100dvh, calc(100vw * 16 / 9))' }}>
-        <Scene st={st} now={now} dropStart={dropStart} anim={anim} shake={shake} best={best} onTap={drop} />
+      <div className="relative size-full overflow-hidden">
+        <TowerStage theme={st.theme} api={stage} onReady={onReady} onLand={onLand} onTap={drop} />
         {st.phase === 'intro' && <TowerIntro onBegin={begin} busy={busy} best={best} />}
 
         {/* горна лента */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-3">
+        {/* под стрелата на крана, където и да е тя на този екран */}
+        <div className="pointer-events-none absolute inset-x-0 flex items-start justify-between px-3" style={{ top: 'calc((100dvh - min(100dvh, 177.78vw)) / 2 + min(100dvh, 177.78vw) * 0.1)' }}>
           <button onClick={quit} className="pointer-events-auto rounded-full bg-black/45 p-2 text-white" aria-label="Край">
             <X className="size-5" />
           </button>
           <div className="text-center text-white drop-shadow-[0_2px_3px_rgba(0,0,0,.6)]">
-            <p className="text-5xl font-black tabular-nums leading-none">{st.xs.length + (anim && anim.res.kind !== 'fall' ? 1 : 0)}</p>
+            <p className="text-5xl font-black tabular-nums leading-none">{st.xs.length}</p>
             <p className="text-xs font-extrabold uppercase tracking-wider">етажа · рекорд {best}</p>
           </div>
           <div className="flex gap-0.5 rounded-full bg-black/45 px-2.5 py-1.5">
@@ -299,7 +272,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
           </div>
         </div>
         {st.streak > 0 && (
-          <div className="pointer-events-none absolute left-3 top-16 rounded-full bg-accent/90 px-2.5 py-1 text-xs font-black text-ink-strong">⭐ {st.streak}/3 перфектни</div>
+          <div className="pointer-events-none absolute left-3 rounded-full bg-accent/90 px-2.5 py-1 text-xs font-black text-ink-strong" style={{ top: 'calc((100dvh - min(100dvh, 177.78vw)) / 2 + min(100dvh, 177.78vw) * 0.1 + 3.4rem)' }}>⭐ {st.streak}/3 перфектни</div>
         )}
 
         {toast && now - toast.at < 1400 && (
@@ -392,134 +365,6 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { 
         </div>
       </div>
     </div>
-  );
-}
-
-function Scene({ st, now, dropStart, anim, shake, best, onTap, wide = false }: { st: TowerState; now: number; dropStart: number; anim: Anim | null; shake: number; best: number; onTap: () => void; wide?: boolean }) {
-  const vx = wide ? WIDE_X : 0;
-  const vw = wide ? WIDE_W : VW;
-  const style = TOWER_STYLE[st.theme];
-  const base = BASE[st.theme];
-  const n = st.xs.length;
-  const sim = { xs: st.xs, lean: st.lean };
-  // по време на пускане времето е замразено в момента на тапа
-  const t = anim ? Math.min(TOWER.DROP_MS, anim.start - dropStart) : st.phase === 'drop' ? Math.min(TOWER.DROP_MS, now - dropStart) : now;
-  const sway = swayX(t, sim);
-  const size = (i: number) => floorSize(st.seed, i);
-  const hang = size(n);
-  const cam = Math.max(0, HANG_Y + hang.h + 210 - (base - towerHeight(st.seed, n)));
-  const floorX = (i: number) => CX + st.xs[i] + (n ? (sway * (i + 1)) / n : 0) - size(i).w / 2;
-  const floorY = (i: number) => base - towerHeight(st.seed, i + 1);
-
-  // анимация на пускането (в координатите на света)
-  let drop: React.ReactNode = null;
-  let towerRot = 0;
-  let towerFade = 1;
-  if (anim) {
-    const el = now - anim.start;
-    const r = anim.res;
-    const fromY = HANG_Y - cam;
-    const toY = base - towerHeight(st.seed, n + 1);
-    const k = Math.min(1, el / 340);
-    const ease = k * k;
-    const hw = hang.w;
-    let x = CX + r.craneX - hw / 2 + ((r.kind === 'fall' ? r.craneX : r.landX + (n ? sway : 0)) - r.craneX) * ease;
-    let y = fromY + (toY - fromY) * ease;
-    let rot = 0;
-    let op = 1;
-    if (r.kind === 'fall' && el > 340) {
-      const f = Math.min(1, (el - 340) / 760);
-      const dir = Math.sign(r.dx) || 1;
-      x += dir * 140 * f;
-      y += 520 * f * f;
-      rot = dir * 85 * f;
-      op = 1 - f * 0.6;
-    }
-    if (r.kind === 'collapse' && el > 340) {
-      const f = Math.min(1, (el - 340) / 1300);
-      towerRot = (Math.sign(r.next.lean) || 1) * 78 * f * f;
-      towerFade = 1 - f * 0.5;
-    }
-    drop = (
-      <g opacity={op} transform={`rotate(${rot} ${x + hw / 2} ${y + hang.h / 2})`}>
-        <Floor style={style} x={x} y={y} w={hw} h={hang.h} i={n} />
-        {r.kind !== 'fall' && el >= 340 && <Dust x={x + hw / 2} y={y + hang.h} />}
-      </g>
-    );
-  }
-  const hanging = st.phase === 'drop' && !anim;
-  const cx = craneX(t, n, st.seed);
-
-  return (
-    <svg viewBox={`${vx} 0 ${vw} ${VH}`} preserveAspectRatio={wide ? 'xMidYMax slice' : 'xMidYMid meet'} className="absolute inset-0 h-full w-full touch-none select-none" onPointerDown={onTap} role="img" aria-label="Кулата">
-      <defs>
-        <linearGradient id="tw-sky" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor={(wide ? SKY_WIDE : SKY)[st.theme]} />
-          <stop offset=".35" stopColor={st.theme === 'library' ? '#1f1a40' : '#2c4f8f'} />
-          <stop offset=".7" stopColor="#141a3c" />
-          <stop offset="1" stopColor="#05060f" />
-        </linearGradient>
-        <filter id="tw-sh">
-          <feDropShadow dx="0" dy="3" stdDeviation="2" floodOpacity=".35" />
-        </filter>
-      </defs>
-      <g style={{ transform: `translateY(${cam}px)`, transition: 'transform .6s ease-out' }}>
-        {/* небето продължава нагоре */}
-        <rect x={vx} y="-9000" width={vw} height="9004" fill="url(#tw-sky)" />
-        {STARS.map((s, i) => (
-          <circle key={i} cx={vx + (s.x / VW) * vw} cy={s.y} r={s.s} fill="#fff" opacity=".8" />
-        ))}
-        <image href={wide ? `/tower/wide-${st.theme}.webp` : `/tower/${st.theme}.webp`} x={vx} y="0" width={vw} height={VH} preserveAspectRatio="none" />
-        {/* основата */}
-        <rect x={CX - TOWER_BASE_W / 2} y={base} width={TOWER_BASE_W} height="13" rx="4" fill="#8d8173" stroke="#4a4036" strokeWidth="2" />
-        {/* линия на рекорда */}
-        {best > 0 && (
-          <g opacity=".85">
-            <line x1={CX - 210} x2={CX + 210} y1={base - best * FH} y2={base - best * FH} stroke="#ffd84a" strokeWidth="2.5" strokeDasharray="10 8" />
-            <rect x={CX + 122} y={base - best * FH - 26} width="88" height="22" rx="11" fill="#ffd84a" />
-            <text x={CX + 166} y={base - best * FH - 10} textAnchor="middle" fontSize="12" fontWeight="900" fill="#3a2a00">
-              Рекорд {best}
-            </text>
-          </g>
-        )}
-        {/* кулата */}
-        <g key={shake} className={shake ? 'tower-shake' : ''} style={{ transformOrigin: `${CX}px ${base}px` }}>
-          <g transform={`rotate(${towerRot} ${CX} ${base})`} opacity={towerFade} filter="url(#tw-sh)">
-            {st.xs.map((_, i) => (
-              <Floor key={i} style={style} x={floorX(i)} y={floorY(i)} w={size(i).w} h={size(i).h} i={i} ground={i === 0} />
-            ))}
-            {n > 0 && !(anim && anim.res.kind !== 'fall') && <Roof style={style} x={floorX(n - 1)} y={floorY(n - 1)} w={size(n - 1).w} />}
-          </g>
-        </g>
-        {drop}
-      </g>
-
-      {/* кранът — на екрана, не в света */}
-      <line x1={vx} y1="114" x2={vx + vw} y2="114" stroke="#2b2b2b" strokeWidth="6" />
-      <line x1={vx} y1="124" x2={vx + vw} y2="124" stroke="#2b2b2b" strokeWidth="2" strokeDasharray="8 6" />
-      <g transform={`translate(${CX + (hanging ? cx : anim ? anim.res.craneX : cx)} 0)`}>
-        <rect x="-22" y="104" width="44" height="22" rx="4" fill="#f5b800" stroke="#2b2b2b" strokeWidth="2.5" />
-        <line x1="0" y1="126" x2="0" y2={hanging ? HANG_Y - 14 : 150} stroke="#2b2b2b" strokeWidth="2.5" />
-        {hanging && (
-          <g>
-            <path d={`M0 ${HANG_Y - 14} L${-hang.w / 2 + 10} ${HANG_Y} M0 ${HANG_Y - 14} L${hang.w / 2 - 10} ${HANG_Y}`} stroke="#2b2b2b" strokeWidth="2" fill="none" />
-            <g filter="url(#tw-sh)">
-              <Floor style={style} x={-hang.w / 2} y={HANG_Y} w={hang.w} h={hang.h} i={n} ground={n === 0} />
-            </g>
-            <line x1="0" y1={HANG_Y + hang.h + 6} x2="0" y2={HANG_Y + hang.h + 70} stroke="#fff" strokeWidth="2" strokeDasharray="4 6" opacity=".7" />
-          </g>
-        )}
-      </g>
-    </svg>
-  );
-}
-
-function Dust({ x, y }: { x: number; y: number }) {
-  return (
-    <g className="climb-dust">
-      <ellipse cx={x - 50} cy={y - 2} rx="16" ry="7" fill="#d7c6a2" />
-      <ellipse cx={x + 50} cy={y - 2} rx="16" ry="7" fill="#d7c6a2" />
-    </g>
   );
 }
 

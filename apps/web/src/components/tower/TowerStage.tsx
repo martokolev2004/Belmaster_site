@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * ТЕСТ (/test): нов вид на „Кула на Словото“ — кран с въже, етажи с обем, небе, което се сменя с височината,
- * камера, прах, искри и срутване. Без въпроси и без сървър; правилата за пускане са същите (simulateDrop).
+ * Сцената на „Кула на Словото“: кран с въже, етажи с обем, небе, което се сменя с височината, камера, прах,
+ * искри и срутване. Играта (TowerGame) я управлява през TowerStageApi; правилата са в @belmaster/shared.
+ * Три фона: town — град през деня, mountain — планина по залез, library — нощен град.
  */
-import { useEffect, useRef, useState } from 'react';
-import { TOWER, TOWER_BASE_W, craneX, floorSize, newTowerSim, simulateDrop, swayX, topX, towerHeight, type TowerSim } from '@belmaster/shared';
+import { memo, useEffect, useRef } from 'react';
+import { TOWER, TOWER_BASE_W, craneX, floorSize, newTowerSim, swayX, topX, towerHeight, type DropKind, type DropResult, type TowerSim, type TowerTheme } from '@belmaster/shared';
 
 const VW = 450;
 const VH = 800;
@@ -13,15 +14,60 @@ const GROUND = 706;
 const HOOK_Y = 150;
 const NS = 'http://www.w3.org/2000/svg';
 const INK = '#141a33';
-const PALETTE: [string, string][] = [
-  ['#f7e8c9', '#d6b98a'],
-  ['#f4a98f', '#c9705a'],
-  ['#92d6ca', '#4fa699'],
-  ['#f6d274', '#c99a2e'],
-  ['#bdb8f3', '#7f78c9'],
-  ['#f5b8d2', '#c9779c'],
-  ['#aad3f7', '#5f96c9'],
+type Sky = [number, string, string, string][];
+interface Look {
+  /** небето според височината: зора → стратосфера → космос */
+  sky: Sky;
+  palette: [string, string][];
+  /** дял на светещите прозорци */
+  lit: number;
+  /** колко се виждат звездите още от земята */
+  stars: number;
+  dust: string;
+  ground: [string, string];
+  road: [string, string];
+  base: [string, string];
+  cloud: string;
+}
+const SPACE: Sky = [
+  [2600, '#0a1650', '#1c3a96', '#4f7fe0'],
+  [4200, '#03051a', '#0a1240', '#1a2a70'],
 ];
+const LOOKS: Record<TowerTheme, Look> = {
+  town: {
+    sky: [[0, '#3b6fd6', '#8fc3f5', '#ffd9b0'], [500, '#2f7ae0', '#6fb7f7', '#cfeaff'], [1400, '#173f9e', '#3f7ee0', '#9fd0ff'], ...SPACE],
+    palette: [['#f7e8c9', '#d6b98a'], ['#f4a98f', '#c9705a'], ['#92d6ca', '#4fa699'], ['#f6d274', '#c99a2e'], ['#bdb8f3', '#7f78c9'], ['#f5b8d2', '#c9779c'], ['#aad3f7', '#5f96c9']],
+    lit: 0.34,
+    stars: 0,
+    dust: '#f3ead6',
+    ground: ['#4a8a52', '#6fb574'],
+    road: ['#3a3f55', '#f4f6ff'],
+    base: ['#c9cdee', '#8f96c4'],
+    cloud: '#ffffff',
+  },
+  mountain: {
+    sky: [[0, '#4a3f96', '#e9806e', '#ffd596'], [500, '#3c3a94', '#c06a98', '#ffb590'], [1400, '#1f2a7a', '#5a4fb0', '#c98ad0'], ...SPACE],
+    palette: [['#f1dcc0', '#b98a5e'], ['#e0a070', '#a8603a'], ['#cfd6c0', '#8c9a78'], ['#f3c97a', '#c08a2e'], ['#d9b8a0', '#9c6f58'], ['#ece4d4', '#a79c88']],
+    lit: 0.5,
+    stars: 0,
+    dust: '#f1dcc0',
+    ground: ['#3f6b4f', '#5c8f63'],
+    road: ['#8a6a4a', '#8a6a4a'],
+    base: ['#d8c9b4', '#9c8a74'],
+    cloud: '#ffd9c9',
+  },
+  library: {
+    sky: [[0, '#0b1444', '#27357f', '#5b4b9e'], [800, '#070d33', '#162463', '#33408f'], [2600, '#03051a', '#0a1240', '#1a2a70'], [4200, '#01020c', '#050a26', '#0d1650']],
+    palette: [['#8fb4f5', '#4f78c9'], ['#b49cf2', '#7458c4'], ['#f29cc0', '#b85888'], ['#7fd6d0', '#3f9a98'], ['#f5d27a', '#c09a30'], ['#e8ecff', '#9aa4d0']],
+    lit: 0.62,
+    stars: 0.9,
+    dust: '#c9d2ff',
+    ground: ['#22403f', '#2f5957'],
+    road: ['#1c2036', '#ffd884'],
+    base: ['#aab3e6', '#6f78b4'],
+    cloud: '#8f9ad6',
+  },
+};
 const ease = {
   out: (k: number) => 1 - (1 - k) ** 3,
   back: (k: number) => 1 + 2.7 * (k - 1) ** 3 + 1.7 * (k - 1) ** 2,
@@ -31,14 +77,6 @@ const rnd = (seed: number, i: number, k: number) => {
   const v = Math.sin(seed * 9301 + i * 49.297 + k * 233.11) * 43758.5453;
   return v - Math.floor(v);
 };
-/** Небето според височината (в единици на кулата): зора → ден → стратосфера → космос. */
-const SKY: [number, string, string, string][] = [
-  [0, '#3b6fd6', '#8fc3f5', '#ffd9b0'],
-  [500, '#2f7ae0', '#6fb7f7', '#cfeaff'],
-  [1400, '#173f9e', '#3f7ee0', '#9fd0ff'],
-  [2600, '#0a1650', '#1c3a96', '#4f7fe0'],
-  [4200, '#03051a', '#0a1240', '#1a2a70'],
-];
 const hex = (c: string) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
 const mix = (a: string, b: string, k: number) => {
   const A = hex(a), B = hex(b);
@@ -46,8 +84,8 @@ const mix = (a: string, b: string, k: number) => {
 };
 
 /** Рисунката на един етаж; начало = средата на долния ръб. */
-function floorArt(w: number, h: number, i: number, seed: number): string {
-  const [c0, c1] = PALETTE[Math.floor(rnd(seed, i, 7) * PALETTE.length)];
+function floorArt(w: number, h: number, i: number, seed: number, look: Look): string {
+  const [c0, c1] = look.palette[Math.floor(rnd(seed, i, 7) * look.palette.length)];
   const x = -w / 2;
   const n = w >= 150 ? 3 : 2;
   const wh = Math.min(h - 16, 27), ww = 21, wy = -h + (h - wh) / 2 + 2;
@@ -61,7 +99,7 @@ function floorArt(w: number, h: number, i: number, seed: number): string {
       s += `<rect x="${cx - 10}" y="${-h + 9}" width="20" height="${h - 9}" rx="3" fill="#7a4a2b" stroke="${INK}" stroke-width="2.5"/><circle cx="${cx + 5}" cy="${-(h - 9) / 2}" r="1.8" fill="#ffd84d"/><path d="M${cx - 15} ${-h + 9}h30l-4 -7h-22z" fill="#e2543f" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/>`;
       continue;
     }
-    const lit = rnd(seed, i, k + 11) < 0.34;
+    const lit = rnd(seed, i, k + 11) < look.lit;
     s += `<rect x="${cx - ww / 2 - 2}" y="${wy - 2}" width="${ww + 4}" height="${wh + 4}" rx="3" fill="#fffaf0" stroke="${INK}" stroke-width="2"/>`;
     s += `<rect x="${cx - ww / 2}" y="${wy}" width="${ww}" height="${wh}" rx="1.5" fill="${lit ? '#ffe08a' : '#4f78b3'}"/>`;
     s += `<path d="M${cx - ww / 2} ${wy + wh * 0.62}l${ww * 0.55} ${-wh * 0.62}h${ww * 0.25}l${-ww * 0.8} ${wh * 0.9}z" fill="#fff" opacity="${lit ? 0.35 : 0.22}"/>`;
@@ -75,23 +113,30 @@ function floorArt(w: number, h: number, i: number, seed: number): string {
   return s;
 }
 
-export interface TowerHud {
-  floors: number;
-  lives: number;
-  combo: number;
-  over: boolean;
-  started: boolean;
+export interface TowerStageApi {
+  /** състоянието от сървъра; етажите се пренареждат само ако се различават */
+  sync(seed: number, sim: TowerSim, best: number): void;
+  /** кранът тръгва; t0 = началото на пускането (performance.now) */
+  aim(t0: number): void;
+  /** кранът чака (въпрос, подготовка) */
+  hold(): void;
+  /** анимацията на едно пускане; приключва, когато сцената е готова за следващия ход */
+  play(res: DropResult): Promise<void>;
+  /** грешен отговор */
+  hurt(): void;
 }
 
-export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; control: React.MutableRefObject<{ drop: () => void; restart: () => void; setAuto: (v: boolean) => void } | null> }) {
+export const TowerStage = memo(function TowerStage({ theme, api, onReady, onLand, onTap }: { theme: TowerTheme; api: React.MutableRefObject<TowerStageApi | null>; onReady: () => void; onLand: (kind: DropKind) => void; onTap: () => void }) {
   const svg = useRef<SVGSVGElement>(null);
-  const hud = useRef(onHud);
-  hud.current = onHud;
+  const cb = useRef({ onReady, onLand });
+  cb.current = { onReady, onLand };
+  const look = LOOKS[theme];
 
   useEffect(() => {
     const root = svg.current!;
     const q = <T extends SVGElement>(s: string) => root.querySelector(s) as T;
     const world = q<SVGGElement>('#tw-world'), floorsG = q<SVGGElement>('#tw-floors'), fx = q<SVGGElement>('#tw-fx'), hang = q<SVGGElement>('#tw-hang'), cable = q<SVGPathElement>('#tw-cable'), trolley = q<SVGGElement>('#tw-trolley');
+    const bestG = q<SVGGElement>('#tw-best'), bestT = q<SVGTextElement>('#tw-best-t');
     const ghost = q<SVGRectElement>('#tw-ghost'), ring = q<SVGCircleElement>('#tw-ring'), stars = q<SVGGElement>('#tw-stars'), cam = q<SVGGElement>('#tw-cam');
     const layers: [SVGGElement, number][] = [[q('#tw-l1'), 0.12], [q('#tw-l2'), 0.3], [q('#tw-l3'), 0.62], [q('#tw-clouds'), 0.5]];
     const stops = [q<SVGStopElement>('#tw-s0'), q<SVGStopElement>('#tw-s1'), q<SVGStopElement>('#tw-s2')];
@@ -101,8 +146,8 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       return e;
     };
 
-    let showOver = false, alive = true, raf = 0, last = performance.now(), clock = 0, seed = Math.random(), sim: TowerSim = newTowerSim();
-    let phase: 'aim' | 'fall' | 'over' = 'aim', t0 = performance.now(), camY = 0, shake = 0, hitstop = 0, combo = 0, auto = false, started = false, autoTol = 8, sway = 0;
+    let alive = true, raf = 0, last = performance.now(), clock = 0, seed = 0, sim: TowerSim = newTowerSim();
+    let phase: 'hold' | 'aim' | 'fall' | 'over' = 'hold', t0 = performance.now(), camY = 0, shake = 0, hitstop = 0, combo = 0, sway = 0, cxNow = 0, first = true;
     let els: { g: SVGGElement; x: number; y: number; h: number; w: number; bounce: number }[] = [];
     type Job = { t: number; d: number; fn: (k: number) => void; res: () => void };
     const jobs: Job[] = [];
@@ -148,54 +193,56 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       }).then(() => (r.remove(), c.remove()));
     };
 
-    const emit = () => hud.current({ floors: sim.xs.length, lives: sim.lives, combo, over: phase === 'over' && showOver, started });
     const yOf = (i: number) => -towerHeight(seed, i);
     const setHang = () => {
       const { w, h } = floorSize(seed, sim.xs.length);
-      hang.innerHTML = `<g transform="translate(0 ${h})">${floorArt(w, h, sim.xs.length, seed)}</g>`;
+      hang.innerHTML = `<g transform="translate(0 ${h})">${floorArt(w, h, sim.xs.length, seed, look)}</g>`;
       hang.dataset.w = String(w);
-      hang.dataset.h = String(h);
       hang.setAttribute('opacity', '1');
       ghost.setAttribute('width', String(w));
     };
-    const startAim = () => {
-      phase = 'aim';
-      t0 = performance.now();
-      autoTol = 3 + Math.random() * (10 + sim.xs.length * 0.5);
-      setHang();
+    const addFloor = (i: number, x: number) => {
+      const { w, h } = floorSize(seed, i);
+      const g = mk('g') as SVGGElement;
+      g.innerHTML = floorArt(w, h, i, seed, look);
+      floorsG.appendChild(g);
+      return { g, x, y: yOf(i), h, w, bounce: 0 };
     };
-    const restart = () => {
-      jobs.length = 0;
-      parts.forEach((p) => p.el.remove());
-      parts.length = 0;
-      fx.replaceChildren();
-      floorsG.replaceChildren();
-      els = [];
-      seed = Math.random();
-      sim = newTowerSim();
-      combo = 0;
-      showOver = false;
-      camY = 0;
-      started = false;
-      startAim();
-      emit();
+    const sync = (sd: number, next: TowerSim, best: number) => {
+      const same = sd === seed && next.xs.length === els.length && next.xs.every((x, i) => Math.abs(x - els[i].x) < 0.01);
+      const fresh = sd !== seed;
+      seed = sd;
+      sim = next;
+      if (!same) {
+        floorsG.replaceChildren();
+        els = next.xs.map((x, i) => addFloor(i, x));
+      }
+      if (fresh || first) {
+        first = false;
+        combo = 0;
+        camY = Math.max(0, towerHeight(seed, next.xs.length) - 250);
+        cxNow = craneX(0, next.xs.length, seed);
+      }
+      const show = best > next.xs.length;
+      bestG.style.display = show ? '' : 'none';
+      if (show) {
+        bestG.setAttribute('transform', `translate(0 ${-towerHeight(seed, best)})`);
+        bestT.textContent = `РЕКОРД · ${best}`;
+      }
+      if (phase !== 'fall' && phase !== 'over') setHang();
     };
 
-    async function drop() {
-      if (phase !== 'aim') return;
-      started = true;
-      const t = performance.now() - t0;
-      const res = simulateDrop(sim, t, seed);
+    async function playDrop(res: DropResult) {
       const i = sim.xs.length, { w, h } = floorSize(seed, i);
       phase = 'fall';
       hang.setAttribute('opacity', '0');
       const g = mk('g') as SVGGElement;
-      g.innerHTML = floorArt(w, h, i, seed);
+      g.innerHTML = floorArt(w, h, i, seed, look);
       floorsG.appendChild(g);
       // от куката до върха на кулата
       const fromY = HOOK_Y - GROUND - camY + 34 + h;
       const toY = yOf(i);
-      const x0 = res.craneX, x1 = res.kind === 'fall' ? res.craneX : res.landX + (res.targetX - topX(sim));
+      const x0 = (cxNow = res.craneX), x1 = res.kind === 'fall' ? res.craneX : res.landX + (res.targetX - topX(sim));
       const dist = Math.max(60, toY - fromY);
       await run(Math.sqrt(dist / 900) * 1000, (k) => g.setAttribute('transform', `translate(${x0 + (x1 - x0) * k * k} ${fromY + dist * k * k}) scale(${1 - 0.06 * k} ${1 + 0.1 * k})`));
       if (res.kind === 'fall') {
@@ -203,10 +250,10 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
         combo = 0;
         const dir = Math.sign(res.dx) || 1;
         shake = 0.25;
-        puff(x1 - dir * w * 0.3, toY, 8, '#f3ead6', 120, 5, 0.5, 240, dir * 0.4);
+        puff(x1 - dir * w * 0.3, toY, 8, look.dust, 120, 5, 0.5, 240, dir * 0.4);
         pop(x1, toY - 60, 'ИЗПУСНАТ!', '#ff8a8a', 26);
         sim = res.next;
-        emit();
+        cb.current.onLand('fall');
         await run(900, (k) => g.setAttribute('transform', `translate(${x1 + dir * 150 * k} ${toY + 760 * k * k - 30 * Math.sin(k * 3)}) rotate(${dir * 260 * k})`));
         g.remove();
       } else {
@@ -217,38 +264,38 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
         hitstop = perfect ? 0.07 : 0.03;
         shake = Math.max(shake, perfect ? 0.14 : 0.22);
         // кацане: сплескване + вълна надолу по кулата
-        run(520, (k) => (els[els.length - 1].bounce = (1 - ease.elastic(k)) * 0.16));
+        const me = els[els.length - 1];
+        run(520, (k) => (me.bounce = (1 - ease.elastic(k)) * 0.16));
         for (let d = 1; d <= Math.min(6, els.length - 1); d++) {
           const e = els[els.length - 1 - d];
           setTimeout(() => run(380, (k) => (e.bounce = (1 - ease.elastic(k)) * 0.07 * (1 - d / 8))), d * 34);
         }
         const tx = res.landX;
-        puff(tx - w / 2, toY, 6, '#f3ead6', 110, 5, 0.5, 220, -0.5);
-        puff(tx + w / 2, toY, 6, '#f3ead6', 110, 5, 0.5, 220, 0.5);
+        puff(tx - w / 2, toY, 6, look.dust, 110, 5, 0.5, 220, -0.5);
+        puff(tx + w / 2, toY, 6, look.dust, 110, 5, 0.5, 220, 0.5);
         if (perfect) {
           flash(tx, toY, w);
           sparkle(tx, toY - h / 2, 14);
           pop(tx, toY - h - 26, combo > 1 ? `ПЕРФЕКТНО ×${combo}` : 'ПЕРФЕКТНО!', '#ffd84d', 28);
           if (res.steadied) setTimeout(() => pop(0, toY - h - 70, 'КУЛАТА СЕ ИЗПРАВИ', '#9fe8ff', 20), 300);
         } else pop(tx, toY - h - 20, `+1`, '#fff', 24);
-        emit();
+        cb.current.onLand(res.kind);
         if (res.kind === 'collapse') return collapse();
       }
       if (sim.lives <= 0) {
         phase = 'over';
-        showOver = true;
-        emit();
         return;
       }
       await run(160, () => {});
-      startAim();
+      phase = 'hold';
+      setHang();
     }
     async function collapse() {
       phase = 'over';
       shake = 0.9;
       hitstop = 0.16;
       const dir = Math.sign(sim.lean) || 1;
-      pop(0, yOf(els.length) - 40, 'СРУТВАНЕ!', '#ff7a7a', 36);
+      pop(0, -camY - 420, 'СРУТВАНЕ!', '#ff7a7a', 36);
       els.forEach((e, k) => {
         const vx = dir * (60 + k * 26) + (Math.random() - 0.5) * 120, vr = dir * (80 + Math.random() * 240);
         let x = e.x, y = e.y, vy = -80 - Math.random() * 160, r = 0;
@@ -262,7 +309,7 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
             r += vr * dt;
             if (y > 0) {
               y = 0;
-              if (Math.abs(vy) > 200) puff(x, 0, 3, '#f3ead6', 90, 6, 0.5);
+              if (Math.abs(vy) > 200) puff(x, 0, 3, look.dust, 90, 6, 0.5);
               vy = Math.abs(vy) > 160 ? -vy * 0.3 : 0;
             }
             e.g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${r.toFixed(0)} 0 ${-e.h / 2})`);
@@ -270,12 +317,30 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
         }, delay);
       });
       els = [];
-      // панелът идва след като срутването се види
-      setTimeout(() => alive && ((showOver = true), emit()), 1500);
+      // резултатът идва след като срутването се види
+      await new Promise((r) => setTimeout(r, 1500));
     }
 
-    control.current = { drop: () => void drop(), restart, setAuto: (v) => (auto = v) };
-    Object.assign(window, { __tws: { drop: () => void drop(), get: () => ({ sim, seed, phase, t0 }), setAuto: (v: boolean) => (auto = v), fns: { craneX, swayX, topX } } });
+    api.current = {
+      sync,
+      aim: (start) => {
+        if (phase === 'fall' || phase === 'over') return;
+        phase = 'aim';
+        t0 = start;
+        setHang();
+      },
+      hold: () => {
+        if (phase === 'aim') phase = 'hold';
+      },
+      play: playDrop,
+      hurt: () => {
+        shake = Math.max(shake, 0.45);
+        const r = mk('rect', { x: -1400, y: -9000, width: 2800, height: 9600, fill: '#ff3b4f' });
+        fx.appendChild(r);
+        run(450, (k) => r.setAttribute('opacity', String(0.28 * (1 - k)))).then(() => r.remove());
+      },
+    };
+    cb.current.onReady();
 
     function frame(now: number) {
       if (!alive) return;
@@ -307,10 +372,10 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) (parts[i].el.remove(), parts.splice(i, 1));
 
       const n = sim.xs.length, top = towerHeight(seed, n);
-      const t = now - t0;
+      const t = phase === 'aim' ? now - t0 : 0;
       // люлеене — върхът се отмества най-много; кулата леко се огъва
       const target = phase === 'over' ? 0 : swayX(t, sim);
-      sway += (target - sway) * Math.min(1, real * 14);
+      sway = phase === 'aim' ? target : sway + (target - sway) * Math.min(1, real * 8);
       const vis = camY + 760;
       els.forEach((e, k) => {
         const f = ((k + 1) / Math.max(1, els.length)) ** 1.5;
@@ -320,28 +385,27 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       });
       // кранът
       const hookWorldY = HOOK_Y - GROUND - camY;
-      if (phase === 'aim') {
-        if (t >= TOWER.DROP_MS || (auto && Math.abs(craneX(t, n, seed) - topX(sim) - swayX(t, sim)) < autoTol && t > 500)) void drop();
-        const cx = craneX(t, n, seed), vx = craneX(t + 16, n, seed) - cx;
-        const lag = -vx * 2.2;
+      if (phase === 'aim' || phase === 'hold') {
+        const aiming = phase === 'aim';
+        const goal = craneX(t, n, seed), vx = aiming ? craneX(t + 16, n, seed) - goal : 0;
+        cxNow = aiming ? goal : cxNow + (goal - cxNow) * Math.min(1, real * 6);
+        const cx = cxNow, lag = -vx * 2.2, bob = aiming ? 0 : Math.sin(clock * 2.2) * 1.5;
         trolley.setAttribute('transform', `translate(${cx.toFixed(1)} 0)`);
         cable.setAttribute('d', `M${cx.toFixed(1)} ${hookWorldY - 96}Q${(cx + lag * 0.3).toFixed(1)} ${hookWorldY - 40} ${(cx + lag).toFixed(1)} ${hookWorldY + 34}`);
-        hang.setAttribute('transform', `translate(${(cx + lag).toFixed(1)} ${hookWorldY + 34}) rotate(${(-vx * 0.9).toFixed(2)})`);
-        const h = Number(hang.dataset.h ?? 44), w = Number(hang.dataset.w ?? 150);
+        hang.setAttribute('transform', `translate(${(cx + lag).toFixed(1)} ${hookWorldY + 34}) rotate(${(-vx * 0.9 + bob).toFixed(2)})`);
+        const w = Number(hang.dataset.w ?? 150);
         ghost.setAttribute('x', String(cx - w / 2));
         ghost.setAttribute('y', String(-top - 4));
-        ghost.setAttribute('opacity', '0.32');
-        const left = 1 - t / TOWER.DROP_MS;
+        ghost.setAttribute('opacity', aiming ? '0.32' : '0');
+        const left = Math.max(0, 1 - t / TOWER.DROP_MS);
         ring.setAttribute('stroke-dashoffset', String(113 * (1 - left)));
         ring.setAttribute('stroke', left < 0.3 ? '#ff6b6b' : '#fff');
         ring.setAttribute('transform', `translate(${cx.toFixed(1)} ${51 - GROUND - camY})`);
-        ring.setAttribute('opacity', '1');
-        void h;
+        ring.setAttribute('opacity', aiming ? '1' : '0');
       } else {
         ghost.setAttribute('opacity', '0');
         ring.setAttribute('opacity', '0');
-        const cx = Number(trolley.getAttribute('transform')?.match(/-?[\d.]+/)?.[0] ?? 0);
-        cable.setAttribute('d', `M${cx} ${hookWorldY - 96}L${cx} ${hookWorldY + 20 + Math.sin(clock * 9) * 3}`);
+        cable.setAttribute('d', `M${cxNow.toFixed(1)} ${hookWorldY - 96}L${cxNow.toFixed(1)} ${hookWorldY + 20 + Math.sin(clock * 9) * 3}`);
       }
       // камера и паралакс
       camY += (Math.max(0, top - 250) - camY) * Math.min(1, real * 2.6);
@@ -351,48 +415,38 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       world.setAttribute('transform', `translate(${VW / 2} ${(GROUND + camY).toFixed(1)})`);
       for (const [g, f] of layers) g.setAttribute('transform', `translate(0 ${(camY * f).toFixed(1)})`);
       // небето се сменя с височината
-      let a = SKY[0], b = SKY[SKY.length - 1];
+      const SKY = look.sky;
+      let a = SKY[0], b = SKY[1];
       for (let i = 0; i < SKY.length - 1; i++) if (camY >= SKY[i][0]) (a = SKY[i]), (b = SKY[i + 1]);
       const k = Math.max(0, Math.min(1, (camY - a[0]) / Math.max(1, b[0] - a[0])));
       stops.forEach((s, i) => s.setAttribute('stop-color', mix(a[i + 1] as string, b[i + 1] as string, k)));
-      stars.setAttribute('opacity', String(Math.max(0, Math.min(1, (camY - 1500) / 1500))));
+      stars.setAttribute('opacity', String(Math.max(look.stars, Math.min(1, (camY - 1500) / 1500))));
     }
-    startAim();
-    emit();
     raf = requestAnimationFrame(frame);
     return () => {
       alive = false;
       cancelAnimationFrame(raf);
-      control.current = null;
+      api.current = null;
     };
-  }, [control]);
+  }, [api, look]);
 
-  const house = (x: number, w: number, h: number, c: string, roof: string) => (
-    <g key={x}>
-      <rect x={x} y={GROUND - h} width={w} height={h} fill={c} />
-      <path d={`M${x - 6} ${GROUND - h}l${w / 2 + 6} ${-h * 0.45} ${w / 2 + 6} ${h * 0.45}z`} fill={roof} />
-      {[0.25, 0.65].map((k) => (
-        <rect key={k} x={x + w * k} y={GROUND - h * 0.7} width={w * 0.16} height={h * 0.22} fill="#ffe9a3" opacity=".8" />
-      ))}
-    </g>
-  );
-  const cloud = (x: number, y: number, s: number, o: number, i: number) => (
-    <g key={i} transform={`translate(${x} ${y}) scale(${s})`} opacity={o}>
-      <path d="M0 0q16-22 44-10 20-24 52-4 30-8 40 16 24 2 20 20h-170q-14-18 14-22z" fill="#fff" className={i % 2 ? 'tw-drift' : 'tw-drift2'} />
-    </g>
-  );
   return (
-    <svg ref={svg} viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMin meet" className="block size-full select-none" style={{ overflow: 'visible' }} role="img" aria-label="Кула на Словото">
+    <svg ref={svg} viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" onPointerDown={onTap} className="block size-full cursor-pointer touch-manipulation select-none" style={{ overflow: 'visible' }} role="img" aria-label="Кула на Словото">
       <defs>
         <linearGradient id="tw-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop id="tw-s0" offset="0" stopColor="#3b6fd6" />
-          <stop id="tw-s1" offset=".55" stopColor="#8fc3f5" />
-          <stop id="tw-s2" offset="1" stopColor="#ffd9b0" />
+          <stop id="tw-s0" offset="0" stopColor={look.sky[0][1]} />
+          <stop id="tw-s1" offset=".55" stopColor={look.sky[0][2]} />
+          <stop id="tw-s2" offset="1" stopColor={look.sky[0][3]} />
         </linearGradient>
         <radialGradient id="tw-sun">
           <stop offset="0" stopColor="#fff7df" />
           <stop offset=".25" stopColor="#ffe2a6" stopOpacity=".8" />
           <stop offset="1" stopColor="#ffb27a" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id="tw-moon">
+          <stop offset="0" stopColor="#f4f1ff" stopOpacity=".9" />
+          <stop offset=".3" stopColor="#b9b4ff" stopOpacity=".35" />
+          <stop offset="1" stopColor="#7f78ff" stopOpacity="0" />
         </radialGradient>
         <pattern id="tw-truss" width="26" height="22" patternUnits="userSpaceOnUse">
           <path d="M0 22 13 0 26 22" fill="none" stroke="#f2b632" strokeWidth="3" />
@@ -400,46 +454,29 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       </defs>
       <style>{`.tw-font{font-family:'Unbounded Variable','Nunito Variable',sans-serif}.tw-drift{animation:tw-d 70s linear infinite}.tw-drift2{animation:tw-d 110s linear infinite reverse}.tw-blink{animation:tw-b 1.2s steps(2) infinite}.tw-tw{animation:tw-t 3s ease-in-out infinite}@keyframes tw-d{from{transform:translateX(-60px)}to{transform:translateX(60px)}}@keyframes tw-b{50%{opacity:.2}}@keyframes tw-t{50%{opacity:.25}}`}</style>
       <rect x="-2000" y="-400" width="4450" height="1700" fill="url(#tw-sky)" />
-      <g id="tw-stars" opacity="0">
-        {Array.from({ length: 70 }, (_, i) => (
-          <circle key={i} cx={-700 + ((i * 263.3) % 1850)} cy={(i * 97.7) % 760} r={0.8 + (i % 4) * 0.4} fill="#fff" className="tw-tw" style={{ animationDelay: `${(i % 7) * 0.4}s` }} />
+      <g id="tw-stars" opacity={look.stars}>
+        {Array.from({ length: 90 }, (_, i) => (
+          <circle key={i} cx={-700 + rnd(5, i, 1) * 1850} cy={-60 + rnd(5, i, 2) * 760} r={0.7 + rnd(5, i, 3) * 1.3} fill="#fff" className="tw-tw" style={{ animationDelay: `${(i % 7) * 0.4}s` }} />
         ))}
       </g>
       <g id="tw-cam">
-        <g id="tw-l1">
-          <circle cx="340" cy="560" r="230" fill="url(#tw-sun)" />
-          <circle cx="340" cy="560" r="42" fill="#fff4d6" />
-          <path d="M-900 720V600l120-90 110 70 130-120 120 100 90-60 140 110 110-130 120 90 130-70 110 90 120-110 140 120 110-80 120 70 130-110 120 100 110-60 140 90v110z" fill="#7fa3e0" opacity=".55" />
-        </g>
-        <g id="tw-clouds">
-          {[[-380, 420, 1.2, 0.8], [260, 330, 0.9, 0.7], [-120, 180, 1.4, 0.75], [420, 40, 1.1, 0.7], [-520, -120, 1, 0.65], [120, -300, 1.5, 0.7], [-260, -520, 1.1, 0.6], [380, -760, 1.3, 0.55], [-80, -1050, 1.6, 0.5], [300, -1400, 1.2, 0.4]].map(([x, y, s, o], i) => cloud(x, y, s, o, i))}
-        </g>
-        <g id="tw-l2">
-          <path d="M-900 720V560h70v-50h60v90h50v-140h80v100h60v-60h70v110h60v-170h90v120h50v-80h70v130h60v-100h80v70h60v-150h70v110h60v-70h90v140h50v-110h70v90h60v-60h80v120h60v-90h70v180z" fill="#5f86cf" opacity=".8" />
-        </g>
-        <g id="tw-l3">
-          {[[-640, 90, 110, '#e9d7b4', '#b5553f'], [-500, 110, 150, '#d9c3a0', '#8f3f34'], [-360, 80, 96, '#efe0c4', '#b5553f'], [-250, 70, 120, '#dccaa6', '#9c4a3a'], [330, 90, 130, '#e9d7b4', '#8f3f34'], [450, 110, 100, '#d9c3a0', '#b5553f'], [590, 80, 150, '#efe0c4', '#9c4a3a'], [700, 100, 112, '#dccaa6', '#b5553f'], [820, 90, 140, '#e9d7b4', '#8f3f34']].map(([x, w, h, c, r]) => house(x as number, w as number, h as number, c as string, r as string))}
-          {[-700, -180, 250, 560, 900].map((x) => (
-            <g key={x}>
-              <rect x={x - 4} y={GROUND - 46} width="8" height="46" fill="#6b4a2e" />
-              <circle cx={x} cy={GROUND - 62} r="30" fill="#4f9d5a" />
-              <circle cx={x - 16} cy={GROUND - 48} r="20" fill="#3f8a4b" />
-              <circle cx={x + 18} cy={GROUND - 50} r="22" fill="#5fae69" />
-            </g>
-          ))}
-        </g>
+        <Backdrop theme={theme} look={look} />
         <g id="tw-world">
-          <rect x="-1400" y="0" width="2800" height="400" fill="#4a8a52" />
-          <rect x="-1400" y="0" width="2800" height="10" fill="#6fb574" />
-          <path d="M-1400 34h2800v46h-2800z" fill="#3a3f55" />
-          <path d="M-1400 55h2800" stroke="#f4f6ff" strokeWidth="3" strokeDasharray="26 22" opacity=".7" />
-          <rect x={-TOWER_BASE_W / 2 - 14} y="-2" width={TOWER_BASE_W + 28} height="16" rx="5" fill="#c9cdee" stroke={INK} strokeWidth="2.5" />
-          <rect x={-TOWER_BASE_W / 2 - 14} y="12" width={TOWER_BASE_W + 28} height="8" fill="#8f96c4" stroke={INK} strokeWidth="2.5" />
+          <rect x="-1400" y="0" width="2800" height="400" fill={look.ground[0]} />
+          <rect x="-1400" y="0" width="2800" height="10" fill={look.ground[1]} />
+          <path d="M-1400 34h2800v46h-2800z" fill={look.road[0]} />
+          <path d="M-1400 55h2800" stroke={look.road[1]} strokeWidth="3" strokeDasharray="26 22" opacity=".7" />
+          <rect x={-TOWER_BASE_W / 2 - 14} y="-2" width={TOWER_BASE_W + 28} height="16" rx="5" fill={look.base[0]} stroke={INK} strokeWidth="2.5" />
+          <rect x={-TOWER_BASE_W / 2 - 14} y="12" width={TOWER_BASE_W + 28} height="8" fill={look.base[1]} stroke={INK} strokeWidth="2.5" />
+          <g id="tw-best" style={{ display: 'none' }}>
+            <path d="M-1400 0h2800" stroke="#ffd84d" strokeWidth="2.5" strokeDasharray="10 9" opacity=".85" />
+            <text id="tw-best-t" x="-214" y="-8" fontSize="12" fontWeight="900" fill="#ffd84d" stroke={INK} strokeWidth="4" paintOrder="stroke" strokeLinejoin="round" className="tw-font" />
+          </g>
           <g id="tw-floors" />
           <rect id="tw-ghost" height="4" rx="2" fill="#0b1030" opacity="0" />
           <path id="tw-cable" fill="none" stroke="#2b2f45" strokeWidth="3" strokeLinecap="round" />
           <g id="tw-hang" />
-          <circle id="tw-ring" r="18" fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray="113" opacity="0" style={{ transformBox: 'fill-box' }} />
+          <circle id="tw-ring" r="18" fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray="113" opacity="0" />
           <g id="tw-fx" />
         </g>
         {/* кранът — закачен за екрана */}
@@ -457,59 +494,126 @@ export function TowerStage({ onHud, control }: { onHud: (h: TowerHud) => void; c
       </g>
     </svg>
   );
+});
+
+const CLOUDS = [[-380, 420, 1.2, 0.8], [260, 330, 0.9, 0.7], [-120, 180, 1.4, 0.75], [420, 40, 1.1, 0.7], [-520, -120, 1, 0.65], [120, -300, 1.5, 0.7], [-260, -520, 1.1, 0.6], [380, -760, 1.3, 0.55], [-80, -1050, 1.6, 0.5], [300, -1400, 1.2, 0.4]];
+
+/** редица сгради с прозорци (за градските фонове) */
+function Skyline({ k, color, win, minH, maxH, lit }: { k: number; color: string; win: string; minH: number; maxH: number; lit: number }) {
+  const out: React.ReactNode[] = [];
+  let x = -900, i = 0;
+  while (x < 1350) {
+    const w = 62 + rnd(k, i, 1) * 70, h = minH + rnd(k, i, 2) * (maxH - minH), top = GROUND - h;
+    out.push(<rect key={`b${i}`} x={x} y={top} width={w} height={h + 60} fill={color} />);
+    if (rnd(k, i, 3) < 0.4) out.push(<rect key={`a${i}`} x={x + w / 2 - 2} y={top - 26} width="4" height="26" fill={color} />);
+    for (let r = 0; r * 22 + 14 < h - 8; r++)
+      for (let c = 0; c * 17 + 10 < w - 12; c++) if (rnd(k, i * 31 + r, c + 5) < lit) out.push(<rect key={`w${i}-${r}-${c}`} x={x + 10 + c * 17} y={top + 14 + r * 22} width="8" height="11" fill={win} />);
+    x += w + 4 + rnd(k, i, 4) * 20;
+    i++;
+  }
+  return <>{out}</>;
 }
 
-export function TowerStageDemo() {
-  const control = useRef<{ drop: () => void; restart: () => void; setAuto: (v: boolean) => void } | null>(null);
-  const [hud, setHud] = useState<TowerHud>({ floors: 0, lives: 3, combo: 0, over: false, started: false });
-  const [auto, setAuto] = useState(false);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        control.current?.drop();
-      }
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, []);
-  return (
-    <div className="twg" onPointerDown={() => !hud.over && control.current?.drop()}>
-      <TowerStage onHud={setHud} control={control} />
-      <div className="twg-hud">
-        <div className="twg-score">
-          <b className="ln-display">{hud.floors}</b>
-          <span>етажа</span>
-        </div>
-        {hud.combo > 1 && <div className="twg-combo ln-display">×{hud.combo} перфектни</div>}
-        <div className="twg-lives">
-          {Array.from({ length: 3 }, (_, i) => (
-            <span key={i} data-on={i < hud.lives}>♥</span>
+function Backdrop({ theme, look }: { theme: TowerTheme; look: Look }) {
+  const house = (x: number, w: number, h: number, c: string, roof: string, win = '#ffe9a3') => (
+    <g key={x}>
+      <rect x={x} y={GROUND - h} width={w} height={h} fill={c} />
+      <path d={`M${x - 6} ${GROUND - h}l${w / 2 + 6} ${-h * 0.45} ${w / 2 + 6} ${h * 0.45}z`} fill={roof} />
+      {[0.25, 0.65].map((k) => (
+        <rect key={k} x={x + w * k} y={GROUND - h * 0.7} width={w * 0.16} height={h * 0.22} fill={win} opacity=".85" />
+      ))}
+    </g>
+  );
+  const clouds = (
+    <g id="tw-clouds">
+      {CLOUDS.map(([x, y, s, o], i) => (
+        <g key={i} transform={`translate(${x} ${y}) scale(${s})`} opacity={o * (theme === 'library' ? 0.35 : 1)}>
+          <path d="M0 0q16-22 44-10 20-24 52-4 30-8 40 16 24 2 20 20h-170q-14-18 14-22z" fill={look.cloud} className={i % 2 ? 'tw-drift' : 'tw-drift2'} />
+        </g>
+      ))}
+    </g>
+  );
+  if (theme === 'mountain') {
+    const peak = (x: number, b: number, h: number, c: string, i: number) => (
+      <g key={i}>
+        <path d={`M${x - b / 2} 760L${x} ${720 - h}L${x + b / 2} 760z`} fill={c} />
+        <path d={`M${x} ${720 - h}l${b * 0.11} ${h * 0.22}l${-b * 0.05} ${-h * 0.05}l${-b * 0.05} ${h * 0.07}l${-b * 0.05} ${-h * 0.06}l${-b * 0.07} ${h * 0.04}z`} fill="#fff4ea" opacity=".9" />
+      </g>
+    );
+    const pine = (x: number, s: number, c: string) => (
+      <g key={x} transform={`translate(${x} ${GROUND}) scale(${s})`}>
+        <rect x="-4" y="-16" width="8" height="16" fill="#5a3b28" />
+        <path d="M0-96 22-58H10L28-30H-28L-10-58H-22z" fill={c} />
+        <path d="M0-96 22-58H10L28-30H0z" fill="#000" opacity=".12" />
+      </g>
+    );
+    return (
+      <>
+        <g id="tw-l1">
+          <circle cx="110" cy="590" r="230" fill="url(#tw-sun)" />
+          <circle cx="110" cy="590" r="40" fill="#fff0cf" />
+          {[[-700, 520, 300], [-330, 600, 380], [60, 520, 290], [380, 640, 420], [760, 560, 330], [1100, 520, 300]].map(([x, b, h], i) => peak(x, b, h, i % 2 ? '#8f6aa8' : '#a57ab0', i))}
+        </g>
+        {clouds}
+        <g id="tw-l2">
+          <path d="M-900 760V610q110-70 230-20 100-90 230-30 120-80 250-10 110-70 230-10 120-80 250-20 110-60 230 0 100-70 230-20v170z" fill="#5d4a86" />
+          <path d="M-900 760V660q150-50 300-10 160-60 320-10 150-50 300 0 160-50 320-10 150-40 300 0 100-30 210-10v140z" fill="#463c70" />
+        </g>
+        <g id="tw-l3">
+          {[-760, -690, -560, -300, -230, 300, 372, 620, 700, 880, 960].map((x, i) => pine(x, 0.9 + (i % 3) * 0.28, i % 2 ? '#2f5d50' : '#3a6f58'))}
+          {[[-470, 100, 76, '#b98a5e', '#6e3f2c'], [440, 110, 82, '#a8774e', '#5f3626'], [770, 96, 70, '#b98a5e', '#6e3f2c']].map(([x, w, h, c, r]) => house(x as number, w as number, h as number, c as string, r as string, '#ffd884'))}
+        </g>
+      </>
+    );
+  }
+  if (theme === 'library')
+    return (
+      <>
+        <g id="tw-l1">
+          <circle cx="330" cy="420" r="210" fill="url(#tw-moon)" />
+          <circle cx="330" cy="420" r="36" fill="#f4f1ff" />
+          <circle cx="318" cy="410" r="7" fill="#d9d4f5" />
+          <circle cx="342" cy="432" r="5" fill="#d9d4f5" />
+          <Skyline k={3} color="#1b2a66" win="#4a5aa8" minH={130} maxH={300} lit={0.25} />
+        </g>
+        {clouds}
+        <g id="tw-l2">
+          <Skyline k={7} color="#141f52" win="#ffd884" minH={90} maxH={230} lit={0.3} />
+        </g>
+        <g id="tw-l3">
+          <Skyline k={11} color="#0d1538" win="#ffe9a3" minH={50} maxH={130} lit={0.42} />
+          {[-620, -240, 260, 640, 1010].map((x) => (
+            <g key={x}>
+              <rect x={x - 2} y={GROUND - 64} width="4" height="64" fill="#0a1030" />
+              <circle cx={x} cy={GROUND - 66} r="20" fill="#ffd884" opacity=".22" />
+              <circle cx={x} cy={GROUND - 66} r="5" fill="#fff1c2" />
+            </g>
           ))}
-        </div>
-      </div>
-      {!hud.started && !hud.over && <p className="twg-hint ln-display">Натисни, за да пуснеш етажа</p>}
-      {hud.over && (
-        <div className="twg-over" onPointerDown={(e) => e.stopPropagation()}>
-          <p className="ln-eyebrow" style={{ justifyContent: 'center' }}>Край на играта</p>
-          <b className="ln-display ln-grad">{hud.floors}</b>
-          <span>етажа</span>
-          <button onClick={() => control.current?.restart()} className="ln-btn ln-btn-primary">Още една кула</button>
-        </div>
-      )}
-      <div className="twg-tools" onPointerDown={(e) => e.stopPropagation()}>
-        <button
-          onClick={() => {
-            const v = !auto;
-            setAuto(v);
-            control.current?.setAuto(v);
-          }}
-          className="ln-btn ln-btn-ghost ln-btn-sm"
-        >
-          {auto ? 'Спри авто' : 'Авто'}
-        </button>
-        <button onClick={() => control.current?.restart()} className="ln-btn ln-btn-ghost ln-btn-sm">↻</button>
-      </div>
-    </div>
+        </g>
+      </>
+    );
+  return (
+    <>
+      <g id="tw-l1">
+        <circle cx="340" cy="560" r="230" fill="url(#tw-sun)" />
+        <circle cx="340" cy="560" r="42" fill="#fff4d6" />
+        <path d="M-900 720V600l120-90 110 70 130-120 120 100 90-60 140 110 110-130 120 90 130-70 110 90 120-110 140 120 110-80 120 70 130-110 120 100 110-60 140 90v110z" fill="#7fa3e0" opacity=".55" />
+      </g>
+      {clouds}
+      <g id="tw-l2">
+        <path d="M-900 720V560h70v-50h60v90h50v-140h80v100h60v-60h70v110h60v-170h90v120h50v-80h70v130h60v-100h80v70h60v-150h70v110h60v-70h90v140h50v-110h70v90h60v-60h80v120h60v-90h70v180z" fill="#5f86cf" opacity=".8" />
+      </g>
+      <g id="tw-l3">
+        {[[-640, 90, 110, '#e9d7b4', '#b5553f'], [-500, 110, 150, '#d9c3a0', '#8f3f34'], [-360, 80, 96, '#efe0c4', '#b5553f'], [-250, 70, 120, '#dccaa6', '#9c4a3a'], [330, 90, 130, '#e9d7b4', '#8f3f34'], [450, 110, 100, '#d9c3a0', '#b5553f'], [590, 80, 150, '#efe0c4', '#9c4a3a'], [700, 100, 112, '#dccaa6', '#b5553f'], [820, 90, 140, '#e9d7b4', '#8f3f34']].map(([x, w, h, c, r]) => house(x as number, w as number, h as number, c as string, r as string))}
+        {[-700, -180, 250, 560, 900].map((x) => (
+          <g key={x}>
+            <rect x={x - 4} y={GROUND - 46} width="8" height="46" fill="#6b4a2e" />
+            <circle cx={x} cy={GROUND - 62} r="30" fill="#4f9d5a" />
+            <circle cx={x - 16} cy={GROUND - 48} r="20" fill="#3f8a4b" />
+            <circle cx={x + 18} cy={GROUND - 50} r="22" fill="#5fae69" />
+          </g>
+        ))}
+      </g>
+    </>
   );
 }
