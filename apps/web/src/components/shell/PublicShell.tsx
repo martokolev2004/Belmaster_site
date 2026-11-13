@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { NavProgress } from '@/components/fx/NavProgress';
 import '@fontsource-variable/unbounded';
 import '@/components/shell/nx.css';
 import Link from 'next/link';
@@ -8,6 +10,9 @@ import { ButtonLink } from '@/components/ui';
 export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="nx min-h-dvh">
+      <Suspense>
+        <NavProgress />
+      </Suspense>
       <header className="sticky top-0 z-20 border-b-2 border-line bg-bg/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Link href="/" aria-label="БЕЛ Мастър — начало">

@@ -56,10 +56,9 @@ export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: W
           <Alert>{error}</Alert>
         </div>
       )}
-      {!socket || !connected ? (
-        <p className="py-10 text-center font-bold text-muted">Свързване…</p>
-      ) : !state ? (
-        <Hub socket={socket} quick={quick} weapons={weapons} selected={selected} diamonds={diamonds} isGuest={isGuest} />
+      {/* началният екран се показва веднага; бутоните се включват, щом връзката е готова */}
+      {!state || !socket ? (
+        <Hub socket={socket && connected ? socket : null} quick={quick} weapons={weapons} selected={selected} diamonds={diamonds} isGuest={isGuest} />
       ) : (
         <div data-game className="contents">
           {state.phase === 'lobby' ? <Lobby socket={socket} state={state} /> : <Match socket={socket} state={state} offset={offset} chat={chat} />}
@@ -70,7 +69,7 @@ export function ClimbGame({ weapons, selected, diamonds, isGuest }: { weapons: W
 }
 
 // ───────────── начало ─────────────
-function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: ClimbSocket; quick: { searching: boolean; offerBot: boolean }; weapons: WeaponView[]; selected: string; diamonds: number; isGuest: boolean }) {
+function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: ClimbSocket | null; quick: { searching: boolean; offerBot: boolean }; weapons: WeaponView[]; selected: string; diamonds: number; isGuest: boolean }) {
   const [code, setCode] = useState('');
   const RULES: [string, string, string][] = [
     ['❓', 'Един въпрос за двамата', 'Само най-бързият верен избира какво да направи.'],
@@ -109,7 +108,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <span className="nx-tile-ic"><Zap className="size-6" /></span>
             <p className="ln-display nx-tile-t mt-4">Бърза игра</p>
             <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">Срещу случаен съперник от твоя клас.</p>
-            <Button block disabled={quick.searching} onClick={() => socket.emit('climb:quick')}>
+            <Button block disabled={quick.searching || !socket} onClick={() => socket?.emit('climb:quick')}>
               {quick.searching ? 'Търсим съперник…' : 'Търси съперник'}
             </Button>
           </div>
@@ -117,7 +116,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <span className="nx-tile-ic"><Users className="size-6" /></span>
             <p className="ln-display nx-tile-t mt-4">С приятел</p>
             <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">Създай стая и прати кода или линка.</p>
-            <Button variant="outline" block onClick={() => socket.emit('climb:create')}>
+            <Button variant="outline" block disabled={!socket} onClick={() => socket?.emit('climb:create')}>
               Създай стая
             </Button>
           </div>
@@ -125,7 +124,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
             <span className="nx-tile-ic"><Bot className="size-6" /></span>
             <p className="ln-display nx-tile-t mt-4">Срещу бот</p>
             <p className="mb-5 mt-1 flex-1 text-sm font-semibold text-muted">За загрявка, без рейтинг.</p>
-            <Button variant="outline" block onClick={() => socket.emit('climb:bot')}>
+            <Button variant="outline" block disabled={!socket} onClick={() => socket?.emit('climb:bot')}>
               Играй с бота
             </Button>
           </div>
@@ -133,7 +132,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
         {quick.searching && (
           <p className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold text-muted">
             Търсим противник от твоя клас…
-            <button onClick={() => socket.emit('climb:quick_leave')} className="text-secondary underline">
+            <button onClick={() => socket?.emit('climb:quick_leave')} className="text-secondary underline">
               Откажи
             </button>
           </p>
@@ -141,9 +140,9 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
         {!quick.searching && quick.offerBot && (
           <div className="nx-panel mt-3 flex flex-wrap items-center gap-3 p-4 text-sm font-bold">
             <span className="flex-1">😴 Няма свободен противник в момента. Опитай пак след малко или играй с бота.</span>
-            <Button size="sm" onClick={() => socket.emit('climb:bot')}>Играй с бота</Button>
-            <Button size="sm" variant="outline" onClick={() => socket.emit('climb:quick')}>Опитай пак</Button>
-            <button onClick={() => socket.emit('climb:quick_leave')} className="px-2 text-muted underline">Затвори</button>
+            <Button size="sm" onClick={() => socket?.emit('climb:bot')}>Играй с бота</Button>
+            <Button size="sm" variant="outline" onClick={() => socket?.emit('climb:quick')}>Опитай пак</Button>
+            <button onClick={() => socket?.emit('climb:quick_leave')} className="px-2 text-muted underline">Затвори</button>
           </div>
         )}
       </section>
@@ -154,7 +153,7 @@ function Hub({ socket, quick, weapons, selected, diamonds, isGuest }: { socket: 
           className="flex flex-1 gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (code.trim()) socket.emit('climb:join', { code });
+            if (code.trim()) socket?.emit('climb:join', { code });
           }}
         >
           <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6} placeholder="НАПР. K7Q2MX" className="font-mono tracking-widest" />

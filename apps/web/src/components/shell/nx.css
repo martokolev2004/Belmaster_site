@@ -334,3 +334,28 @@ html:has(.nx) body { background: #090d1e; }
 .wk-list li { position: relative; padding: 0.75rem 0.9rem 0.75rem 2.1rem; font-size: 0.98rem; line-height: 1.6; color: var(--ink); background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--ln-line); }
 .wk-list li::before { content: ''; position: absolute; left: 0.9rem; top: 1.3rem; width: 0.45rem; height: 0.45rem; background: rgb(var(--acc)); transform: rotate(45deg); }
 .wk-quote { padding: 0.7rem 1rem; font-style: italic; border-left: 3px solid rgb(var(--acc)); background: rgba(255, 255, 255, 0.04); }
+
+/* ── дребни движения ── */
+.pg-in { animation: pg-in 0.28s ease-out backwards; }
+@keyframes pg-in { from { opacity: 0; } }
+/* картите влизат една след друга (само при появяване; „backwards“ — за да не остава трансформация след края) */
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):not([data-game] *) { animation: nx-enter 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(2) { animation-delay: 0.05s; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(3) { animation-delay: 0.1s; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(4) { animation-delay: 0.15s; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(5) { animation-delay: 0.2s; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(6) { animation-delay: 0.25s; }
+.nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card):nth-child(n + 7) { animation-delay: 0.3s; }
+@keyframes nx-enter { from { opacity: 0; transform: translateY(16px); } }
+/* лентите за напредък се пълнят плавно */
+.nx-bar i { animation: nx-fill 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards 0.2s; transform-origin: 0 50%; }
+@keyframes nx-fill { from { transform: scaleX(0); } }
+/* натискане */
+.nx :is(.nx-tile, .nx-chip, .lb-book):active { transform: scale(0.97); transition-duration: 0.05s; }
+/* лента за зареждане при смяна на страница */
+.nav-progress { position: fixed; left: 0; top: 0; z-index: 100; height: 3px; width: 100%; transform-origin: 0 50%; background: linear-gradient(90deg, rgb(var(--acc)), rgb(var(--acc-hi))); box-shadow: 0 0 12px rgb(var(--acc)); pointer-events: none; }
+.nav-progress[data-phase='run'] { animation: nav-run 6s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; }
+.nav-progress[data-phase='done'] { animation: nav-done 0.35s ease-out forwards; }
+@keyframes nav-run { from { transform: scaleX(0); } to { transform: scaleX(0.92); } }
+@keyframes nav-done { from { transform: scaleX(0.92); opacity: 1; } to { transform: scaleX(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pg-in, .nx main :is(.nx-panel, .nx-tile, .nx-feature, .lb-book, .ln-card), .nx-bar i { animation: none; } }

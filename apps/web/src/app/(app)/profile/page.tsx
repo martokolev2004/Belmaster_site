@@ -12,6 +12,7 @@ import { logoutAction } from '@/app/(auth)/actions';
 import { needsParent } from '@/lib/age';
 import { PasswordForm, ProfileForm } from './ProfileForms';
 import { PrivacyCard } from './PrivacyCard';
+import { Count } from '@/components/fx/Count';
 
 export const metadata = { title: 'Профил' };
 
@@ -33,7 +34,7 @@ export default async function ProfilePage() {
 
   const stats = [
     { icon: '🔥', v: user.streak, l: 'дни серия', s: `рекорд ${user.bestStreak}`, c: '#ff9d3c' },
-    { icon: '⭐', v: user.xp.toLocaleString('bg-BG'), l: 'общо XP', s: `ниво ${lp.level}`, c: '#ffd166' },
+    { icon: '⭐', v: user.xp, l: 'общо XP', s: `ниво ${lp.level}`, c: '#ffd166' },
     { icon: '💎', v: diamondsOf(user), l: 'диаманта', s: 'за аватара', c: '#5fd0ff' },
     { icon: '📝', v: attempts._count, l: 'теста', s: `${accuracy}% точност`, c: '#6ea2ff' },
     { icon: '⚔️', v: rating ? rating.rating : '—', l: 'рейтинг', s: rating ? `${rating.wins}/${rating.games} победи` : 'този месец', c: '#ff7a8a' },
@@ -95,7 +96,7 @@ export default async function ProfilePage() {
         {stats.map((s) => (
           <div key={s.l} className="nx-panel pf-stat" style={{ '--c': s.c } as CSSProperties}>
             <span className="pf-stat-ic">{s.icon}</span>
-            <b className="ln-display">{s.v}</b>
+            <b className="ln-display">{typeof s.v === 'number' ? <Count to={s.v} /> : s.v}</b>
             <span>{s.l}</span>
             <small>{s.s}</small>
           </div>

@@ -1,3 +1,6 @@
+import { Suspense } from 'react';
+import { NavProgress } from '@/components/fx/NavProgress';
+import { Count } from '@/components/fx/Count';
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel } from '@belmaster/shared';
@@ -33,6 +36,9 @@ export async function AppShell({ user, children, skin }: { user: User; children:
   return (
     <GameSocketProvider>
       <div className="app-shell nx min-h-dvh md:pl-64">
+        <Suspense>
+          <NavProgress />
+        </Suspense>
         {/* Странично меню (компютър) */}
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r-2 border-line bg-bg px-4 py-6 md:flex">
           <Link href="/" className="mb-8 px-3">
@@ -64,10 +70,10 @@ export async function AppShell({ user, children, skin }: { user: User; children:
             </Link>
             <div className="flex items-center gap-2 text-sm font-extrabold">
               <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-orange" title="Серия от дни">
-                <Flame className="size-5" fill="currentColor" /> {user.streak}
+                <Flame className="size-5" fill="currentColor" /> <Count to={user.streak} />
               </span>
               <span className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-accent-dark" title="Опит (XP)">
-                <Star className="size-5" fill="currentColor" /> {user.xp}
+                <Star className="size-5" fill="currentColor" /> <Count to={user.xp} />
               </span>
               <Link href="/notifications" className="relative rounded-xl p-1.5 text-muted hover:bg-surface-2" aria-label="Известия" title="Известия">
                 <Bell className="size-5" />
@@ -76,7 +82,7 @@ export async function AppShell({ user, children, skin }: { user: User; children:
                 )}
               </Link>
               <Link href="/profile/avatar" className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-secondary hover:bg-surface-2" title="Диаманти — за магазина на аватара">
-                <Gem className="size-5" /> {diamonds}
+                <Gem className="size-5" /> <Count to={diamonds} />
               </Link>
               <Link href="/profile" className="relative md:hidden" aria-label="Профил">
                 <Avatar name={user.displayName} avatar={user.avatar} seed={user.id} size={34} />
