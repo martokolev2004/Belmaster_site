@@ -22,6 +22,7 @@ import { cn } from '@/lib/cn';
 import { play } from '@/lib/sound';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { buyWeaponAction, selectWeaponAction } from '@/app/(app)/climb/actions';
+import { ShareButton } from '@/components/share/ShareCard';
 import { ClimbStage } from './ClimbStage';
 import { ClimbDemo } from './ClimbDemo';
 import { useClimb, useLeft, type ClimbSocket } from './useClimb';
@@ -758,6 +759,7 @@ function FinishedPanel({ socket, state }: { socket: ClimbSocket; state: ClimbSta
         </p>
       )}
       <div className="mt-4 grid gap-2">
+        {won && <ShareButton data={{ kicker: 'Към върха', value: 'Победа', line: `срещу ${state.players.find((p) => p.uid !== state.you)?.name ?? 'съперника'}`, color: '#5fe0d0' }} />}
         <Button onClick={() => socket.emit('climb:rematch')}>{state.vsBot ? 'Нова игра с бота' : 'Реванш'}</Button>
         {state.matchId && (
           <Link href={`/match/${state.matchId}`} className="font-extrabold text-secondary">

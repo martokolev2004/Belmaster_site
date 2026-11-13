@@ -14,6 +14,7 @@ import { play } from '@/lib/sound';
 import type { ClientQuestion } from '@/lib/quiz-types';
 import type { TowerState } from '@/lib/tower';
 import { answerTowerAction, beginTowerAction, dropTowerAction, quitTowerAction, startTowerAction, towerReviewAction, type TowerFinish } from '@/app/(app)/tower/actions';
+import { ShareButton } from '@/components/share/ShareCard';
 import { TowerStage, type TowerStageApi } from './TowerStage';
 
 interface TopRow {
@@ -426,6 +427,11 @@ function StartScreen({
             </Button>
             {isGuest && <span className="text-xs font-semibold text-muted">Като гост играеш, но не влизаш в класацията.</span>}
           </div>
+          {over && finish!.floors > 0 && (
+            <div className="mt-3 max-w-xs">
+              <ShareButton data={{ kicker: 'Кула на Словото', value: String(finish!.floors), line: finish!.record ? 'етажа — нов рекорд!' : 'етажа', color: '#ffb020' }} />
+            </div>
+          )}
           {error && <p className="mt-2 text-sm font-bold text-error">{error}</p>}
         </div>
         <div className="tw-score">

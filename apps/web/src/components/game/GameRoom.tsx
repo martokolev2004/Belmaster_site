@@ -8,6 +8,7 @@ import { Bot, Castle, Check, Clock, Copy, Crown, LogOut, MessageCircle, Swords, 
 import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
+import { ShareButton } from '@/components/share/ShareCard';
 import { BattleStage as MapBoard } from './BattleStage';
 import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
@@ -1012,6 +1013,11 @@ function Finished({ state, me }: { state: GameState; me: string }) {
         </div>
         <h1 className="text-3xl font-black">{winner?.uid === me ? 'Победа! 🎉' : `${winner?.name ?? '—'} печели!`}</h1>
         <p className="mt-1 text-muted">{mine ? `Ти си ${mine.place}. място с ${mine.territories} области.` : ''}</p>
+        {mine && mine.place <= 2 && (
+          <div className="mx-auto mt-4 max-w-xs">
+            <ShareButton data={{ kicker: 'Битка', value: mine.place === 1 ? 'Победа' : `${mine.place}. място`, line: `${mine.territories} области от ${Object.keys(state.regions).length}`, color: mine.place === 1 ? '#ffc93c' : '#6ea2ff' }} />
+          </div>
+        )}
       </div>
 
       <ol className="card3d mt-6 divide-y-2 divide-line rounded-2xl bg-surface">

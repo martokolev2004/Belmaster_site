@@ -4,8 +4,8 @@ import { diamondsEarned, lockedItems, nextLevel, type UnlockProgress } from '@be
 import { isAdmin } from './auth';
 
 /** Налични диаманти (спечелени − похарчени). */
-export function diamondsOf(user: Pick<User, 'xp' | 'diamondsSpent'>): number {
-  return Math.max(0, diamondsEarned(user.xp) - user.diamondsSpent);
+export function diamondsOf(user: Pick<User, 'xp' | 'diamondsSpent'> & { diamondsBonus?: number }): number {
+  return Math.max(0, diamondsEarned(user.xp) + (user.diamondsBonus ?? 0) - user.diamondsSpent);
 }
 
 /** Какво е постигнал потребителят — за отключване на части от аватара. */

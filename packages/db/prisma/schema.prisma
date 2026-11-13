@@ -34,6 +34,8 @@ model User {
   bestStreak    Int       @default(0)
   lastActiveDay String? // YYYY-MM-DD (Europe/Sofia), за серията
   diamondsSpent  Int      @default(0) // диаманти = floor(xp/1000) − похарчени
+  diamondsBonus  Int      @default(0) // подарени диаманти (напр. +3 за първото споделяне)
+  shareRewardAt  DateTime? // кога е получена наградата за споделяне (само веднъж)
   ownedItems     String[] // купени части на аватара ("част:стойност")
   announcedLevel Int      @default(0) // до кое ниво е показан екранът „Ново ниво“ (0 = още не е настроено)
   announcedItems String[] // отключени части, за които вече е показана анимацията

@@ -41,7 +41,7 @@ export async function buyItemAction(key: string): Promise<{ ok: boolean; error?:
   if (res.count !== 1) return { ok: false, error: 'Опитай пак.' };
   await unlock(user.id);
   revalidatePath('/', 'layout');
-  return { ok: true, diamonds: diamondsOf({ xp: user.xp, diamondsSpent: user.diamondsSpent + price }) };
+  return { ok: true, diamonds: diamondsOf({ xp: user.xp, diamondsBonus: user.diamondsBonus, diamondsSpent: user.diamondsSpent + price }) };
 }
 
 /** Маха червената точка от видени части. */

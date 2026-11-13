@@ -1,0 +1,19 @@
+.shr-open { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.85rem 1.2rem; font-size: 0.85rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; background: linear-gradient(90deg, rgba(255, 122, 138, 0.22), rgba(197, 155, 255, 0.22), rgba(110, 162, 255, 0.22)); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.28); border-radius: 0.9rem; transition: transform 0.15s, box-shadow 0.15s; }
+.shr-open:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1.5px #fff; }
+.shr { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(4, 6, 26, 0.86); backdrop-filter: blur(8px); animation: shr-in 0.25s ease-out; }
+.shr-box { position: relative; display: flex; align-items: center; gap: 1.6rem; max-width: 100%; max-height: 100%; }
+.shr-x { position: absolute; right: -0.4rem; top: -0.4rem; z-index: 2; display: flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; color: #fff; background: rgba(255, 255, 255, 0.14); border-radius: 999px; }
+.shr-frame { flex-shrink: 0; height: min(78dvh, 640px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 1.4rem; background: #080d2c; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18), 0 30px 80px rgba(0, 0, 0, 0.6); opacity: 0.4; transition: opacity 0.3s; }
+.shr-frame[data-ready='true'] { opacity: 1; }
+.shr-frame canvas { display: block; width: 100%; height: 100%; }
+.shr-side { display: flex; flex-direction: column; gap: 0.7rem; width: 19rem; max-width: 100%; color: #fff; }
+.nx .shr-side h2 { font-size: 1.5rem; }
+.shr-side p { font-size: 0.95rem; font-weight: 600; color: rgba(255, 255, 255, 0.72); }
+.shr-side .ln-btn { width: 100%; gap: 0.5rem; }
+.shr-side .ln-btn:disabled { opacity: 0.5; }
+.shr-side p.shr-reward { padding: 0.6rem 0.8rem; font-weight: 900; color: #06223a; background: linear-gradient(90deg, #9fe8ff, #5fd0ff); border-radius: 0.7rem; }
+.shr-side p.shr-reward[data-got] { color: #06240a; background: linear-gradient(90deg, #c9f5a8, #7fdc4a); animation: shr-pop 0.5s cubic-bezier(0.3, 1.7, 0.5, 1); }
+.shr-side p.shr-note { font-size: 0.82rem; }
+@media (max-width: 720px) { .shr-box { flex-direction: column; gap: 0.9rem; } .shr-frame { height: min(52dvh, 480px); } .shr-side { width: min(22rem, 100%); gap: 0.5rem; text-align: center; } .shr-side > p:not(.shr-reward):not(.shr-note) { display: none; } .nx .shr-side h2 { font-size: 1.15rem; } }
+@keyframes shr-in { from { opacity: 0; } }
+@keyframes shr-pop { from { transform: scale(0.6); } }

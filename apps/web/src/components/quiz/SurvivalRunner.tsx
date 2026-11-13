@@ -13,6 +13,7 @@ import { hasAnswer } from './inputs';
 import { ContextBox } from './ContextBox';
 import { Confetti } from '@/components/game/BattleExtras';
 import { play } from '@/lib/sound';
+import { ShareButton } from '@/components/share/ShareCard';
 import './quiz.css';
 
 /** степените на пламъка: от колко поредни, име и цвят */
@@ -74,6 +75,11 @@ function DoneCard({ done, best }: { done: Done; best: number }) {
         {done.record ? `Стар рекорд: счупен. Новият е ${best}.` : `Рекордът ти е ${best} — оставаха още ${Math.max(1, best - done.streak + 1)}.`}
         {done.xpEarned > 0 && <span className="ml-2 text-accent">+{done.xpEarned} XP</span>}
       </p>
+      {done.streak > 0 && (
+        <div className="mt-5">
+          <ShareButton data={{ kicker: 'До първа грешка', value: String(done.streak), line: `поредни верни · степен „${t.name}“`, color: t.color }} />
+        </div>
+      )}
     </>
   );
 }

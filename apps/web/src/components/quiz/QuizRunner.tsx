@@ -15,6 +15,7 @@ import { PassageText } from './PassageText';
 import { ContextBox } from './ContextBox';
 import { Confetti } from '@/components/game/BattleExtras';
 import { play } from '@/lib/sound';
+import { ShareButton } from '@/components/share/ShareCard';
 import './quiz.css';
 export { LETTERS };
 
@@ -187,7 +188,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
     );
   }
 
-  if (finished) return <ResultScreen result={finished} questions={questions} answers={answers} againHref={againHref} backHref={backHref} onReport={setReportFor} reportFor={reportFor} bestStreak={mode === 'practice' ? bestStreak : null} />;
+  if (finished) return <ResultScreen result={finished} questions={questions} answers={answers} againHref={againHref} backHref={backHref} onReport={setReportFor} reportFor={reportFor} title={title} bestStreak={mode === 'practice' ? bestStreak : null} />;
 
   const progress = mode === 'practice' ? ((idx + (result ? 1 : 0)) / questions.length) * 100 : (answeredCount / questions.length) * 100;
 
@@ -395,6 +396,7 @@ function ResultScreen({
   onReport,
   reportFor,
   bestStreak,
+  title,
 }: {
   result: FinishResult;
   questions: ClientQuestion[];
@@ -404,6 +406,7 @@ function ResultScreen({
   onReport: (id: string | null) => void;
   reportFor: string | null;
   bestStreak: number | null;
+  title: string;
 }) {
   const ex = result.exam;
   const pct = ex ? Math.round((ex.points / Math.max(1, ex.maxPoints)) * 100) : result.total ? Math.round((result.score / result.total) * 100) : 0;
@@ -486,7 +489,10 @@ function ResultScreen({
           <span className="rounded-full bg-error px-2.5 py-0.5 text-sm text-white">{result.mistakesCount}</span>
         </a>
       )}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-4">
+        <ShareButton data={{ kicker: ex ? title : `Тест · ${title}`, value: ex ? ex.grade.toFixed(2) : `${pct}%`, line: ex ? `${ex.points} от ${ex.maxPoints} точки · ${gradeWord(ex.grade)}` : `${right} от ${result.results.length} верни`, color: tone }} />
+      </div>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
         <ButtonLink href={againHref} block size="lg">
           {ex ? 'Реши отново' : 'Нов тест'}
         </ButtonLink>
