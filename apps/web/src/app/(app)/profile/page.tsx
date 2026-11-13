@@ -60,7 +60,7 @@ export default async function ProfilePage() {
               {fresh.length > 0 ? `🎁 ${fresh.length} нови неща за аватара` : 'Промени аватара'}
             </Link>
             <Link href="/grade?next=/profile" className="nx-chip">Смени клас</Link>
-            <Link href="/friends" className="nx-chip">
+            <Link href="/leaderboard#friends" className="nx-chip">
               Код за приятели: <b className="font-mono tracking-widest text-white">{user.friendCode}</b>
             </Link>
           </div>

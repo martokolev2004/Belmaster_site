@@ -25,7 +25,7 @@ export async function addFriendAction(_: FormState, form: FormData): Promise<For
   }
   if (existing) return { error: 'Вече си изпратил покана.' };
   await prisma.friendship.create({ data: { requesterId: user.id, addresseeId: target.id } });
-  revalidatePath('/friends');
+  revalidatePath('/leaderboard');
   return { ok: `Поканата до ${target.displayName} е изпратена.` };
 }
 
@@ -35,7 +35,7 @@ async function accept(id: string, userId: string) {
     await unlock(uid);
   }
   void userId;
-  revalidatePath('/friends');
+  revalidatePath('/leaderboard');
 }
 
 export async function respondFriendAction(form: FormData) {
@@ -49,6 +49,6 @@ export async function respondFriendAction(form: FormData) {
   // изтриване само при изрично „откажи“ — никога по подразбиране
   else if ((decision === 'decline' || decision === 'cancel') && (f.addresseeId === user.id || f.requesterId === user.id)) {
     await prisma.friendship.delete({ where: { id } });
-    revalidatePath('/friends');
+    revalidatePath('/leaderboard');
   }
 }
