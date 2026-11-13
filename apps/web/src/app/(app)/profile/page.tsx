@@ -1,8 +1,8 @@
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
-import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES, currentSeason, gradeLabel, levelProgress, type AchievementCategory, type AchievementIcon } from '@belmaster/shared';
-import { achievementMetrics } from '@belmaster/db';
-import { Award, BookOpen, Brain, Castle, CheckCircle2, ChevronRight, Crown, Flame, Gem, GraduationCap, KeyRound, LogOut, Medal, Mountain, Pencil, Rocket, School, ScrollText, Shield, ShieldCheck, Star, Swords, Target, Trophy, UserRound, Users, Zap } from 'lucide-react';
+import { ACHIEVEMENTS, currentSeason, gradeLabel, levelProgress } from '@belmaster/shared';
+import { ACHIEVEMENT_ICONS as ICONS } from './achievement-icons';
+import { ChevronRight, GraduationCap, KeyRound, LogOut, Pencil, School, ShieldCheck, Target, UserRound } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { diamondsOf } from '@/lib/avatar';
@@ -15,16 +15,14 @@ import { PrivacyCard } from './PrivacyCard';
 
 export const metadata = { title: 'Профил' };
 
-const ICONS: Record<AchievementIcon, typeof Star> = { star: Star, flame: Flame, award: Award, swords: Swords, crown: Crown, castle: Castle, book: BookOpen, users: Users, target: Target, shield: Shield, mountain: Mountain, trophy: Trophy, brain: Brain, graduation: GraduationCap, zap: Zap, medal: Medal, scroll: ScrollText, check: CheckCircle2, gem: Gem, rocket: Rocket };
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const [achievements, attempts, rating, matches, metrics] = await Promise.all([
+  const [achievements, attempts, rating, matches] = await Promise.all([
     prisma.userAchievement.findMany({ where: { userId: user.id }, orderBy: { unlockedAt: 'desc' } }),
     prisma.quizAttempt.aggregate({ where: { userId: user.id }, _count: true, _sum: { score: true, total: true } }),
     prisma.playerRating.findUnique({ where: { userId_grade_season: { userId: user.id, grade: user.grade!, season: currentSeason() } } }),
     prisma.matchPlayer.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { endedAt: 'desc' } }, take: 5 }),
-    achievementMetrics(prisma, user.id),
   ]);
   const unlocked = new Set(achievements.map((a) => a.code));
   const lp = levelProgress(user.xp, user.level);
@@ -109,7 +107,7 @@ export default async function ProfilePage() {
         <div className="nx-panel pf-box">
           <header>
             <h2 className="ln-display">Постижения</h2>
-            <a href="#all" className="pf-more">Виж всички →</a>
+            <Link href="/profile/achievements" className="pf-more">Виж всички →</Link>
           </header>
           <div className="nx-bar mb-4">
             <i style={{ width: `${(unlocked.size / ACHIEVEMENTS.length) * 100}%` }} />
@@ -162,41 +160,6 @@ export default async function ProfilePage() {
         <QuickLink href="/stats" icon={<Target className="size-5" />} c="#5fe0d0" title="Статистика" text="Силни и слаби теми" />
         <QuickLink href="/class" icon={<School className="size-5" />} c="#6ea2ff" title="Моят клас" text="Задачи от учителя" />
         <QuickLink href="/teacher" icon={<GraduationCap className="size-5" />} c="#c59bff" title={user.teacherStatus === 'APPROVED' ? 'Учител' : 'Аз съм учител'} text="Класове и тестове" />
-      </section>
-
-      {/* ── всички постижения ── */}
-      <section id="all" className="nx-panel pf-box">
-        <header>
-          <h2 className="ln-display">Всички постижения</h2>
-          <span className="pf-more">{unlocked.size} от {ACHIEVEMENTS.length}</span>
-        </header>
-        {(Object.keys(ACHIEVEMENT_CATEGORIES) as AchievementCategory[]).map((cat) => (
-          <div key={cat} className="mt-4">
-            <h3 className="pf-cat">{ACHIEVEMENT_CATEGORIES[cat]}</h3>
-            <div className="pf-ach">
-              {ACHIEVEMENTS.filter((a) => a.category === cat).map((a) => {
-                const Icon = ICONS[a.icon];
-                const on = unlocked.has(a.code);
-                const cur = a.metric ? Math.min(metrics[a.metric], a.goal ?? 0) : 0;
-                return (
-                  <div key={a.code} data-on={on}>
-                    <span className="pf-badge"><Icon className="size-5" /></span>
-                    <span className="min-w-0">
-                      <b>{a.name}</b>
-                      <small>{a.description}</small>
-                      {!on && a.metric && a.goal && a.goal > 1 && (
-                        <span className="pf-prog">
-                          <span className="nx-bar"><i style={{ width: `${(cur / a.goal) * 100}%` }} /></span>
-                          {cur}/{a.goal}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
       </section>
 
       {/* ── настройки ── */}
