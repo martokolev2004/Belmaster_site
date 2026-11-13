@@ -290,18 +290,21 @@ html:has(.nx) body { background: #090d1e; }
 .lb-search { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.4rem; padding: 0 1.1rem; height: 3.4rem; color: var(--muted); background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px var(--ln-line); clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); transition: box-shadow 0.2s; }
 .lb-search:focus-within { box-shadow: inset 0 0 0 2px rgb(var(--acc)); color: #fff; }
 .nx .lb-search input { flex: 1; min-width: 0; height: 100%; border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; outline: none; font-weight: 700; color: #fff; }
-.lb-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
-@media (max-width: 1000px) { .lb-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .lb-grid { grid-template-columns: 1fr; } }
-.lb-card { position: relative; display: flex; flex-direction: column; min-height: 9.6rem; padding: 1.15rem 1.2rem 1rem; overflow: hidden; box-shadow: inset 0 0 0 1px var(--ln-line), inset 4px 0 0 var(--c); transition: transform 0.25s, background 0.25s; }
-.lb-card:hover { transform: translateY(-4px); background: linear-gradient(140deg, color-mix(in srgb, var(--c) 22%, transparent), rgba(255, 255, 255, 0.03) 70%); }
-.lb-no { position: absolute; right: 0.9rem; top: 0.6rem; font-size: 2.2rem; color: transparent; -webkit-text-stroke: 1.2px color-mix(in srgb, var(--c) 55%, transparent); opacity: 0.6; }
-.lb-author { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--c); padding-right: 3rem; }
-.lb-title { margin-top: 0.45rem; font-size: 1.12rem; font-weight: 900; line-height: 1.2; color: #fff; padding-right: 2rem; }
-.lb-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-top: auto; padding-top: 0.9rem; }
 .lb-chip { padding: 0.25rem 0.6rem; font-size: 0.7rem; font-weight: 800; color: var(--ink); background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px var(--ln-line); }
-.lb-q { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.74rem; font-weight: 800; color: var(--muted); white-space: nowrap; transition: color 0.2s, transform 0.2s; }
-.lb-card:hover .lb-q { color: #fff; transform: translateX(3px); }
+/* рафтове с книги: всеки ред стъпва на дървена дъска */
+.lb-shelf { --bh: 13.5rem; --gap: 3rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(8.6rem, 1fr)); grid-auto-rows: var(--bh); row-gap: var(--gap); column-gap: 1.1rem; padding: 0.6rem 1.2rem 1.6rem; background: linear-gradient(180deg, transparent calc(var(--bh) + 0.6rem), #a9794a calc(var(--bh) + 0.6rem), #8a5d34 calc(var(--bh) + 1.05rem), #5c3b1f calc(var(--bh) + 1.05rem), #3d2612 calc(var(--bh) + 1.5rem), rgba(0, 0, 0, 0.45) calc(var(--bh) + 1.5rem), transparent calc(var(--bh) + 2.5rem)) 0 0 / 100% calc(var(--bh) + var(--gap)) repeat-y; }
+.lb-book { position: relative; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 9.6rem; height: 100%; margin: 0 auto; padding: 1.5rem 0.8rem 0.9rem 1.35rem; text-align: center; color: #f6e7c1; border-radius: 3px 7px 7px 3px; background: linear-gradient(90deg, var(--d) 0, var(--d) 0.5rem, rgba(255, 255, 255, 0.22) 0.5rem, rgba(0, 0, 0, 0.28) 0.62rem, transparent 0.95rem), radial-gradient(120% 80% at 70% 0%, rgba(255, 255, 255, 0.16), transparent 60%), linear-gradient(160deg, var(--c), var(--d)); box-shadow: inset -3px 0 0 rgba(255, 255, 255, 0.5), inset -4px 0 0 rgba(0, 0, 0, 0.25), inset -6px 0 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.5), 6px 0 14px rgba(0, 0, 0, 0.35); transform-origin: 50% 100%; transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s; }
+.lb-book::before { content: ''; position: absolute; inset: 0.55rem 0.7rem 0.55rem 1.15rem; border: 1px solid rgba(246, 231, 193, 0.5); border-radius: 2px; pointer-events: none; }
+.lb-book:hover { transform: translateY(-10px) rotate(-1.5deg); box-shadow: inset -3px 0 0 rgba(255, 255, 255, 0.5), inset -4px 0 0 rgba(0, 0, 0, 0.25), inset -6px 0 0 rgba(255, 255, 255, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.5), 10px 14px 24px rgba(0, 0, 0, 0.5); }
+.lb-author { font-size: 0.58rem; font-weight: 900; letter-spacing: 0.14em; line-height: 1.35; text-transform: uppercase; color: rgba(246, 231, 193, 0.85); }
+.lb-rule { width: 2.2rem; height: 1px; margin: 0.55rem 0 0; background: rgba(246, 231, 193, 0.6); }
+.lb-title { display: flex; flex: 1; align-items: center; font-family: 'Playfair Display Variable', Georgia, serif; font-size: 1.12rem; font-weight: 800; line-height: 1.16; color: #fff6dc; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); text-wrap: balance; overflow-wrap: anywhere; }
+.lb-book[data-long='true'] .lb-title { font-size: 0.95rem; }
+.lb-orn { font-size: 0.95rem; line-height: 1; color: rgba(246, 231, 193, 0.7); }
+.lb-period { margin-top: 0.3rem; font-size: 0.56rem; font-weight: 800; letter-spacing: 0.06em; line-height: 1.2; color: rgba(246, 231, 193, 0.7); }
+/* разделител: колко въпроса има по произведението */
+.lb-mark { position: absolute; top: -3px; right: 1rem; width: 1.35rem; padding: 0.3rem 0 0.55rem; font-size: 0.68rem; font-weight: 900; line-height: 1; color: #3a2408; background: #ffd166; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); }
+@media (max-width: 600px) { .lb-shelf { --bh: 12.4rem; grid-template-columns: repeat(auto-fill, minmax(7.4rem, 1fr)); column-gap: 0.7rem; padding-inline: 0.6rem; } .lb-title { font-size: 1rem; } }
 .wk-hero { padding: clamp(1.4rem, 3.5vw, 2.4rem); background: linear-gradient(120deg, rgb(var(--acc) / 0.22), rgba(255, 255, 255, 0.03) 60%); }
 .wk-title { margin-top: 0.8rem; font-size: clamp(1.6rem, 4.2vw, 3rem); overflow-wrap: anywhere; }
 .wk-nav { display: flex; flex-wrap: wrap; gap: 0.3rem 1.3rem; margin-top: 1.6rem; padding-top: 1.1rem; border-top: 1px solid var(--ln-line); font-size: 0.8rem; font-weight: 800; color: var(--muted); }

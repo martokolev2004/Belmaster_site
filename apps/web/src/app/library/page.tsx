@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { BookOpen, ChevronRight, Search } from 'lucide-react';
+import { BookOpen, Search } from 'lucide-react';
+import '@fontsource-variable/playfair-display';
 import '@/components/landing/landing-next.css';
 import { gradeLabel } from '@belmaster/shared';
 import { prisma } from '@/lib/db';
@@ -13,7 +14,17 @@ export const metadata = {
   alternates: { canonical: '/library' },
 };
 
-const SPINE = ['#6ea2ff', '#5fe0d0', '#ffd166', '#ff7a8a', '#c59bff', '#ff9d3c'];
+/** платът на корицата: [основен цвят, тъмен ръб] — един автор винаги е в един цвят */
+const CLOTH: [string, string][] = [
+  ['#23508f', '#16335e'],
+  ['#8a2a3c', '#5a1826'],
+  ['#1f6b5c', '#12443a'],
+  ['#a8741f', '#6e4a10'],
+  ['#5b3a8c', '#3a235e'],
+  ['#2a6f8f', '#18465c'],
+  ['#8a4a26', '#5a2e14'],
+];
+const clothOf = (author: string) => CLOTH[[...author].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 9973, 7) % CLOTH.length];
 
 export default async function LibraryPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const user = await getCurrentUser();
@@ -55,20 +66,21 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       {works.length === 0 ? (
         <EmptyState title={term ? 'Нищо не е намерено' : 'Библиотеката още е празна'} icon={<BookOpen className="size-12" />} />
       ) : (
-        <div className="lb-grid">
-          {works.map((w, i) => (
-            <Link key={w.id} href={`/library/${slugify(w.title)}`} className="nx-panel lb-card" style={{ '--c': SPINE[i % SPINE.length] } as React.CSSProperties}>
-              <span className="lb-no ln-display">{String(i + 1).padStart(2, '0')}</span>
-              <span className="lb-author">{w.author}</span>
-              <span className="lb-title">{w.title.replace(/\.\.\.$/, '…')}</span>
-              <span className="lb-foot">
-                {w.period && <span className="lb-chip">{w.period}</span>}
-                <span className="lb-q">
-                  {w._count.questions > 0 ? `${w._count.questions} ${w._count.questions === 1 ? 'въпрос' : 'въпроса'}` : 'четиво'} <ChevronRight className="size-4" />
-                </span>
-              </span>
-            </Link>
-          ))}
+        <div className="lb-shelf">
+          {works.map((w) => {
+            const [c, d] = clothOf(w.author);
+            const title = w.title.replace(/\.\.\.$/, '…');
+            return (
+              <Link key={w.id} href={`/library/${slugify(w.title)}`} className="lb-book" data-long={title.length > 26} style={{ '--c': c, '--d': d } as React.CSSProperties}>
+                {w._count.questions > 0 && <span className="lb-mark" title={`${w._count.questions} ${w._count.questions === 1 ? 'въпрос' : 'въпроса'} по произведението`}>{w._count.questions}</span>}
+                <span className="lb-author">{w.author}</span>
+                <span className="lb-rule" />
+                <span className="lb-title">{title}</span>
+                <span className="lb-orn">❦</span>
+                {w.period && <span className="lb-period">{w.period}</span>}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
