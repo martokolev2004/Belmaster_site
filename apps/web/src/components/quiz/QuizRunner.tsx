@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ACHIEVEMENTS, gradeWord } from '@belmaster/shared';
-import { Check, ChevronLeft, ChevronRight, Clock, Flag, Flame, Star, Timer, Trophy, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock, Flag, Timer, X } from 'lucide-react';
 import { Badge, Button, ButtonLink, Input, ProgressBar, Select, Textarea } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { Answer, ClientPassage, ClientQuestion, FinishResult, QuestionResult, TestKind } from '@/lib/quiz-types';
@@ -13,6 +13,9 @@ import { checkAnswerAction, finishTestAction, reportQuestionAction } from '@/app
 import { AnswerInput, hasAnswer as hasAnswerBase, LETTERS } from './inputs';
 import { PassageText } from './PassageText';
 import { ContextBox } from './ContextBox';
+import { Confetti } from '@/components/game/BattleExtras';
+import { play } from '@/lib/sound';
+import './quiz.css';
 export { LETTERS };
 
 interface Props {
@@ -45,6 +48,10 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
   const [pending, start] = useTransition();
   const [reportFor, setReportFor] = useState<string | null>(null);
   const [showPassage, setShowPassage] = useState(true);
+  // обратна връзка: серия от поредни верни, светкавица, разтърсване
+  const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
+  const [fx, setFx] = useState<{ k: 'ok' | 'part' | 'bad'; n: number; toast: string | null } | null>(null);
 
   const q = questions[idx];
   const passage = useMemo(() => passages.find((p) => p.id === q?.passageId) ?? null, [passages, q]);
@@ -75,7 +82,13 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
     start(async () => {
       if (!q) return;
       const r = await checkAnswerAction(q.id, answers[q.id] ?? {});
-      if (r) setChecked((prev) => ({ ...prev, [q.id]: r }));
+      if (!r) return;
+      setChecked((prev) => ({ ...prev, [q.id]: r }));
+      const s = r.correct ? streak + 1 : 0;
+      setStreak(s);
+      setBestStreak((b) => Math.max(b, s));
+      play(r.correct ? 'correct' : 'wrong');
+      setFx((f) => ({ k: r.correct ? 'ok' : r.score > 0 ? 'part' : 'bad', n: (f?.n ?? 0) + 1, toast: r.correct && [3, 5, 10, 15, 20].includes(s) ? `🔥 ${s} поредни верни!` : null }));
     });
 
   const next = () => {
@@ -174,7 +187,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
     );
   }
 
-  if (finished) return <ResultScreen result={finished} questions={questions} answers={answers} againHref={againHref} backHref={backHref} onReport={setReportFor} reportFor={reportFor} />;
+  if (finished) return <ResultScreen result={finished} questions={questions} answers={answers} againHref={againHref} backHref={backHref} onReport={setReportFor} reportFor={reportFor} bestStreak={mode === 'practice' ? bestStreak : null} />;
 
   const progress = mode === 'practice' ? ((idx + (result ? 1 : 0)) / questions.length) * 100 : (answeredCount / questions.length) * 100;
 
@@ -185,10 +198,24 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
         <Link href={backHref} aria-label="Изход" className="rounded-xl p-1.5 text-muted hover:bg-surface-2">
           <X className="size-6" />
         </Link>
-        <ProgressBar value={progress} />
+        {mode === 'practice' && questions.length <= 30 ? (
+          <div className="qz-dots" aria-label={`Въпрос ${idx + 1} от ${questions.length}`}>
+            {questions.map((qq, i) => {
+              const r = checked[qq.id];
+              return <i key={qq.id} data-s={r ? (r.correct ? 'ok' : r.score > 0 ? 'part' : 'bad') : i === idx ? 'now' : undefined} />;
+            })}
+          </div>
+        ) : (
+          <ProgressBar value={progress} />
+        )}
         <span className="shrink-0 text-sm font-extrabold text-muted">
           {idx + 1}/{questions.length}
         </span>
+        {streak >= 2 && (
+          <span key={streak} className="qz-streak" title="Поредни верни отговори">
+            🔥 {streak}
+          </span>
+        )}
         {left != null && (
           <span className={cn('flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1 font-mono text-sm font-black tabular-nums', left < 5 * 60_000 ? 'animate-pulse bg-error/15 text-error' : 'bg-surface-2 text-ink-strong')}>
             <Clock className="size-4" />
@@ -213,6 +240,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
         )}
 
         <section key={q.id} className="animate-rise">
+         <div key={fx && result ? fx.n : 0} className={fx && result ? (fx.k === 'bad' ? 'qz-shake' : fx.k === 'ok' ? 'qz-bump' : undefined) : undefined}>
           <div className="mb-3 flex flex-wrap gap-2">
             <Badge tone="blue">{q.label}</Badge>
             {q.workTitle && <Badge tone="yellow">{q.workTitle}</Badge>}
@@ -224,6 +252,7 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
           <div className="mt-6">
             <QuestionInput q={q} answer={answer} result={mode === 'practice' ? result : undefined} onAnswer={setAnswer} />
           </div>
+         </div>
 
           {mode === 'exam' && (
             <div className="mt-8 flex items-center justify-between gap-3">
@@ -263,22 +292,35 @@ export function QuizRunner({ kind, examId = null, mode, title, questions, passag
         </section>
       </div>
 
+      {/* светкавица по ръба на екрана и поздрав за серия */}
+      {fx && result && <div key={`f${fx.n}`} className="qz-flash" data-k={fx.k} />}
+      {fx?.toast && result && (
+        <div key={`t${fx.n}`} className="qz-toast">
+          {fx.toast}
+        </div>
+      )}
+
       {/* Долна лента (практика) */}
       {mode === 'practice' && (
-        <div className={cn('fixed inset-x-0 bottom-0 z-40 border-t-2 md:left-64', result ? (result.correct ? 'border-primary/30 bg-[#d7ffb8] dark:bg-[#1f3a12]' : result.score > 0 ? 'border-orange/40 bg-[#ffecd1] dark:bg-[#3a2a12]' : 'border-error/30 bg-[#ffdfe0] dark:bg-[#3a1717]') : 'border-line bg-bg')}>
+        <div key={result ? `r${q.id}` : 'idle'} data-k={result ? (result.correct ? 'ok' : result.score > 0 ? 'part' : 'bad') : undefined} className={cn('fixed inset-x-0 bottom-0 z-40 border-t-2 md:left-64', result ? 'qz-bar' : 'border-line bg-bg')}>
           <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             {result ? (
               <div className="flex items-start gap-3">
-                <span className={cn('flex size-12 shrink-0 items-center justify-center rounded-full bg-white', result.correct ? 'text-primary' : 'text-error')}>
-                  {result.correct ? <Check className="size-7" strokeWidth={3} /> : <X className="size-7" strokeWidth={3} />}
+                <span className="qz-ic" data-k={result.correct ? 'ok' : result.score > 0 ? 'part' : 'bad'}>
+                  {result.correct ? <Check className="size-7" strokeWidth={3.5} /> : <X className="size-7" strokeWidth={3.5} />}
+                  {result.correct &&
+                    Array.from({ length: 12 }, (_, i) => {
+                      const a = (i / 12) * Math.PI * 2;
+                      return <b key={i} style={{ '--dx': `${Math.cos(a) * 52}px`, '--dy': `${Math.sin(a) * 52}px`, '--c': ['#ffd166', '#fff', '#9be564'][i % 3] } as React.CSSProperties} />;
+                    })}
                 </span>
                 <div>
-                  <p className={cn('text-xl font-black', result.correct ? 'text-primary-dark' : 'text-error-dark')}>
-                    {result.correct ? 'Вярно!' : result.score > 0 ? `Частично вярно (${Math.round(result.score * 100)}%)` : 'Грешно'}
+                  <p className="text-xl font-black text-white">
+                    {result.correct ? (streak >= 3 ? `Вярно! ${streak} поредни` : 'Вярно!') : result.score > 0 ? `Частично вярно (${Math.round(result.score * 100)}%)` : 'Грешно'}
                   </p>
-                  {!result.correct && <p className="font-bold text-error-dark">Верен отговор: {correctAnswerText(q, result)}</p>}
-                  {result.explanation && <p className="mt-1 text-sm text-ink">{result.explanation}</p>}
-                  <button onClick={() => setReportFor(q.id)} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-muted hover:underline">
+                  {!result.correct && <p className="font-bold text-white/90">Верен отговор: {correctAnswerText(q, result)}</p>}
+                  {result.explanation && <p className="mt-1 text-sm text-white/80">{result.explanation}</p>}
+                  <button onClick={() => setReportFor(q.id)} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-white/60 hover:underline">
                     <Flag className="size-3" /> Докладвай въпроса
                   </button>
                 </div>
@@ -327,6 +369,23 @@ export function QuestionInput({ q, answer, result, onAnswer }: { q: ClientQuesti
   );
 }
 
+/** Число, което „се навива“ от 0 до стойността. */
+function useCountUp(target: number, ms = 1400, delay = 250) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const tick = (now: number) => {
+      const k = Math.max(0, Math.min(1, (now - t0) / ms));
+      setV(target * (1 - (1 - k) ** 3));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms, delay]);
+  return v;
+}
+
 function ResultScreen({
   result,
   questions,
@@ -335,6 +394,7 @@ function ResultScreen({
   backHref,
   onReport,
   reportFor,
+  bestStreak,
 }: {
   result: FinishResult;
   questions: ClientQuestion[];
@@ -343,50 +403,77 @@ function ResultScreen({
   backHref: string;
   onReport: (id: string | null) => void;
   reportFor: string | null;
+  bestStreak: number | null;
 }) {
   const ex = result.exam;
   const pct = ex ? Math.round((ex.points / Math.max(1, ex.maxPoints)) * 100) : result.total ? Math.round((result.score / result.total) * 100) : 0;
   const byId = new Map(result.results.map((r) => [r.id, r]));
+  const wrong = questions.filter((q) => byId.get(q.id) && !byId.get(q.id)!.correct);
+  const right = result.results.filter((r) => r.correct).length;
+  const [tab, setTab] = useState<'wrong' | 'all'>(wrong.length ? 'wrong' : 'all');
+  const shownPct = useCountUp(pct);
+  const shownGrade = useCountUp(ex ? ex.grade - 2 : 0);
+  const shownXp = useCountUp(result.xpEarned, 1000, 900);
+  const done = Math.round(shownPct) === pct;
+  const tone = pct >= 80 ? '#58cc02' : pct >= 50 ? '#ffb020' : '#ff4b5f';
+  const C = 2 * Math.PI * 54;
+  useEffect(() => {
+    const t = setTimeout(() => play(pct >= 50 ? 'win' : 'lose'), 1500);
+    return () => clearTimeout(t);
+  }, [pct]);
+  const list = tab === 'wrong' ? wrong : questions;
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="animate-pop text-center">
-        <div className="mx-auto mb-4 flex size-24 items-center justify-center rounded-full bg-accent text-[#4b3b00] shadow-[0_6px_0_var(--color-accent-dark)]">
-          <Trophy className="size-12" />
+      {pct >= 80 && done && <Confetti />}
+      <div className="qz-end animate-rise">
+        <div className="qz-ring" data-done={done}>
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,.1)" />
+            <circle cx="60" cy="60" r="54" stroke={tone} strokeDasharray={C} strokeDashoffset={C * (1 - shownPct / 100)} style={{ filter: `drop-shadow(0 0 8px ${tone})` }} />
+          </svg>
+          <div className="qz-ring-in">
+            <b className="ln-display">{ex ? (2 + shownGrade).toFixed(2) : `${Math.round(shownPct)}%`}</b>
+            <small>{ex ? gradeWord(ex.grade) : `${right} от ${result.results.length} верни`}</small>
+          </div>
         </div>
-        <h1 className="text-3xl font-black">{pct >= 80 ? 'Страхотно!' : pct >= 50 ? 'Добра работа!' : 'Продължавай да учиш!'}</h1>
+        <h1 className="ln-display mt-5 text-3xl">{pct >= 80 ? 'Страхотно!' : pct >= 50 ? 'Добра работа!' : 'Продължавай да учиш!'}</h1>
         {ex ? (
           <>
             {ex.timedOut && <p className="mt-1 font-bold text-error">Времето изтече — изпитът беше предаден автоматично.</p>}
-            <div className="mx-auto mt-4 grid max-w-md grid-cols-2 gap-3">
-              <div className="card3d rounded-2xl bg-surface p-4">
-                <p className="text-xs font-extrabold uppercase text-muted">Точки</p>
-                <p className="text-3xl font-black text-ink-strong">
-                  {ex.points}
-                  <span className="text-lg text-muted">/{ex.maxPoints}</span>
-                </p>
-                <p className="text-sm font-bold text-muted">{pct}%</p>
-              </div>
-              <div className="card3d rounded-2xl bg-surface p-4">
-                <p className="text-xs font-extrabold uppercase text-muted">Ориентировъчно</p>
-                <p className="text-3xl font-black text-ink-strong">{ex.grade.toFixed(2)}</p>
-                <p className="text-sm font-bold text-muted">{gradeWord(ex.grade)}</p>
-              </div>
-            </div>
-            <p className="mx-auto mt-3 max-w-md text-xs text-muted">
+            <p className="mt-2 text-lg font-extrabold text-white">
+              {ex.points} от {ex.maxPoints} точки · {Math.round(shownPct)}%
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-xs text-muted">
               Оценката е само ориентир: смятана е от процента точки без есето и задачите със свободен текст ({100 - ex.maxPoints} от 100 точки на истинската матура).
               {ex.timeUsedSec != null && ` Време: ${fmtTime(ex.timeUsedSec * 1000)}.`}
             </p>
           </>
         ) : (
           <p className="mt-1 text-muted">
-            {Number.isInteger(result.score) ? result.score : result.score.toFixed(1)} от {result.total} точки ({pct}%)
+            {Number.isInteger(result.score) ? result.score : result.score.toFixed(1)} от {result.total} точки
           </p>
         )}
       </div>
-      <div className="mt-6 grid grid-cols-3 gap-3">
-        <Stat icon={<Star className="size-5" />} color="text-accent-dark" label="XP" value={`+${result.xpEarned}`} />
-        <Stat icon={<Flame className="size-5" />} color="text-orange" label="Серия" value={`${result.streak} дни`} />
-        <Stat icon={<Trophy className="size-5" />} color="text-[#b88600]" label="Ниво" value={`${result.level}${result.leveledUp ? ' ↑' : ''}`} />
+      <div className="qz-stats">
+        <div className="nx-panel qz-stat" style={{ '--c': '#ffd166' } as React.CSSProperties}>
+          <span>XP</span>
+          <b>+{Math.round(shownXp)}</b>
+        </div>
+        <div className="nx-panel qz-stat" style={{ '--c': '#ff9d3c', animationDelay: '.08s' } as React.CSSProperties}>
+          <span>Серия</span>
+          <b>{result.streak} дни</b>
+        </div>
+        <div className="nx-panel qz-stat" style={{ '--c': '#6ea2ff', animationDelay: '.16s' } as React.CSSProperties}>
+          <span>Ниво</span>
+          <b>
+            {result.level}
+            {result.leveledUp ? ' ↑' : ''}
+          </b>
+        </div>
+        <div className="nx-panel qz-stat" style={{ '--c': '#5fe0d0', animationDelay: '.24s' } as React.CSSProperties}>
+          <span>{bestStreak != null ? 'Поредни верни' : 'Верни'}</span>
+          <b>{bestStreak != null ? `🔥 ${bestStreak}` : `${right}/${result.results.length}`}</b>
+        </div>
       </div>
       {result.unlocked.length > 0 && (
         <div className="mt-4 rounded-2xl border-2 border-accent bg-accent/15 p-4 text-center font-extrabold">
@@ -408,26 +495,48 @@ function ResultScreen({
         </ButtonLink>
       </div>
 
-      <h2 className="mb-3 mt-10 text-xl font-black">Разбор</h2>
+      <div className="mb-3 mt-10 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="ln-display text-xl">Разбор</h2>
+        <div className="qz-tabs">
+          {wrong.length > 0 && (
+            <button data-on={tab === 'wrong'} onClick={() => setTab('wrong')}>
+              Грешни · {wrong.length}
+            </button>
+          )}
+          <button data-on={tab === 'all'} onClick={() => setTab('all')}>
+            Всички · {questions.length}
+          </button>
+        </div>
+      </div>
+      {wrong.length === 0 && <p className="mb-3 font-bold text-primary">Нито една грешка — браво!</p>}
       <ol className="space-y-3">
-        {questions.map((q, i) => {
+        {list.map((q, n) => {
           const r = byId.get(q.id);
           if (!r) return null;
           const a = answers[q.id];
+          const i = questions.indexOf(q);
           return (
-            <li key={q.id} className={cn('card3d rounded-2xl bg-surface p-4', r.correct ? 'border-primary/40' : r.score > 0 ? 'border-orange/50' : 'border-error/40')}>
+            <li key={q.id} className="nx-panel qz-rev" style={{ '--c': r.correct ? '#58cc02' : r.score > 0 ? '#ff9d3c' : '#ff4b5f', animationDelay: `${Math.min(n, 8) * 0.04}s` } as React.CSSProperties}>
               <div className="flex items-start gap-3">
                 <span className={cn('mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-white', r.correct ? 'bg-primary' : r.score > 0 ? 'bg-orange' : 'bg-error')}>
                   {r.correct ? <Check className="size-4" strokeWidth={3} /> : r.score > 0 ? <span className="text-[10px] font-black">{Math.round(r.score * 100)}%</span> : <X className="size-4" strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-bold text-ink-strong">
+                  <p className="qz-q whitespace-pre-line">
                     {i + 1}. {q.prompt}
                   </p>
-                  {!r.correct && <p className="mt-1 text-sm text-error-dark">Твой отговор: {yourAnswerText(q, a) || '—'}</p>}
-                  <p className="mt-1 text-sm font-bold text-primary-dark">Верен: {correctAnswerText(q, r)}</p>
-                  {r.explanation && <p className="mt-1 text-sm text-muted">{r.explanation}</p>}
-                  <button onClick={() => onReport(q.id)} className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-muted hover:underline">
+                  {!r.correct && (
+                    <p className="qz-row" data-k="you">
+                      <small>Ти</small>
+                      <span>{yourAnswerText(q, a) || 'без отговор'}</span>
+                    </p>
+                  )}
+                  <p className="qz-row" data-k="ok">
+                    <small>Верен</small>
+                    <span>{correctAnswerText(q, r)}</span>
+                  </p>
+                  {r.explanation && <p className="mt-2 text-sm text-muted">{r.explanation}</p>}
+                  <button onClick={() => onReport(q.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-muted hover:underline">
                     <Flag className="size-3" /> Докладвай
                   </button>
                 </div>
@@ -450,17 +559,6 @@ function yourAnswerText(q: ClientQuestion, a?: Answer) {
     return a.blanks.map((c, i) => `(${q.blanks!.blanks[i].label}) ${c == null ? '—' : q.blanks!.blanks[i].options[c]}`).join(', ');
   if (q.type === 'PUNCTUATION') return a.text ?? '';
   return '';
-}
-
-function Stat({ icon, color, label, value }: { icon: React.ReactNode; color: string; label: string; value: string }) {
-  return (
-    <div className="card3d rounded-2xl bg-surface p-3 text-center">
-      <div className={cn('mb-1 flex items-center justify-center gap-1 text-xs font-extrabold uppercase', color)}>
-        {icon} {label}
-      </div>
-      <div className="text-xl font-black text-ink-strong">{value}</div>
-    </div>
-  );
 }
 
 const REASONS = ['Грешен верен отговор', 'Грешка в условието', 'Неясен въпрос', 'Друго'];
