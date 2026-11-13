@@ -204,10 +204,10 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
           <Reveal>
             <p className="ln-eyebrow">Библиотека</p>
             <h2 className="ln-display ln-h2">
-              Четеш ги <span className="ln-grad">тук.</span>
+              Всяко произведение <span className="ln-grad">на рафта.</span>
             </h2>
             <p className="ln-lead" style={{ marginTop: '1rem' }}>
-              Произведенията, които учиш — с резюме, герои, теми и идеи. А класиците ги четеш направо в сайта, без да търсиш учебника.
+              Произведенията, които учиш — с резюме, герои, теми, идеи и ключови цитати. Отваряш книгата и за пет минути си припомняш всичко преди теста.
             </p>
             <div className="ln-cta">
               <Link href="/library" className="ln-btn ln-btn-ghost">
