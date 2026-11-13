@@ -135,6 +135,9 @@ html:has(.nx) body { background: #090d1e; }
 }
 .nx main h2:not(.ln-display):not(.whitespace-pre-line):not([data-game] *) { font-family: 'Unbounded Variable', 'Nunito Variable', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; font-size: 1rem; line-height: 1.2; }
 .nx :is(input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea):not([data-game] *) { border-width: 1px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.05); }
+/* падащите списъци: браузърът рисува менюто сам — без това е бяло със светъл текст */
+.nx select { color-scheme: dark; }
+.nx select option, .nx select optgroup { color: #fff; background-color: #141a33; }
 .nx :is(input, select, textarea):not([data-game] *):focus { border-color: rgb(var(--acc)); box-shadow: 0 0 0 3px rgb(var(--acc) / 0.25); }
 .nx-shell-plain { min-height: 100dvh; }
 
