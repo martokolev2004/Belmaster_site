@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import '@fontsource-variable/unbounded';
+import '@fontsource-variable/playfair-display';
 import '@/components/landing/landing-next.css';
 import { LogoMark } from '@/components/Logo';
 import { ClimbDemo } from '@/components/climb/ClimbDemo';
-import { MapPreview } from '@/components/game/MapPreview';
+import { LandingBattle } from '@/components/landing/LandingBattle';
 import { Hero, Nav, Reveal, Tilt } from '@/components/landing/LandingFx';
 
 
@@ -24,6 +25,14 @@ const GAMES = [
 ];
 
 /** Началната страница за посетители (без вход). Старият вариант е запазен в app/Landing.tsx. */
+const BOOKS = [
+  { slug: 'borba', title: 'Борба', author: 'Христо Ботев', c: '#8a2a3c', d: '#5a1826' },
+  { slug: 'paisiy', title: 'Паисий', author: 'Иван Вазов', c: '#23508f', d: '#16335e' },
+  { slug: 'gradushka', title: 'Градушка', author: 'Пейо Яворов', c: '#1f6b5c', d: '#12443a' },
+  { slug: 'andreshko', title: 'Андрешко', author: 'Елин Пелин', c: '#a8741f', d: '#6e4a10' },
+  { slug: 'vyara', title: 'Вяра', author: 'Никола Вапцаров', c: '#5b3a8c', d: '#3a235e' },
+];
+
 export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'warm' | 'green' }) {
   const row = [...TOPICS, ...TOPICS, ...TOPICS];
 
@@ -166,11 +175,12 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
         <div className="ln-orb" style={{ background: '#1cb0f6', bottom: '-14rem', left: '-20rem' }} />
         <div className="ln-wrap ln-split" data-flip="true">
           <Reveal delay={0.15}>
-            <div className="ln-frame">
-              <div className="ln-frame-in">
-                <div className="ln-frame-bar"><span className="ln-live" /> Континентът на Словото</div>
-                <MapPreview className="block w-full" />
+            {/* жива карта, наклонена като игрална дъска */}
+            <div className="ln-board">
+              <div className="ln-board-in">
+                <LandingBattle preset={10} />
               </div>
+              <span className="ln-board-tag"><span className="ln-live" /> Битка · на живо</span>
             </div>
           </Reveal>
           <Reveal>
@@ -184,6 +194,42 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
               <li><i>🔁</i><span><b>Грешките се връщат</b>Сайтът помни къде бъркаш и ти го дава отново, докато го научиш.</span></li>
               <li><i>🏆</i><span><b>Лиги и класации</b>Седмични лиги, рейтинг, постижения и аватар, който расте с теб.</span></li>
             </ul>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="ln-section" style={{ paddingTop: 0 }}>
+        <div className="ln-orb" style={{ background: '#c59bff', top: '-6rem', right: '-22rem' }} />
+        <div className="ln-wrap ln-split">
+          <Reveal>
+            <p className="ln-eyebrow">Библиотека</p>
+            <h2 className="ln-display ln-h2">
+              Четеш ги <span className="ln-grad">тук.</span>
+            </h2>
+            <p className="ln-lead" style={{ marginTop: '1rem' }}>
+              Произведенията, които учиш — с резюме, герои, теми и идеи. А класиците ги четеш направо в сайта, без да търсиш учебника.
+            </p>
+            <div className="ln-cta">
+              <Link href="/library" className="ln-btn ln-btn-ghost">
+                Към библиотеката <span aria-hidden>→</span>
+              </Link>
+            </div>
+          </Reveal>
+          <Reveal delay={0.15}>
+            <div className="ln-books">
+              {BOOKS.map((b, i) => (
+                <Link key={b.slug} href={`/library/${b.slug}`} className="ln-book" style={{ '--c': b.c, '--d': b.d, '--i': i } as CSSProperties} aria-label={`${b.title} — ${b.author}`}>
+                  <span className="ln-book-spine" />
+                  <span className="ln-book-pages" />
+                  <span className="ln-book-front">
+                    <em>{b.author}</em>
+                    <b>{b.title}</b>
+                    <i>❦</i>
+                  </span>
+                </Link>
+              ))}
+              <span className="ln-shelf" />
+            </div>
           </Reveal>
         </div>
       </section>
