@@ -93,7 +93,7 @@ export function LandingNext({ theme = 'ink' }: { theme?: 'ink' | 'violet' | 'war
             ].map(({ g, st }) => (
               <div key={g.no} className="ln-fan-slot" style={st as CSSProperties}>
                 <div className="ln-fan-float" style={st as CSSProperties}>
-                  <Link href={g.href} className="ln-fan-card" style={{ backgroundImage: `url(${g.img})`, '--c': g.c } as CSSProperties}>
+                  <Link href={g.href} className="ln-fan-card" style={{ backgroundImage: `url(${g.href === '/climb' ? '/landing/climb-hero.webp' : g.img})`, '--c': g.c } as CSSProperties}>
                     <span className="ln-display">
                       <em>{g.tag}</em>
                       {g.title}
