@@ -313,6 +313,20 @@ html:has(.nx) body { background: #090d1e; }
 .nx main .wk-sec h2 { font-size: 0.95rem; color: #fff; margin-bottom: 1rem; }
 .wk-text p { font-size: 1.02rem; line-height: 1.75; color: var(--ink); }
 .wk-text p + p { margin-top: 0.9rem; }
+/* самото произведение — лист от книга */
+.wk-book { scroll-margin-top: 5.5rem; padding: clamp(1.6rem, 5vw, 3.4rem) clamp(1.1rem, 6vw, 4rem); color: #2b2218; background: linear-gradient(90deg, rgba(120, 90, 50, 0.16), transparent 5%, transparent 95%, rgba(120, 90, 50, 0.16)), #f6efdf; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4), 0 24px 60px rgba(0, 0, 0, 0.45); }
+.wk-book header { margin-bottom: 2.2rem; text-align: center; }
+.wk-book header p { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; color: #8a6a3c; }
+.nx main .wk-book h2 { margin-top: 0.5rem; font-family: 'Playfair Display Variable', Georgia, serif !important; font-size: clamp(1.7rem, 5vw, 2.5rem) !important; font-weight: 800; line-height: 1.15; letter-spacing: 0 !important; text-transform: none !important; color: #2b2218 !important; }
+.wk-book header span { display: block; margin-top: 0.7rem; font-size: 1.2rem; color: #a8854e; }
+.wk-page { max-width: 38rem; margin: 0 auto; font-family: Georgia, 'Times New Roman', serif; font-size: 1.1rem; line-height: 1.8; }
+.wk-page p { white-space: pre-line; text-indent: 1.6em; }
+.wk-page p + p { margin-top: 0.5rem; }
+.nx main .wk-page h3 { margin: 2.2rem 0 1rem; font-family: 'Playfair Display Variable', Georgia, serif !important; font-size: 1.25rem !important; font-weight: 800; text-align: center; letter-spacing: 0 !important; text-transform: none !important; color: #2b2218 !important; }
+.wk-book[data-verse='true'] .wk-page { width: fit-content; max-width: 100%; line-height: 1.62; }
+.wk-book[data-verse='true'] .wk-page p { text-indent: 0; }
+.wk-book[data-verse='true'] .wk-page p + p { margin-top: 1.5rem; }
+.wk-book footer { margin-top: 2.4rem; text-align: center; font-size: 0.75rem; font-weight: 700; color: #8a6a3c; }
 .wk-list { display: grid; gap: 0.6rem; }
 .wk-list li { position: relative; padding: 0.75rem 0.9rem 0.75rem 2.1rem; font-size: 0.98rem; line-height: 1.6; color: var(--ink); background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--ln-line); }
 .wk-list li::before { content: ''; position: absolute; left: 0.9rem; top: 1.3rem; width: 0.45rem; height: 0.45rem; background: rgb(var(--acc)); transform: rotate(45deg); }

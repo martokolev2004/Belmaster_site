@@ -130,6 +130,8 @@ model Work {
   authorInfo  String? // за автора
   quotes      String? // ключови цитати (по един на ред)
   extra       String? // свободен текст / бележки
+  text        String? // самото произведение (само за автори със свободни права)
+  textSource  String? // откъде е взет текстът
   published   Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())

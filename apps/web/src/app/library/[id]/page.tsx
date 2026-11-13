@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, BookOpen, Pencil } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import type { Metadata } from 'next';
 import { isAdmin, getCurrentUser } from '@/lib/auth';
 import { slugify } from '@/lib/slug';
 import type { Work } from '@belmaster/db';
 import { ButtonLink, EmptyState } from '@/components/ui';
+import '@fontsource-variable/playfair-display';
 import '@/components/landing/landing-next.css';
 
 const FIELDS = [
@@ -24,8 +25,9 @@ async function findWork(param: string, admin = false) {
   const where = admin ? {} : { published: true };
   const byId = await prisma.work.findFirst({ where: { id: param, ...where }, include });
   if (byId) return byId;
-  const all = await prisma.work.findMany({ where, include, orderBy: { grade: 'desc' } });
-  return all.find((w) => slugify(w.title) === param) ?? null;
+  const all = await prisma.work.findMany({ where, select: { id: true, title: true }, orderBy: { grade: 'desc' } });
+  const hit = all.find((w) => slugify(w.title) === param);
+  return hit ? prisma.work.findUnique({ where: { id: hit.id }, include }) : null;
 }
 
 const short = (s: string | null, n = 155) => (s ? (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s) : '');
@@ -87,6 +89,11 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
               Тествай се · {work._count.questions} {work._count.questions === 1 ? 'въпрос' : 'въпроса'}
             </ButtonLink>
           )}
+          {work.text && (
+            <ButtonLink href="#text" variant={work._count.questions > 0 ? 'outline' : undefined} icon={<BookOpen className="size-4" />}>
+              Прочети произведението
+            </ButtonLink>
+          )}
           {admin && (
             <ButtonLink href={`/admin/works/${work.id}`} variant="outline" icon={<Pencil className="size-4" />}>
               Редактирай
@@ -100,10 +107,11 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
                 {f.title}
               </a>
             ))}
+            {work.text && <a href="#text">Текст</a>}
           </nav>
         )}
       </header>
-      {filled.length === 0 ? (
+      {filled.length === 0 && work.text ? null : filled.length === 0 ? (
         <EmptyState title="Информацията за произведението се подготвя" icon={<span className="text-5xl">✍️</span>}>
           Скоро тук ще има резюме, анализ, герои и цитати.
         </EmptyState>
@@ -139,6 +147,28 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
       )}
+      {work.text && <Reader title={work.title} author={work.author} text={work.text} source={work.textSource} />}
     </article>
+  );
+}
+
+/** Самото произведение — като страница от книга. Празен ред = нов абзац/строфа; „# “ = заглавие на част. */
+function Reader({ title, author, text, source }: { title: string; author: string; text: string; source: string | null }) {
+  const blocks = text.replace(/\r/g, '').trim().split(/\n\s*\n/);
+  const lines = text.split('\n').filter((l) => l.trim());
+  // стихове: повечето редове са къси → пазим редовете и подравняваме в средата на листа
+  const verse = lines.filter((l) => l.length < 60).length / Math.max(1, lines.length) > 0.8;
+  return (
+    <section id="text" className="wk-book mt-4" data-verse={verse}>
+      <header>
+        <p>{author}</p>
+        <h2>{title.replace(/\.\.\.$/, '…')}</h2>
+        <span aria-hidden>❦</span>
+      </header>
+      <div className="wk-page">
+        {blocks.map((b, i) => (b.startsWith('# ') ? <h3 key={i}>{b.slice(2)}</h3> : <p key={i}>{b}</p>))}
+      </div>
+      {source && <footer>Източник: {source}</footer>}
+    </section>
   );
 }

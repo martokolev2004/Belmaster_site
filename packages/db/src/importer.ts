@@ -246,11 +246,14 @@ export interface WorksFile {
     characters?: string;
     authorInfo?: string;
     quotes?: string;
+    /** самото произведение — само за автори със свободни права; seed го чете от textFile */
+    text?: string;
+    textSource?: string;
   }[];
 }
 
 /** Полетата с описание — от файла се попълват само ако в базата са празни (за да не се изтрие редакция от админ панела). */
-const WORK_TEXT_FIELDS = ['genre', 'summary', 'themes', 'characters', 'authorInfo', 'quotes'] as const;
+const WORK_TEXT_FIELDS = ['genre', 'summary', 'themes', 'characters', 'authorInfo', 'quotes', 'text', 'textSource'] as const;
 
 export async function importWorks(prisma: PrismaClient, file: WorksFile): Promise<number> {
   let n = 0;
@@ -273,6 +276,8 @@ export async function importWorks(prisma: PrismaClient, file: WorksFile): Promis
         characters: w.characters ?? null,
         authorInfo: w.authorInfo ?? null,
         quotes: w.quotes ?? null,
+        text: w.text ?? null,
+        textSource: w.textSource ?? null,
         extra: w.studiedIn ? `Изучава се в ${w.studiedIn}.` : null,
         sortOrder: i,
       },

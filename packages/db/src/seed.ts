@@ -22,7 +22,14 @@ function jsonFiles(dir: string): string[] {
 async function main() {
   const withDemo = process.argv.includes('--demo') || process.env.SEED_DEMO === '1';
   for (const f of jsonFiles(path.join(root, 'works'))) {
-    const n = await importWorks(prisma, JSON.parse(readFileSync(f, 'utf8')));
+    const file = JSON.parse(readFileSync(f, 'utf8'));
+    // текстовете на произведенията са в отделни файлове (textFile, спрямо data/works)
+    for (const w of file.works) {
+      if (!w.textFile) continue;
+      w.text = readFileSync(path.join(root, 'works', w.textFile), 'utf8').trim();
+      w.textSource ??= 'Моята библиотека (chitanka.info)';
+    }
+    const n = await importWorks(prisma, file);
     console.log(`Произведения: ${path.basename(f)} → ${n}`);
   }
   const qFiles = [...jsonFiles(path.join(root, 'questions')), ...(withDemo ? jsonFiles(path.join(root, 'demo')) : [])];

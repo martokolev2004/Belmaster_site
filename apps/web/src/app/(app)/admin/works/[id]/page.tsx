@@ -71,6 +71,14 @@ export default async function EditWork({ params, searchParams }: { params: Promi
             </Field>
           ))}
         </Card>
+        <Card className="space-y-4">
+          <Field label="Текст на произведението — само за автори със свободни права (починали преди повече от 70 години)">
+            <Textarea name="text" defaultValue={w?.text ?? ''} className="min-h-72 font-serif" placeholder={'Празен ред = нов абзац или строфа. Ред, който започва с „# “, е заглавие на част.'} />
+          </Field>
+          <Field label="Източник на текста">
+            <Input name="textSource" defaultValue={w?.textSource ?? ''} placeholder="напр. Уикиизточник" />
+          </Field>
+        </Card>
         <Button type="submit" size="lg">
           Запази
         </Button>

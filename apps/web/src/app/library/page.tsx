@@ -38,6 +38,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
       ...(term ? { OR: [{ title: { contains: term, mode: 'insensitive' } }, { author: { contains: term, mode: 'insensitive' } }] } : {}),
     },
     orderBy: [{ sortOrder: 'asc' }, { title: 'asc' }],
+    omit: { text: true },
     include: { _count: { select: { questions: { where: { status: 'ACTIVE' } } } } },
   });
   const authors = new Map<string, number>();

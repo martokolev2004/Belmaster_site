@@ -92,7 +92,7 @@ export async function deleteQuestionAction(form: FormData) {
   redirect('/admin/questions');
 }
 
-const WORK_FIELDS = ['title', 'author', 'period', 'genre', 'year', 'summary', 'themes', 'characters', 'authorInfo', 'quotes', 'extra'] as const;
+const WORK_FIELDS = ['title', 'author', 'period', 'genre', 'year', 'summary', 'themes', 'characters', 'authorInfo', 'quotes', 'extra', 'text', 'textSource'] as const;
 
 export async function saveWorkAction(form: FormData) {
   await requireAdmin();
