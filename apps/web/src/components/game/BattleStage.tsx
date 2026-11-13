@@ -1,12 +1,13 @@
 'use client';
 
 /**
- * ТЕСТ (/test): нов вид на картата за „Битка“ — релефен остров в море, рисувани замъци, знамена на завладените
- * области, гори и хълмове в свободните, ефекти при превземане и нападение. Приема същите данни като MapBoard.
+ * Картата за „Битка“ — релефен остров в море, рисувани замъци, знамена на завладените
+ * области, гори и хълмове в свободните, ефекти при превземане и нападение. Старият вид е запазен в MapBoard.tsx (резерва).
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { GameMap, GameState } from '@belmaster/shared';
 import { UserAvatar } from '@/components/avatar/UserAvatar';
+import { cn } from '@/lib/cn';
 import type { MapBubble } from './MapBoard';
 import './battle-stage.css';
 
@@ -19,6 +20,7 @@ interface Props {
   highlight?: string | null;
   attackColor?: string;
   bubbles?: MapBubble[];
+  className?: string;
 }
 
 const INK = '#141a33';
@@ -145,7 +147,7 @@ function DecoArt({ d }: { d: Deco }) {
   );
 }
 
-export function BattleStage({ map, state, selectable, onSelect, onBlocked, highlight, attackColor, bubbles = [] }: Props) {
+export function BattleStage({ map, state, selectable, onSelect, onBlocked, highlight, attackColor, bubbles = [], className }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (n: string) => `${n}-${uid}`;
   const colors = new Map(state.players.map((p) => [p.uid, p.color]));
@@ -213,7 +215,7 @@ export function BattleStage({ map, state, selectable, onSelect, onBlocked, highl
   const order = useMemo(() => [...map.regions].sort((a, b) => a.center[1] - b.center[1]), [map]);
 
   return (
-    <svg viewBox={`0 ${-TOP} ${W} ${H + TOP}`} className="bs block h-auto w-full select-none" role="img" aria-label={map.name}>
+    <svg viewBox={`0 ${-TOP} ${W} ${H + TOP}`} className={cn('bs block h-auto w-full select-none', className)} role="img" aria-label={map.name}>
       <defs>
         <linearGradient id={id('sea')} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={works ? '#3a6f8f' : '#2f8fe0'} />

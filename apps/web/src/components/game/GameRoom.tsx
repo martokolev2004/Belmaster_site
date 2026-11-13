@@ -8,7 +8,7 @@ import { Bot, Castle, Check, Clock, Copy, Crown, LogOut, MessageCircle, Swords, 
 import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
-import { MapBoard } from './MapBoard';
+import { BattleStage as MapBoard } from './BattleStage';
 import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';

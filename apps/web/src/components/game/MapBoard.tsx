@@ -1,5 +1,7 @@
 'use client';
 
+/** РЕЗЕРВА: старият вид на картата за „Битка“ (трева и море от картинки). Играта ползва BattleStage.tsx. */
+
 import { useEffect, useId, useRef, useState } from 'react';
 import type { GameMap, GameState } from '@belmaster/shared';
 import { cn } from '@/lib/cn';
