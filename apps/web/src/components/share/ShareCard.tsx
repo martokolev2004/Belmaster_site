@@ -11,6 +11,7 @@ import { sanitizeAvatar } from '@belmaster/shared';
 import { avatarSvg } from '@/components/avatar/UserAvatar';
 import { claimShareRewardAction, shareInfoAction } from '@/app/actions/share';
 import { play } from '@/lib/sound';
+import { LOGO_SVG } from '@/components/Logo';
 import './share.css';
 
 export interface ShareData {
@@ -110,16 +111,12 @@ async function draw(canvas: HTMLCanvasElement, d: ShareData, who: { id: string; 
   c.font = DISPLAY(58);
   const w1 = c.measureText('БЕЛ ').width, w2 = c.measureText('МАСТЪР').width;
   const lx = (W - (96 + 26 + w1 + w2)) / 2;
-  const lg = c.createLinearGradient(lx, 110, lx + 96, 206);
-  lg.addColorStop(0, '#6ea2ff');
-  lg.addColorStop(1, '#2f5fe0');
-  c.fillStyle = lg;
-  rr(c, lx, 110, 96, 96, 22);
-  c.fill();
+  try {
+    c.drawImage(await loadImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(LOGO_SVG.replace('<svg ', '<svg width="192" height="192" '))}`), lx, 108, 100, 100);
+  } catch {
+    /* без знак — остава само надписът */
+  }
   c.fillStyle = '#fff';
-  c.font = DISPLAY(56);
-  c.textAlign = 'center';
-  c.fillText('Б', lx + 48, 162);
   c.textAlign = 'left';
   c.font = DISPLAY(58);
   c.fillText('БЕЛ ', lx + 122, 160);
