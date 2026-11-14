@@ -12,7 +12,9 @@ const TITLES = { language: 'Език', literature: 'Литература', readi
 
 export default async function TestPage({ params, searchParams }: { params: Promise<{ kind: string }>; searchParams: Promise<{ topic?: string; work?: string }> }) {
   const { kind } = await params;
-  const { topic, work } = await searchParams;
+  // тест само по едно произведение няма — иначе въпросите за „Битка на произведенията“ се наизустяват
+  const { topic } = await searchParams;
+  const work = undefined;
   if (!(kind in KINDS)) notFound();
   const k = kind as keyof typeof KINDS;
   const user = await requireUser();

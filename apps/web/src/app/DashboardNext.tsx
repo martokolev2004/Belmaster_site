@@ -11,7 +11,7 @@ import { newItemKeys } from '@/lib/unlocks';
 
 const GAMES = [
   { no: '01', c: '#ff5a5a', img: '/landing/battle.webp', tag: 'Стратегия · 2–4 играчи', title: 'Битка за Континента', text: 'Завладявай области с верни и бързи отговори.', href: '/play' },
-  { no: '02', c: '#35b8ff', img: '/landing/climb.webp', tag: 'Дуел · 1 на 1', title: 'Към върха', text: 'Строй стъпала или събори съперника с точен изстрел.', href: '/climb' },
+  { no: '02', c: '#35b8ff', img: '/landing/climb-hero.webp', tag: 'Дуел · 1 на 1', title: 'Към върха', text: 'Строй стъпала или събори съперника с точен изстрел.', href: '/climb' },
   { no: '03', c: '#ffd84d', img: '/landing/tower.webp', tag: 'Аркада · сам', title: 'Кула на Словото', text: 'Верен отговор = нов етаж. Пусни го точно.', href: '/tower' },
 ];
 

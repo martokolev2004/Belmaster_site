@@ -94,9 +94,6 @@ export default async function StatsPage() {
                   </span>
                 </div>
                 <Bar p={p} />
-                <Link href={`/tests/literature?work=${work!.id}`} className="text-xs font-bold text-secondary">
-                  Упражнявай
-                </Link>
               </li>
             ))}
           </ul>

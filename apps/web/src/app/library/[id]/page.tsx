@@ -84,13 +84,8 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          {work._count.questions > 0 && (
-            <ButtonLink href={user ? `/tests/literature?work=${work.id}` : '/login?tab=register'}>
-              Тествай се · {work._count.questions} {work._count.questions === 1 ? 'въпрос' : 'въпроса'}
-            </ButtonLink>
-          )}
           {work.text && (
-            <ButtonLink href="#text" variant={work._count.questions > 0 ? 'outline' : undefined} icon={<BookOpen className="size-4" />}>
+            <ButtonLink href="#text" icon={<BookOpen className="size-4" />}>
               Прочети произведението
             </ButtonLink>
           )}

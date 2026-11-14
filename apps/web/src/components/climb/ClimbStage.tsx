@@ -516,7 +516,22 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
         queue = queue.then(async () => {
           if (!alive || cheer !== id) return;
           camS.tz = 1.2;
-          await cheerLoop(heroes[side], id);
+          const w = heroes[side];
+          if (w.height < N) {
+            // другият се е предал или времето е свършило → победителят изтичва догоре
+            w.idle = false;
+            setShield(w, false);
+            for (let k = w.height + 1; k < N && alive && cheer === id; k++) {
+              const st = addStep(w, k);
+              run(200, (t) => setStep(st, ease.back(t)));
+              await hop(w, k, 44, 150);
+            }
+            if (!alive || cheer !== id) return;
+            await hop(w, N, 110, 420);
+            await land(w);
+            pop(w.rig.x, w.rig.y - 190, 'ВРЪХ!', '#fff', 54);
+          }
+          await cheerLoop(w, id);
         });
       },
       play: (outcomes, after, sideOf, meIdx) => {

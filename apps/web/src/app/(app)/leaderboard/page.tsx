@@ -26,17 +26,17 @@ interface Row {
   sub?: string;
 }
 const TABS: { t: Tab; label: string; icon: string; unit: string; play: string; cta: string }[] = [
+  { t: 'xp', label: 'Опит', icon: '⭐', unit: 'XP', play: '/tests', cta: 'Реши тест' },
   { t: 'rating', label: 'Битки', icon: '⚔️', unit: 'рейтинг', play: '/play', cta: 'Изиграй битка' },
   { t: 'climb', label: 'Към върха', icon: '⛰️', unit: 'рейтинг', play: '/climb', cta: 'Изкачи върха' },
   { t: 'tower', label: 'Кула', icon: '🏗️', unit: 'етажа', play: '/tower', cta: 'Построй кула' },
-  { t: 'xp', label: 'Опит', icon: '⭐', unit: 'XP', play: '/tests', cta: 'Реши тест' },
 ];
 const MEDAL = ['#ffc93c', '#c3cae6', '#e0915a'];
 
 export default async function LeaderboardPage({ searchParams }: { searchParams: Promise<{ tab?: string; season?: string; who?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
-  const tab: Tab = sp.tab === 'xp' ? 'xp' : sp.tab === 'climb' ? 'climb' : sp.tab === 'tower' ? 'tower' : 'rating';
+  const tab: Tab = sp.tab === 'rating' ? 'rating' : sp.tab === 'climb' ? 'climb' : sp.tab === 'tower' ? 'tower' : 'xp';
   const season = sp.season === 'all' ? 'all' : currentSeason();
   const friendsOnly = sp.who === 'friends';
   const grade = user.grade!;
@@ -99,7 +99,7 @@ export default async function LeaderboardPage({ searchParams }: { searchParams: 
   const href = (o: { tab?: Tab; season?: string | null; who?: string | null }) => {
     const q = new URLSearchParams();
     const t = o.tab ?? tab, s = o.season === undefined ? sp.season : o.season, w = o.who === undefined ? sp.who : o.who;
-    if (t !== 'rating') q.set('tab', t);
+    if (t !== 'xp') q.set('tab', t);
     if (s) q.set('season', s);
     if (w) q.set('who', w);
     const str = q.toString();

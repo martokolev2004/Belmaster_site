@@ -168,10 +168,8 @@ export class ClimbRoom {
       this.hooks.onRemoved(this, uid);
       return this.emit();
     }
-    // по време на игра — напускането е загуба
-    p.left = true;
-    p.connected = false;
-    this.hooks.onRemoved(this, uid);
+    // по време на игра — напускането е загуба. Играчът остава в стаята, за да види края
+    // (победителят се качва на върха) и да може да пусне нова игра; излиза с „Към началото“.
     const other = this.other(uid);
     this.pushLog(`${p.name} напусна играта.`);
     this.finish(other?.uid ?? null, false);
@@ -825,7 +823,9 @@ export function registerClimb(ns: NS, newCode: () => string) {
       leaveQueue();
       const room = my();
       if (room) room.drop(user.uid);
-      socket.emit('left');
+      // предал се по време на игра → остава на крайния екран; иначе се връща в началото
+      const still = room?.players.get(user.uid);
+      if (!room || !still || still.left) socket.emit('left');
     });
     socket.on('climb:ready', ({ ready }) => my()?.setReady(user.uid, !!ready));
     socket.on('climb:start', async () => {

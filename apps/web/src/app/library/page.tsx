@@ -73,7 +73,6 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
             const title = w.title.replace(/\.\.\.$/, '…');
             return (
               <Link key={w.id} href={`/library/${slugify(w.title)}`} className="lb-book" data-long={title.length > 26} style={{ '--c': c, '--d': d } as React.CSSProperties}>
-                {w._count.questions > 0 && <span className="lb-mark" title={`${w._count.questions} ${w._count.questions === 1 ? 'въпрос' : 'въпроса'} по произведението`}>{w._count.questions}</span>}
                 <span className="lb-author">{w.author}</span>
                 <span className="lb-rule" />
                 <span className="lb-title">{title}</span>

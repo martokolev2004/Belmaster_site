@@ -408,7 +408,13 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
               <Button variant="outline" onClick={() => setConfirmLeave(false)}>
                 Остани
               </Button>
-              <Button variant="danger" onClick={() => socket.emit('climb:leave')}>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirmLeave(false);
+                  socket.emit('climb:leave');
+                }}
+              >
                 Напусни
               </Button>
             </div>
@@ -563,22 +569,67 @@ function ClimbIntro({ state, offset }: { state: ClimbState; offset: number }) {
 }
 
 function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boolean; can: boolean; onShield: () => void }) {
+  const [ask, setAsk] = useState(false);
+  useEffect(() => {
+    if (!can) setAsk(false);
+  }, [can]);
   if (armed)
     return (
-      <div className="flex items-center gap-2 rounded-2xl border-2 border-secondary bg-secondary/10 px-4 py-2.5 text-sm font-extrabold text-secondary-dark">
-        <Shield className="size-5" /> Щитът пази това стъпало — ако те целят, ударът се връща. Изчезва, щом се качиш по-нагоре.
+      <div className="shd shd-on">
+        <span className="shd-ic">
+          <Shield className="size-5" />
+        </span>
+        <span>
+          <b>Щитът е вдигнат</b>
+          <small>Пази това стъпало. Целят ли те — ударът се връща. Качиш ли се — изчезва.</small>
+        </span>
       </div>
     );
-  if (used) return <p className="text-xs font-bold text-muted">🛡️ Щитът е използван.</p>;
+  if (used)
+    return (
+      <div className="shd shd-used">
+        <span className="shd-ic">
+          <Shield className="size-5" />
+        </span>
+        <span>
+          <b>Щитът е използван</b>
+        </span>
+      </div>
+    );
+  if (ask)
+    return (
+      <div className="shd shd-ask">
+        <span className="shd-ic">
+          <Shield className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <b>Вдигаш щита тук?</b>
+          <small>Имаш само един за играта. Другият не го вижда.</small>
+        </span>
+        <button
+          className="shd-yes"
+          onClick={() => {
+            setAsk(false);
+            onShield();
+          }}
+        >
+          Вдигни
+        </button>
+        <button className="shd-no" onClick={() => setAsk(false)}>
+          Не сега
+        </button>
+      </div>
+    );
   return (
-    <button
-      disabled={!can}
-      onClick={() => {
-        if (window.confirm('Щитът е само веднъж за игра и пази само това стъпало — другият не го вижда. Да го вдигна ли?')) onShield();
-      }}
-      className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-secondary px-4 py-2.5 text-sm font-extrabold text-secondary disabled:opacity-40"
-    >
-      <Shield className="size-5" /> Вдигни щит (1 път за игра)
+    <button disabled={!can} onClick={() => setAsk(true)} className="shd shd-btn">
+      <span className="shd-ic">
+        <Shield className="size-5" />
+      </span>
+      <span>
+        <b>Щит</b>
+        <small>{can ? 'Пази стъпалото ти от удар' : 'Става, когато си на стъпало'}</small>
+      </span>
+      <i>1×</i>
     </button>
   );
 }

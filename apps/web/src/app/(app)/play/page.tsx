@@ -18,7 +18,7 @@ export default async function PlayPage({ searchParams }: { searchParams: Promise
   return (
     <div>
       <header className="nx-panel ph-hero animate-rise">
-        <div className="ph-hero-art" style={{ backgroundImage: 'url(/landing/battle.webp)' }} />
+        <div className="ph-hero-art" style={{ backgroundImage: 'url(/landing/battle-hero.webp)' }} />
         <div className="ph-hero-copy">
           <p className="ln-eyebrow">Стратегия · 2–4 играчи</p>
           <h1 className="ln-display nx-h1">
