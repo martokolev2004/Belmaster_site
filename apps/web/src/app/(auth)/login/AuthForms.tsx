@@ -10,6 +10,7 @@ import { guestAction, loginAction, registerAction, type FormState } from '../act
 const GOOGLE_ERRORS: Record<string, string> = {
   google: 'Входът с Google не успя. Опитай пак.',
   google_email: 'Този имейл вече е регистриран с парола. Влез с паролата си.',
+  guest_limit: 'Твърде много гост-влизания от тази мрежа. Опитай пак след час или направи профил.',
   blocked: 'Профилът е блокиран заради нарушение на Общите условия. Ако смяташ, че е грешка, пиши ни от страницата „Контакти“.',
 };
 

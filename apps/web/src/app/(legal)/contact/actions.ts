@@ -7,7 +7,8 @@ import { hit } from '@/lib/rate-limit';
 import { appUrl, sendMail } from '@/lib/mail';
 
 export async function contactAction(_: { ok?: string; error?: string }, form: FormData): Promise<{ ok?: string; error?: string }> {
-  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0].trim() ?? 'local';
+  const h = await headers();
+  const ip = h.get('x-real-ip')?.trim() || (h.get('x-forwarded-for') ?? '').split(',').pop()!.trim() || 'local';
   if (String(form.get('website') ?? '')) return { ok: 'Благодарим! Съобщението е изпратено.' }; // капан за ботове
   if (!hit(`contact:${ip}`, 5, 3600_000)) return { error: 'Твърде много съобщения. Опитай пак след час.' };
   const name = String(form.get('name') ?? '').trim().slice(0, 80);

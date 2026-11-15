@@ -44,7 +44,8 @@ function readConsent(form: FormData): { birthDate: Date; parentEmail: string | n
 
 async function ip() {
   const h = await headers();
-  return (h.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'local';
+  // Caddy слага истинския адрес в X-Real-IP; X-Forwarded-For може да е подправен от клиента
+  return h.get('x-real-ip')?.trim() || (h.get('x-forwarded-for') ?? '').split(',').pop()!.trim() || 'local';
 }
 
 export async function registerAction(_: FormState, form: FormData): Promise<FormState> {
@@ -147,6 +148,8 @@ export async function loginAction(_: FormState, form: FormData): Promise<FormSta
 }
 
 export async function guestAction(form: FormData): Promise<void> {
+  // без масово създаване на гост-профили от един адрес
+  if (!hit(`guest:${await ip()}`, 15, 3600_000)) redirect('/login?error=guest_limit');
   const grade = form.get('grade');
   const n = Math.floor(1000 + Math.random() * 9000);
   const user = await prisma.user.create({

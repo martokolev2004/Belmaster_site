@@ -1,9 +1,37 @@
 {$DOMAIN}, www.{$DOMAIN} {
 	encode gzip
+
+	# заглавки за сигурност: само HTTPS, без вграждане в чужди сайтове, без „отгатване“ на типа на файла
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-X-Powered-By
+	}
+
+	# твърде големи заявки не стигат до приложението (импортът на въпроси в админа е до 8 MB)
+	request_body {
+		max_size 10MB
+	}
+
+	# скритите файлове и служебни пътища не се отдават никога
+	@hidden path /.env* /.git* /.ht* /wp-admin* /wp-login* /xmlrpc.php /phpmyadmin* /vendor/*
+	handle @hidden {
+		respond 404
+	}
+
 	handle /socket.io/* {
-		reverse_proxy game:4000
+		reverse_proxy game:4000 {
+			header_up X-Real-IP {remote_host}
+		}
 	}
 	handle {
-		reverse_proxy web:3000
+		reverse_proxy web:3000 {
+			header_up X-Real-IP {remote_host}
+		}
 	}
 }
