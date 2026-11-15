@@ -1,3 +1,4 @@
+import { CookieNotice } from '@/components/legal/CookieNotice';
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import './globals.css';
@@ -30,7 +31,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const dataTheme = theme === 'light' ? 'light' : theme === 'system' ? undefined : 'dark';
   return (
     <html lang="bg" data-theme={dataTheme}>
-      <body className="min-h-dvh">{children}</body>
+      <body className="min-h-dvh">
+        {children}
+        <CookieNotice />
+      </body>
     </html>
   );
 }

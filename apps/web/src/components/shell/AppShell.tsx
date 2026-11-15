@@ -110,6 +110,7 @@ export async function AppShell({ user, children, skin }: { user: User; children:
           <footer className="mt-12 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted [main:has([data-wide])_&]:hidden">
             <Link href="/privacy" className="hover:underline">Поверителност</Link>
             <Link href="/terms" className="hover:underline">Общи условия</Link>
+            <Link href="/cookies" className="hover:underline">Бисквитки</Link>
             <Link href="/contact" className="hover:underline">Контакти</Link>
             <span>© БЕЛ Мастър</span>
           </footer>

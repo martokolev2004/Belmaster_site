@@ -58,6 +58,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Link href="/library">Библиотека</Link>
           <Link href="/privacy">Поверителност</Link>
           <Link href="/terms">Общи условия</Link>
+          <Link href="/cookies">Бисквитки</Link>
           <Link href="/contact">Контакти</Link>
         </footer>
       </div>

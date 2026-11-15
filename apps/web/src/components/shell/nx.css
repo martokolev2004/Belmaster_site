@@ -413,3 +413,20 @@ html:has(.nx) body { background: #090d1e; }
 @keyframes au-float { to { translate: 0 -10px; } }
 @media (max-width: 900px) { .au { grid-template-columns: 1fr; } .au-side { display: none; } .au-top { display: block; } .au-main { justify-content: flex-start; padding-top: 1rem; } }
 @media (prefers-reduced-motion: reduce) { .au-fan span { animation: none; } }
+
+/* ── известие за бисквитки ── */
+.ck { position: fixed; z-index: 80; left: 1rem; bottom: 1rem; display: flex; align-items: center; gap: 0.8rem; max-width: 34rem; padding: 0.8rem 0.9rem 0.8rem 1rem; color: #fff; font-family: 'Nunito Variable', system-ui, sans-serif; background: rgba(12, 18, 48, 0.94); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 18px 50px rgba(0, 0, 0, 0.5); border-radius: 1rem; backdrop-filter: blur(12px); animation: ck-in 0.45s 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards; }
+.ck-ic { flex-shrink: 0; font-size: 1.6rem; line-height: 1; }
+.ck p { margin: 0; font-size: 0.82rem; font-weight: 600; line-height: 1.45; color: rgba(255, 255, 255, 0.8); }
+.ck p b { color: #fff; }
+.ck a { font-weight: 800; color: #8fb8ff; text-decoration: underline; text-underline-offset: 2px; }
+.ck button { flex-shrink: 0; padding: 0.6rem 1rem; font-size: 0.8rem; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: linear-gradient(180deg, #6ea2ff, #2f5fe0); border-radius: 0.65rem; box-shadow: 0 3px 0 #1d3f9e; }
+.ck button:active { transform: translateY(2px); box-shadow: 0 1px 0 #1d3f9e; }
+@media (max-width: 640px) { .ck { left: 0.6rem; right: 0.6rem; bottom: calc(0.6rem + env(safe-area-inset-bottom)); } body:has(.app-shell) .ck { bottom: calc(5.4rem + env(safe-area-inset-bottom)); } .ck-ic { display: none; } }
+@keyframes ck-in { from { transform: translateY(30px); opacity: 0; } }
+/* таблица на страницата „Бисквитки“ */
+.ck-table { display: grid; gap: 0.6rem; margin-bottom: 1rem; }
+.ck-table > div { padding: 0.8rem 1rem; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); border-radius: 0.8rem; }
+.ck-table code { font-size: 0.85rem; font-weight: 800; color: #8fb8ff; }
+.ck-table p { margin: 0.25rem 0 !important; }
+.ck-table small { font-size: 0.75rem; font-weight: 700; color: var(--muted); }

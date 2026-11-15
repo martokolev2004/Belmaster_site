@@ -36,6 +36,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
         <span>© БЕЛ Мастър</span>
         <Link href="/privacy" className="hover:underline">Поверителност</Link>
         <Link href="/terms" className="hover:underline">Общи условия</Link>
+        <Link href="/cookies" className="hover:underline">Бисквитки</Link>
         <Link href="/contact" className="hover:underline">Контакти</Link>
       </footer>
     </div>
