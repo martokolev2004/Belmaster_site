@@ -453,8 +453,8 @@ function usePhone() {
 }
 
 /**
- * Телефон настрани: сцената е вляво от ръб до ръб, въпросът и бутоните са в колона вдясно —
- * героите се виждат през цялото време.
+ * Телефон настрани: сцената е на целия екран, а въпросът излиза върху нея (както на компютър).
+ * Отговорите са по два на ред и са винаги на екрана.
  */
 function PhoneLayout({
   socket,
@@ -483,6 +483,13 @@ function PhoneLayout({
   const myAim = state.phase === 'aim' && state.aim?.actorUid === state.you;
   const banner = state.phase === 'question' && answered ? `Изпратено — чакаме ${other?.name ?? 'другия'}…` : state.phase === 'resolve' ? state.log[state.log.length - 1] : null;
   const pct = state.phase === 'question' && q ? (left / q.timeMs) * 100 : Math.min(100, left / 120);
+  // на финала първо се вижда как победителят стъпва на върха, после идва панелът
+  const [showEnd, setShowEnd] = useState(false);
+  useEffect(() => {
+    if (state.phase !== 'finished') return setShowEnd(false);
+    const t = setTimeout(() => setShowEnd(true), 1800);
+    return () => clearTimeout(t);
+  }, [state.phase]);
   return (
     <div className="cph" data-game>
       {state.phase === 'finished' && state.winnerUid === state.you && <Confetti />}
@@ -534,25 +541,45 @@ function PhoneLayout({
             <ShieldBox armed={me.shieldArmed} used={me.shieldUsed} can={canShield} onShield={() => socket.emit('climb:shield')} />
           </div>
         )}
-      </div>
-
-      <aside className="cph-side">
         {state.phase !== 'finished' && state.deadline && (
           <div className="cph-timer" data-low={left < 5000}>
             <i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
             <b>{Math.ceil(left / 1000)}</b>
           </div>
         )}
-        <div className="cph-body" data-q={state.phase === 'question'}>
-          {state.phase === 'intro' && <ClimbIntro state={state} offset={offset} />}
-          {state.phase === 'question' && q && <QuestionPanel key={q.id} socket={socket} state={state} phone />}
-          {state.phase === 'reveal' && state.reveal && <RevealPanel state={state} />}
-          {state.phase === 'choose' && <ChoosePanel socket={socket} state={state} />}
-          {state.phase === 'aim' && state.aim && <AimPanel socket={socket} state={state} offset={offset} />}
-          {state.phase === 'resolve' && <p className="rounded-2xl bg-surface-2 p-4 text-center font-extrabold">{state.log[state.log.length - 1]}</p>}
-          {state.phase === 'finished' && <FinishedPanel socket={socket} state={state} />}
-        </div>
-      </aside>
+
+        {/* въпросът излиза върху сцената; щом отговориш, се скрива и гледаш действието */}
+        {state.phase === 'question' && q && !answered && (
+          <div className="cph-modal" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="cph-card">
+              <QuestionPanel key={q.id} socket={socket} state={state} phone />
+            </div>
+          </div>
+        )}
+        {state.phase === 'intro' && (
+          <div className="cph-modal">
+            <div className="cph-card cph-pad">
+              <ClimbIntro state={state} offset={offset} />
+            </div>
+          </div>
+        )}
+        {state.phase === 'reveal' && state.reveal && (
+          <div className="cph-float cph-float-top">
+            <RevealPanel state={state} />
+          </div>
+        )}
+        {(state.phase === 'choose' || state.phase === 'aim') && (
+          <div className="cph-float cph-float-bottom" onPointerDown={(e) => e.stopPropagation()}>
+            {state.phase === 'choose' && <ChoosePanel socket={socket} state={state} />}
+            {state.phase === 'aim' && state.aim && <AimPanel socket={socket} state={state} offset={offset} />}
+          </div>
+        )}
+        {state.phase === 'finished' && showEnd && (
+          <div className="cph-float cph-float-end" onPointerDown={(e) => e.stopPropagation()}>
+            <FinishedPanel socket={socket} state={state} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
