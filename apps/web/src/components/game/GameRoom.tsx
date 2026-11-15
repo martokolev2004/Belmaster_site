@@ -428,7 +428,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
 }
 
 /** Вертикален телефон по време на битка → молба да се завърти. */
-function RotateOverlay() {
+export function RotateOverlay({ text = 'Битката се играе хоризонтално, за да виждаш цялата карта.' }: { text?: string }) {
   return (
     <div className="fixed inset-0 z-[60] hidden flex-col items-center justify-center gap-5 bg-bg p-8 text-center phone-portrait:flex">
       <div className="relative size-28">
@@ -438,7 +438,7 @@ function RotateOverlay() {
       </div>
       <div>
         <p className="text-2xl font-black">Завърти телефона</p>
-        <p className="mt-1 text-muted">Битката се играе хоризонтално, за да виждаш цялата карта.</p>
+        <p className="mt-1 text-muted">{text}</p>
       </div>
       <FullscreenButton big />
     </div>
@@ -449,7 +449,7 @@ function RotateOverlay() {
 type FsDoc = Document & { webkitFullscreenElement?: Element; webkitFullscreenEnabled?: boolean };
 type FsEl = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
 
-function FullscreenButton({ big }: { big?: boolean }) {
+export function FullscreenButton({ big }: { big?: boolean }) {
   const [mode, setMode] = useState<'none' | 'api' | 'ios'>('none');
   const [active, setActive] = useState(false);
   const [help, setHelp] = useState(false);

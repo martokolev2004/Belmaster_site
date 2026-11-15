@@ -430,3 +430,54 @@ html:has(.nx) body { background: #090d1e; }
 .ck-table code { font-size: 0.85rem; font-weight: 800; color: #8fb8ff; }
 .ck-table p { margin: 0.25rem 0 !important; }
 .ck-table small { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+
+/* ── „Към върха“ на телефон настрани: сцена вляво, въпрос вдясно ── */
+.cph { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(0, 1fr) clamp(21rem, 48vw, 29rem); background: #05081c; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.cph-stage { position: relative; display: flex; align-items: center; min-width: 0; overflow: hidden; background: #05081c; touch-action: manipulation; }
+/* лентите над и под сцената продължават небето и земята на картата */
+.cph-stage[data-theme='dusk'] { background: linear-gradient(180deg, #070b25 0 50%, #090c2b 50%); }
+.cph-stage[data-theme='canyon'] { background: linear-gradient(180deg, #3b2a6e 0 50%, #2a1026 50%); }
+.cph-stage[data-theme='night'] { background: linear-gradient(180deg, #020815 0 50%, #041426 50%); }
+.cph-scene { width: 100%; max-width: calc(100dvh * 1280 / 720); margin: 0 auto; }
+.cph-scene svg { border-radius: 0 !important; }
+.cph-top { position: absolute; left: 50%; top: 0.35rem; z-index: 3; display: flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.3rem 0.15rem 0.7rem; transform: translateX(-50%); color: #fff; background: rgba(5, 8, 28, 0.72); border-radius: 999px; backdrop-filter: blur(8px); white-space: nowrap; }
+.cph-top > span { margin-right: 0.3rem; font-size: 0.72rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.cph-top button { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; height: 2rem; padding: 0 0.3rem; font-size: 0.7rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); border-radius: 999px; }
+.cph-top button:active { background: rgba(255, 255, 255, 0.16); }
+.cph-chat { position: absolute; left: 50%; top: 2.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem; width: 17rem; padding: 0.45rem; transform: translateX(-50%); background: #10173a; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 14px 40px rgba(0, 0, 0, 0.6); border-radius: 0.9rem; white-space: normal; }
+.cph-chat button { justify-content: flex-start; height: auto; padding: 0.45rem 0.6rem; font-size: 0.8rem; text-align: left; background: rgba(255, 255, 255, 0.07); border-radius: 0.6rem; }
+.cph-banner { position: absolute; right: 0.5rem; bottom: 0.5rem; z-index: 2; max-width: 58%; padding: 0.35rem 0.9rem; font-size: 0.78rem; font-weight: 800; text-align: center; color: #fff; background: rgba(5, 8, 28, 0.74); border-radius: 999px; backdrop-filter: blur(8px); pointer-events: none; }
+.cph-tap { right: auto; left: 50%; bottom: 3.2rem; max-width: 92%; transform: translateX(-50%); background: rgba(255, 75, 95, 0.85); animation: cph-pulse 0.9s ease-in-out infinite; }
+.cph-shield { position: absolute; left: 0.45rem; bottom: 0.45rem; z-index: 3; max-width: calc(100% - 0.9rem); }
+.cph-shield .shd { width: auto; padding: 0.3rem 0.7rem 0.3rem 0.3rem; background: rgba(5, 8, 28, 0.78); backdrop-filter: blur(8px); border-radius: 999px; }
+.cph-shield .shd-ic { width: 2.1rem; height: 2.1rem; border-radius: 999px; }
+.cph-shield .shd-btn small, .cph-shield .shd-on small, .cph-shield .shd-used b { display: none; }
+.cph-shield .shd-used { padding: 0.3rem; }
+.cph-shield .shd-ask { flex-wrap: nowrap; border-radius: 1rem; padding: 0.45rem 0.6rem; }
+.cph-side { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #0b1030; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.1); }
+.cph-timer { position: relative; flex-shrink: 0; height: 1.1rem; background: rgba(255, 255, 255, 0.08); }
+.cph-timer i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #2f5fe0, #6ea2ff); transition: width 0.25s linear; }
+.cph-timer[data-low='true'] i { background: linear-gradient(90deg, #b3202f, #ff4b5f); }
+.cph-timer b { position: absolute; right: 0.5rem; top: 0; font-size: 0.72rem; font-weight: 900; line-height: 1.1rem; color: #fff; font-variant-numeric: tabular-nums; }
+.cph-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0.45rem; }
+.cph-body[data-q='true'] { overflow: hidden; padding: 0; }
+.cph-body .card3d { padding: 0.7rem; box-shadow: none; border-width: 1px; }
+/* въпросът: текстът се превърта, ако е дълъг; отговорите и бутоните са винаги на екрана */
+.cq { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.cq-text { flex: 1 1 auto; min-height: 2.6rem; overflow-y: auto; overscroll-behavior: contain; padding: 0.4rem 0.6rem 0.3rem; }
+.cq-tags { font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #8fb8ff; }
+.cq-tags b { color: #ff8a8a; }
+.cq-text h2 { margin-top: 0.1rem; font-size: 0.86rem !important; font-weight: 800; line-height: 1.3; white-space: pre-line; color: #fff; }
+.cq-text [class*='border-l-4'] { margin-top: 0.3rem; padding: 0.3rem 0.55rem; }
+.cq-text [class*='border-l-4'] p { font-size: 0.78rem; line-height: 1.4; }
+.cq-text [class*='border-l-4'] p:first-child { font-size: 0.56rem; }
+.cq-ans { flex: 0 1 auto; max-height: 72%; overflow-y: auto; overscroll-behavior: contain; padding: 0.3rem 0.5rem; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+/* отговорите с избор — по два на ред, за да се виждат и четирите */
+.cq-ans > .grid:has(> button) { grid-template-columns: 1fr 1fr; gap: 0.3rem; }
+.cq-ans > .grid > button { align-items: flex-start; gap: 0.4rem; padding: 0.35rem 0.4rem; font-size: 0.74rem; line-height: 1.25; border-radius: 0.6rem; }
+.cq-ans > .grid > button > span:first-child { width: 1.25rem; height: 1.25rem; font-size: 0.62rem; border-radius: 0.35rem; }
+.cq-ans textarea { min-height: 3.2rem; height: 3.2rem; padding: 0.4rem 0.6rem; font-size: 0.85rem; }
+.cq-ans input { height: 2.4rem; }
+.cq-actions { flex-shrink: 0; display: flex; gap: 0.35rem; padding: 0.3rem 0.5rem calc(0.4rem + env(safe-area-inset-bottom)); }
+.cq-actions button { min-height: 2.5rem; }
+@keyframes cph-pulse { 50% { opacity: 0.6; } }

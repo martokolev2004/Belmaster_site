@@ -23,6 +23,7 @@ import { play } from '@/lib/sound';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
 import { buyWeaponAction, selectWeaponAction } from '@/app/(app)/climb/actions';
 import { ShareButton } from '@/components/share/ShareCard';
+import { FullscreenButton, RotateOverlay } from '@/components/game/GameRoom';
 import { ClimbStage } from './ClimbStage';
 import { ClimbDemo } from './ClimbDemo';
 import { useClimb, useLeft, type ClimbSocket } from './useClimb';
@@ -308,14 +309,48 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
   const left = useLeft(state.phase === 'question' && state.question ? state.question.myDeadline : state.deadline, offset);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const desktop = useDesktop();
+  const phone = usePhone();
   const canShield = !me.shieldUsed && me.height > 0 && (['question', 'reveal', 'choose'].includes(state.phase) || state.actorUid === me.uid);
 
   useEffect(() => {
     if (state.phase === 'finished') notifyProgress(4500);
   }, [state.phase]);
 
+  const leaveDialog = confirmLeave && (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmLeave(false)}>
+      <div className="w-full max-w-sm rounded-2xl bg-surface p-5 text-center" onClick={(e) => e.stopPropagation()}>
+        <p className="text-lg font-black">Да напуснеш ли?</p>
+        <p className="mt-1 text-sm text-muted">Напускането е загуба.</p>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button variant="outline" onClick={() => setConfirmLeave(false)}>
+            Остани
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setConfirmLeave(false);
+              socket.emit('climb:leave');
+            }}
+          >
+            Напусни
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (phone)
+    return (
+      <>
+        <PhoneLayout socket={socket} state={state} offset={offset} chat={chat} left={left} me={me} other={other} canShield={canShield} onLeave={() => setConfirmLeave(true)} />
+        {leaveDialog}
+      </>
+    );
+
   return (
     <div className="phone-landscape:fixed phone-landscape:inset-0 phone-landscape:z-40 phone-landscape:flex phone-landscape:flex-col phone-landscape:bg-bg phone-landscape:px-2 phone-landscape:py-1">
+      {/* изправен телефон → молба да се завърти (играта е широка) */}
+      {!desktop && state.phase !== 'finished' && <RotateOverlay text="„Към върха“ се играе хоризонтално, за да виждаш планината и двамата герои." />}
       {state.phase === 'finished' && state.winnerUid === state.you && <Confetti />}
       <div className="mb-3 flex items-center justify-between gap-2 phone-landscape:mb-1">
         <span className="font-extrabold text-ink-strong phone-landscape:text-sm">
@@ -399,28 +434,125 @@ function Match({ socket, state, offset, chat }: { socket: ClimbSocket; state: Cl
       </div>
 
       )}
-      {confirmLeave && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setConfirmLeave(false)}>
-          <div className="w-full max-w-sm rounded-2xl bg-surface p-5 text-center" onClick={(e) => e.stopPropagation()}>
-            <p className="text-lg font-black">Да напуснеш ли?</p>
-            <p className="mt-1 text-sm text-muted">Напускането е загуба.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => setConfirmLeave(false)}>
-                Остани
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  setConfirmLeave(false);
-                  socket.emit('climb:leave');
-                }}
-              >
-                Напусни
-              </Button>
-            </div>
-          </div>
+      {leaveDialog}
+    </div>
+  );
+}
+
+/** Телефон, държан настрани. */
+function usePhone() {
+  const [p, setP] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(orientation: landscape) and (pointer: coarse) and (max-height: 540px)');
+    const on = () => setP(m.matches);
+    on();
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return p;
+}
+
+/**
+ * Телефон настрани: сцената е вляво от ръб до ръб, въпросът и бутоните са в колона вдясно —
+ * героите се виждат през цялото време.
+ */
+function PhoneLayout({
+  socket,
+  state,
+  offset,
+  chat,
+  left,
+  me,
+  other,
+  canShield,
+  onLeave,
+}: {
+  socket: ClimbSocket;
+  state: ClimbState;
+  offset: number;
+  chat: { uid: string; key: string; at: number }[];
+  left: number;
+  me: ClimbState['players'][number];
+  other: ClimbState['players'][number] | undefined;
+  canShield: boolean;
+  onLeave: () => void;
+}) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const q = state.question;
+  const answered = state.phase === 'question' && !!q && q.answered.includes(state.you);
+  const myAim = state.phase === 'aim' && state.aim?.actorUid === state.you;
+  const banner = state.phase === 'question' && answered ? `Изпратено — чакаме ${other?.name ?? 'другия'}…` : state.phase === 'resolve' ? state.log[state.log.length - 1] : null;
+  const pct = state.phase === 'question' && q ? (left / q.timeMs) * 100 : Math.min(100, left / 120);
+  return (
+    <div className="cph" data-game>
+      {state.phase === 'finished' && state.winnerUid === state.you && <Confetti />}
+      <div
+        className="cph-stage"
+        data-theme={state.theme}
+        // прицелване: докосване където и да е по сцената = хвърляне
+        onPointerDown={myAim ? () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' })) : undefined}
+      >
+        <div className="cph-scene">
+          <ClimbStage state={state} chat={chat} tight />
         </div>
-      )}
+        <div className="cph-top" onPointerDown={(e) => e.stopPropagation()}>
+          <span>
+            {Math.max(1, state.questionNo)}/{state.maxQuestions}
+          </span>
+          <button onClick={() => setChatOpen((o) => !o)} aria-label="Бързи съобщения">
+            <MessageCircle className="size-4" />
+          </button>
+          <SoundToggle />
+          <FullscreenButton />
+          {state.phase !== 'finished' && (
+            <button onClick={onLeave} aria-label="Напусни">
+              <LogOut className="size-4" />
+            </button>
+          )}
+          {chatOpen && (
+            <div className="cph-chat">
+              {CLIMB_CHAT.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => {
+                    socket.emit('climb:chat', { key: m.key });
+                    setChatOpen(false);
+                  }}
+                >
+                  {m.text}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {banner && <p className="cph-banner">{banner}</p>}
+        {myAim && <p className="cph-banner cph-tap">Докосни където и да е, за да хвърлиш</p>}
+        {other && !other.connected && !other.isBot && <p className="cph-banner">⚠ Връзката на {other.name} прекъсна</p>}
+        {/* щитът — плаващ бутон в ъгъла на сцената, до моя герой */}
+        {state.phase !== 'finished' && (
+          <div className="cph-shield" onPointerDown={(e) => e.stopPropagation()}>
+            <ShieldBox armed={me.shieldArmed} used={me.shieldUsed} can={canShield} onShield={() => socket.emit('climb:shield')} />
+          </div>
+        )}
+      </div>
+
+      <aside className="cph-side">
+        {state.phase !== 'finished' && state.deadline && (
+          <div className="cph-timer" data-low={left < 5000}>
+            <i style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+            <b>{Math.ceil(left / 1000)}</b>
+          </div>
+        )}
+        <div className="cph-body" data-q={state.phase === 'question'}>
+          {state.phase === 'intro' && <ClimbIntro state={state} offset={offset} />}
+          {state.phase === 'question' && q && <QuestionPanel key={q.id} socket={socket} state={state} phone />}
+          {state.phase === 'reveal' && state.reveal && <RevealPanel state={state} />}
+          {state.phase === 'choose' && <ChoosePanel socket={socket} state={state} />}
+          {state.phase === 'aim' && state.aim && <AimPanel socket={socket} state={state} offset={offset} />}
+          {state.phase === 'resolve' && <p className="rounded-2xl bg-surface-2 p-4 text-center font-extrabold">{state.log[state.log.length - 1]}</p>}
+          {state.phase === 'finished' && <FinishedPanel socket={socket} state={state} />}
+        </div>
+      </aside>
     </div>
   );
 }
@@ -634,7 +766,7 @@ function ShieldBox({ armed, used, can, onShield }: { armed: boolean; used: boole
   );
 }
 
-function QuestionPanel({ socket, state, wide = false }: { socket: ClimbSocket; state: ClimbState; wide?: boolean }) {
+function QuestionPanel({ socket, state, wide = false, phone = false }: { socket: ClimbSocket; state: ClimbState; wide?: boolean; phone?: boolean }) {
   const q = state.question!;
   const [ans, setAns] = useState<AnyAnswer>({});
   const sent = q.answered.includes(state.you);
@@ -645,6 +777,49 @@ function QuestionPanel({ socket, state, wide = false }: { socket: ClimbSocket; s
     if (sent || !hasAnswer(q as never, ans)) return;
     socket.emit('climb:answer', { questionId: q.id, ...ans });
   };
+  const jokers = (
+    <>
+      <button
+        disabled={sent || !me.jokers.fifty || q.type !== 'SINGLE_CHOICE' || q.options.length < 3}
+        onClick={() => socket.emit('climb:joker', { kind: 'fifty' })}
+        title="Маха два грешни отговора (веднъж за игра)"
+        className="rounded-xl border-2 border-purple px-3 text-sm font-black text-purple-dark disabled:opacity-35"
+      >
+        50/50
+      </button>
+      <button
+        disabled={sent || !me.jokers.time}
+        onClick={() => socket.emit('climb:joker', { kind: 'time' })}
+        title="+5 секунди за теб (веднъж за игра)"
+        className="whitespace-nowrap rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
+      >
+        +5 с
+      </button>
+    </>
+  );
+  if (phone)
+    return (
+      <div className="cq">
+        <div className="cq-text">
+          <p className="cq-tags">
+            {q.topicLabel}
+            {q.workTitle && <> · {q.workTitle}</>}
+            {other && q.answered.includes(other.uid) && <b> · {other.name} отговори</b>}
+          </p>
+          <h2>{q.prompt}</h2>
+          {q.context && q.type !== 'FILL_BLANKS' && <ContextBox text={q.context} compact />}
+        </div>
+        <div className="cq-ans">
+          <AnswerInput q={q as never} value={ans} onChange={(a) => setAns((p) => ({ ...p, ...a }))} disabled={sent} compact onSubmit={submit} removed={removed} />
+        </div>
+        <div className="cq-actions">
+          {jokers}
+          <Button block disabled={sent || !hasAnswer(q as never, ans)} onClick={submit}>
+            {sent ? 'Изпратено — чакаме…' : 'Изпрати'}
+          </Button>
+        </div>
+      </div>
+    );
   return (
     <div className="card3d rounded-2xl bg-surface p-4">
       <div className="mb-2 flex flex-wrap gap-1.5">
@@ -662,22 +837,7 @@ function QuestionPanel({ socket, state, wide = false }: { socket: ClimbSocket; s
         </div>
       </div>
       <div className="mt-3 flex gap-2">
-        <button
-          disabled={sent || !me.jokers.fifty || q.type !== 'SINGLE_CHOICE' || q.options.length < 3}
-          onClick={() => socket.emit('climb:joker', { kind: 'fifty' })}
-          title="Маха два грешни отговора (веднъж за игра)"
-          className="rounded-xl border-2 border-purple px-3 text-sm font-black text-purple-dark disabled:opacity-35"
-        >
-          50/50
-        </button>
-        <button
-          disabled={sent || !me.jokers.time}
-          onClick={() => socket.emit('climb:joker', { kind: 'time' })}
-          title="+5 секунди за теб (веднъж за игра)"
-          className="whitespace-nowrap rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
-        >
-          +5 с
-        </button>
+        {jokers}
         <Button block disabled={sent || !hasAnswer(q as never, ans)} onClick={submit}>
           {sent ? 'Изпратено — чакаме…' : 'Изпрати'}
         </Button>

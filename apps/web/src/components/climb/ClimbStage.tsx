@@ -173,7 +173,9 @@ function Doll({ id, color, uri, label, gid }: { id: string; color: string; uri: 
   );
 }
 
-export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { uid: string; key: string; at: number }[] }) {
+export function ClimbStage({ state, chat = [], tight = false }: { state: ClimbState; chat?: { uid: string; key: string; at: number }[]; /** малък екран: камерата приближава, колкото позволяват двамата герои */ tight?: boolean }) {
+  const tightRef = useRef(tight);
+  tightRef.current = tight;
   const svg = useRef<SVGSVGElement>(null);
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const api = useRef<StageApi | null>(null);
@@ -632,7 +634,14 @@ export function ClimbStage({ state, chat = [] }: { state: ClimbState; chat?: { u
       // камера: следи водещия, приближава при действие, тресе при удар
       const lead = Math.min(heroes[0].rig.y, heroes[1].rig.y), low = Math.max(heroes[0].rig.y, heroes[1].rig.y);
       camS.ty = lead * 0.6 + low * 0.4 - 90;
-      camS.z += (camS.tz - camS.z) * Math.min(1, real * 3);
+      // на малък екран: приближаваме, докато и двамата герои (с табелките им) още се виждат
+      let fit = 1;
+      if (tightRef.current) {
+        const span = Math.max(Math.abs(heroes[0].rig.x - W / 2), Math.abs(heroes[1].rig.x - W / 2)) + 120;
+        fit = Math.max(1, Math.min(1.6, W / 2 / span));
+      }
+      const zt = fit * (1 + (camS.tz - 1) * (fit > 1.02 ? 0.25 : 1));
+      camS.z += (zt - camS.z) * Math.min(1, real * 3);
       const half = H / 2 / camS.z;
       const cy = Math.max(half, Math.min(H - half, camS.ty));
       camS.y += (cy - camS.y) * Math.min(1, real * 2.4);
