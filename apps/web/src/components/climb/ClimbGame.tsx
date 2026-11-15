@@ -511,9 +511,13 @@ function PhoneLayout({
           </button>
           <SoundToggle />
           <FullscreenButton />
-          {state.phase !== 'finished' && (
-            <button onClick={onLeave} aria-label="Напусни">
-              <LogOut className="size-4" />
+          {state.phase !== 'finished' ? (
+            <button onClick={onLeave} className="cph-leave">
+              <LogOut className="size-4" /> Напусни
+            </button>
+          ) : (
+            <button onClick={() => socket.emit('climb:leave')} className="cph-leave">
+              <LogOut className="size-4" /> Към началото
             </button>
           )}
           {chatOpen && (

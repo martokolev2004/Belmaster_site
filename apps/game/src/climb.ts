@@ -743,7 +743,8 @@ export function registerClimb(ns: NS, newCode: () => string) {
       for (const p of room.players.values()) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('chat', { uid, key, at: Date.now() });
     },
     emit(room: ClimbRoom) {
-      for (const p of room.players.values()) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('state', room.toState(p.uid));
+      // само на тези, които още са в стаята — иначе напусналият се връща в старата игра (напр. от закъснял чат на бота)
+      for (const p of room.players.values()) if (!p.left && userRoom.get(p.uid) === room.code) for (const sid of userSockets.get(p.uid) ?? []) ns.to(sid).emit('state', room.toState(p.uid));
     },
     onFinished(room: ClimbRoom) {
       persistClimb(room)
@@ -815,7 +816,13 @@ export function registerClimb(ns: NS, newCode: () => string) {
     const leaveQueue = () => (queue = queue.filter((q) => q.user.uid !== user.uid));
 
     const existing = my();
-    if (existing && !existing.players.get(user.uid)?.left) existing.attach(user.uid, socket.id);
+    if (existing && !existing.players.get(user.uid)?.left) {
+      // завършена игра не те връща в себе си — отваряш „Към върха“ и си в началото
+      if (existing.phase === 'finished') {
+        existing.drop(user.uid);
+        userRoom.delete(user.uid);
+      } else existing.attach(user.uid, socket.id);
+    }
 
     socket.on('climb:create', () => {
       const room = create(user.grade as Grade, user.uid);

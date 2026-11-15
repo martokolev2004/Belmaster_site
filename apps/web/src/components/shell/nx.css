@@ -440,7 +440,7 @@ html:has(.nx) body { background: #090d1e; }
 .cph-stage[data-theme='night'] { background: linear-gradient(180deg, #020815, #062035 40%, #0b3a52 68%, #041426 88%); }
 .cph-scene { width: 100%; max-width: calc(100dvh * 1280 / 720); margin: 0 auto; }
 .cph-scene svg { border-radius: 0 !important; }
-.cph-top { position: absolute; left: 50%; top: 0.5rem; z-index: 3; display: flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.3rem 0.15rem 0.7rem; transform: translateX(-50%); color: #fff; background: rgba(5, 8, 28, 0.72); border-radius: 999px; backdrop-filter: blur(8px); white-space: nowrap; }
+.cph-top { position: absolute; left: 50%; top: 0.5rem; z-index: 7; display: flex; align-items: center; gap: 0.15rem; padding: 0.15rem 0.3rem 0.15rem 0.7rem; transform: translateX(-50%); color: #fff; background: rgba(5, 8, 28, 0.72); border-radius: 999px; backdrop-filter: blur(8px); white-space: nowrap; }
 .cph-top > span { margin-right: 0.3rem; font-size: 0.72rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .cph-top button { display: inline-flex; align-items: center; justify-content: center; min-width: 2rem; height: 2rem; padding: 0 0.3rem; font-size: 0.7rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); border-radius: 999px; }
 .cph-top button:active { background: rgba(255, 255, 255, 0.16); }
@@ -490,3 +490,9 @@ html:has(.nx) body { background: #090d1e; }
 .cq-actions button { min-height: 2.6rem; }
 @keyframes cph-pulse { 50% { opacity: 0.6; } }
 @keyframes cph-in { from { opacity: 0; } }
+/* напускането е винаги отгоре, дори върху въпроса */
+.cph-top .cph-leave { gap: 0.3rem; margin-left: 0.2rem; padding: 0 0.7rem; color: #fff; background: rgba(255, 75, 95, 0.85); }
+.cph-top .cph-leave:active { background: #c22a3a; }
+.cph-modal { padding-top: 2.9rem; }
+/* известието за бисквитки не пречи по време на игра */
+body:has(.cph, [data-game]) .ck { display: none; }
