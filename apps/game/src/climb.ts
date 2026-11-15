@@ -247,7 +247,9 @@ export class ClimbRoom {
     this.emit();
     // и двамата отговорили, или първият вече е отговорил вярно — няма смисъл да чакаме
     const active = [...this.players.values()].filter((p) => !p.left);
-    if (r.correct || active.every((p) => aq.answers.has(p.uid))) {
+    // верен отговор на бота не спира въпроса — човекът довършва четенето и отговаря (ботът пак е бил по-бърз)
+    const byBot = this.players.get(uid)?.isBot;
+    if ((r.correct && !byBot) || active.every((p) => aq.answers.has(p.uid))) {
       // ако вторият още може да отговори, но първият е верен — той вече е най-бързият верен
       this.schedule(400, () => this.resolveQuestion());
     }
@@ -507,7 +509,18 @@ export class ClimbRoom {
 
   private botAnswer(uid: string) {
     const aq = this.q!;
-    const delay = 3500 + Math.random() * Math.min(aq.q.timeMs - 6000, 14_000);
+    const q = aq.q;
+    // ботът „чете“ като ученик: ~18 знака в секунда (въпрос, текст, отговори) + време за мислене,
+    // и никога по-бързо от 7 секунди — за да може човекът да прочете всичко
+    const chars =
+      q.prompt.length +
+      (q.context?.length ?? 0) +
+      q.options.join(' ').length +
+      (q.data?.blanks?.text.length ?? 0) +
+      (q.data?.punctuation?.tokens.join(' ').length ?? 0) +
+      (q.matching ? [...q.matching.left, ...q.matching.right].join(' ').length : 0);
+    const read = chars * 55 + 2500;
+    const delay = Math.max(7000, Math.min(q.timeMs - 3000, read * (0.9 + Math.random() * 0.7)));
     setTimeout(() => {
       if (this.q !== aq || this.phase !== 'question') return;
       this.answer(uid, aq.q.id, botAnswer(aq.q, Math.random() < 0.6));
