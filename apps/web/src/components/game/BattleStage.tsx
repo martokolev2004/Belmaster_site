@@ -24,7 +24,7 @@ interface Props {
 }
 
 const INK = '#141a33';
-/** свободната земя е пясъчна — да не се бърка със зеления играч */
+/** свободната земя е пустиня; щом някой я завземе, пониква растителност според цвета му */
 const GRASS = ['#ecdcae', '#e4d19c', '#f1e3b8', '#e8d6a4'];
 const TOP = 56; // въздух над картата — за знамената на северните замъци
 const rnd = (a: number, b: number) => {
@@ -67,7 +67,10 @@ function edgeDist(x: number, y: number, poly: [number, number][]) {
 interface Deco {
   x: number;
   y: number;
-  kind: 'tree' | 'pine' | 'hill' | 'rock';
+  /** големина на украсата: голяма (дърво), средна (храст), дребна (цветя, трева) */
+  kind: 'big' | 'mid' | 'tiny';
+  /** кой вариант от набора */
+  v: number;
   s: number;
 }
 
@@ -114,35 +117,131 @@ function Flag({ color }: { color: string }) {
   );
 }
 
-function DecoArt({ d }: { d: Deco }) {
-  const t = `translate(${d.x} ${d.y}) scale(${d.s})`;
-  if (d.kind === 'tree')
-    return (
-      <g transform={t}>
-        <ellipse cx="0" cy="1" rx="11" ry="3.5" fill="#0b1030" opacity=".22" />
-        <rect x="-2.5" y="-10" width="5" height="11" fill="#7a4a2b" stroke={INK} strokeWidth="2" />
-        <circle cx="0" cy="-19" r="12" fill="#3f9a4d" stroke={INK} strokeWidth="2.5" />
-        <circle cx="-4" cy="-23" r="4" fill="#6cc46f" />
+/** замъкът с аватара и сърцата заема повече място от знамето */
+const nearCastle = (d: Deco, x: number, y: number) => Math.abs(d.x - x) < 100 && d.y > y - 118 && d.y < y + 80;
+
+type Biome = 'desert' | 'red' | 'blue' | 'yellow' | 'green';
+/** цвят на играча → каква растителност пониква в земите му */
+const BIOME: Record<string, Biome> = { '#ff4b4b': 'red', '#1cb0f6': 'blue', '#ffc800': 'yellow', '#58cc02': 'green' };
+const K = { stroke: INK, strokeWidth: 2.5, strokeLinejoin: 'round' as const };
+const Shadow = ({ rx = 11 }: { rx?: number }) => <ellipse cx="0" cy="1" rx={rx} ry="3.5" fill="#0b1030" opacity=".22" />;
+const Trunk = () => <rect x="-2.5" y="-10" width="5" height="11" fill="#7a4a2b" stroke={INK} strokeWidth="2" />;
+const Pine = ({ c, snow }: { c: string; snow?: boolean }) => (
+  <>
+    <Shadow rx={10} />
+    <rect x="-2" y="-6" width="4" height="7" fill="#7a4a2b" stroke={INK} strokeWidth="2" />
+    <path d="M0 -36L11 -18H6L13 -5H-13L-6 -18H-11z" fill={c} {...K} />
+    {snow && <path d="M0 -36L6.5 -25Q3 -22 0 -25Q-3 -22 -6.5 -25zM-9 -11Q-5 -8 0 -11Q5 -8 9 -11L6 -17H-6z" fill="#fff" />}
+  </>
+);
+const Round = ({ c, hi }: { c: string; hi: string }) => (
+  <>
+    <Shadow />
+    <Trunk />
+    <circle cx="0" cy="-19" r="12" fill={c} {...K} />
+    <circle cx="-4" cy="-23" r="4" fill={hi} />
+  </>
+);
+const Bush = ({ c, dot }: { c: string; dot: string }) => (
+  <>
+    <Shadow rx={13} />
+    <path d="M-13 0a7 7 0 0 1 4-12a8 8 0 0 1 14-2a7 7 0 0 1 8 14z" fill={c} {...K} />
+    <circle cx="-3" cy="-9" r="2" fill={dot} />
+    <circle cx="6" cy="-6" r="2" fill={dot} />
+  </>
+);
+const Flowers = ({ cs, mid = '#ffa51f' }: { cs: string[]; mid?: string }) => (
+  <>
+    {[[-8, 0], [0, -5], [8, 1]].map(([x, y], i) => (
+      <g key={i} transform={`translate(${x} ${y})`}>
+        <circle r="3.6" fill={cs[i % cs.length]} stroke={INK} strokeWidth="1.5" />
+        <circle r="1.2" fill={mid} />
       </g>
-    );
-  if (d.kind === 'pine')
-    return (
-      <g transform={t}>
-        <ellipse cx="0" cy="1" rx="10" ry="3.5" fill="#0b1030" opacity=".22" />
-        <rect x="-2" y="-6" width="4" height="7" fill="#7a4a2b" stroke={INK} strokeWidth="2" />
-        <path d="M0 -36L11 -18H6L13 -5H-13L-6 -18H-11z" fill="#2f7d55" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-      </g>
-    );
-  if (d.kind === 'hill')
-    return (
-      <g transform={t}>
-        <path d="M-22 0Q-8 -30 2 -12Q10 -26 22 0z" fill="#b7c2a0" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
-        <path d="M-9 -17q3 -7 7 -1l-3 4z" fill="#fff" />
-      </g>
-    );
+    ))}
+  </>
+);
+const Tuft = ({ c }: { c: string }) => <path d="M-7 0q1-8-2-11M0 0q0-10 1-14M7 0q-1-8 3-11" fill="none" stroke={c} strokeWidth="2.6" strokeLinecap="round" />;
+
+/** Една украса според земята: пустиня (свободно поле) или растителността на собственика. */
+function art(biome: Biome, d: Deco) {
+  const alt = d.v % 2 === 0;
+  if (biome === 'desert') {
+    if (d.kind === 'big')
+      return alt ? (
+        <>
+          <Shadow rx={10} />
+          <path d="M-4 0V-26a4 4 0 0 1 8 0V0z" fill="#6fae5a" {...K} />
+          <path d="M-4 -12h-5a3 3 0 0 1-3-3v-5" fill="none" stroke={INK} strokeWidth="8" strokeLinecap="round" />
+          <path d="M-4 -12h-5a3 3 0 0 1-3-3v-5" fill="none" stroke="#6fae5a" strokeWidth="4" strokeLinecap="round" />
+          <path d="M4 -8h5a3 3 0 0 0 3-3v-7" fill="none" stroke={INK} strokeWidth="8" strokeLinecap="round" />
+          <path d="M4 -8h5a3 3 0 0 0 3-3v-7" fill="none" stroke="#6fae5a" strokeWidth="4" strokeLinecap="round" />
+        </>
+      ) : (
+        <path d="M-12 0l3 -11 9 -5 9 7 3 9z" fill="#c9b48a" {...K} />
+      );
+    if (d.kind === 'mid') return alt ? <path d="M-9 0l3 -8 7 -2 6 5 1 5z" fill="#d6c59c" {...K} /> : <path d="M-16 0q8 -9 16 -3q8 -6 16 3" fill="none" stroke="#c9b07a" strokeWidth="3" strokeLinecap="round" />;
+    return <Tuft c="#b89a5e" />;
+  }
+  if (biome === 'red') {
+    // есен: червени и оранжеви корони, макове
+    if (d.kind === 'big') return alt ? <Round c="#e2543f" hi="#ff9a6b" /> : <Round c="#f08a2e" hi="#ffd08a" />;
+    if (d.kind === 'mid') return <Bush c="#c0392b" dot="#ffd84d" />;
+    return alt ? <Flowers cs={['#ff5a5a', '#ff8a5a']} mid="#2b1a1a" /> : <path d="M-7 0q3-4 0-8M2 -1q4-3 2-8M8 0q-1-5 3-7" fill="none" stroke="#f08a2e" strokeWidth="2.6" strokeLinecap="round" />;
+  }
+  if (biome === 'blue') {
+    // зима: заснежени ели, ледени кристали
+    if (d.kind === 'big') return alt ? <Pine c="#2f8f9a" snow /> : <Pine c="#3a78b8" snow />;
+    if (d.kind === 'mid')
+      return alt ? (
+        <>
+          <Shadow rx={9} />
+          <path d="M0 -22L7 -9L0 0L-7 -9z" fill="#bfeaff" {...K} />
+          <path d="M0 -22L0 0L-7 -9z" fill="#fff" opacity=".6" />
+        </>
+      ) : (
+        <>
+          <Shadow rx={13} />
+          <path d="M-13 0a7 7 0 0 1 4-12a8 8 0 0 1 14-2a7 7 0 0 1 8 14z" fill="#f4fbff" {...K} />
+        </>
+      );
+    return alt ? <Flowers cs={['#fff', '#bfeaff']} mid="#3a78b8" /> : <path d="M-8 0q4 -7 8 -7t8 7z" fill="#fff" stroke={INK} strokeWidth="2" strokeLinejoin="round" />;
+  }
+  if (biome === 'yellow') {
+    // златни ниви: слънчогледи, жито, купи сено
+    if (d.kind === 'big')
+      return alt ? (
+        <Round c="#f2b632" hi="#ffe9a3" />
+      ) : (
+        <>
+          <Shadow rx={13} />
+          <path d="M-13 0Q-12 -20 0 -22Q12 -20 13 0z" fill="#e9b949" {...K} />
+          <path d="M-7 -4q1 -8 3 -12M1 -3q0 -9 1 -15M8 -4q-1 -7 -3 -11" fill="none" stroke="#b9861f" strokeWidth="2" strokeLinecap="round" />
+        </>
+      );
+    if (d.kind === 'mid')
+      return (
+        <>
+          <path d="M0 0V-16" stroke="#3f9a4d" strokeWidth="3" strokeLinecap="round" />
+          <path d="M0 -8q-6 -1 -7 -6q6 0 7 6" fill="#4aa856" stroke={INK} strokeWidth="1.5" />
+          <circle cx="0" cy="-20" r="8" fill="#ffd84d" {...K} />
+          <circle cx="0" cy="-20" r="3.4" fill="#7a4a2b" />
+        </>
+      );
+    return <path d="M-7 0q1-9-1-13M0 0q0-11 1-16M7 0q-1-9 2-13M-8 -13l2 -3M1 -16l1 -3M9 -13l2 -3" fill="none" stroke="#c99a1f" strokeWidth="2.6" strokeLinecap="round" />;
+  }
+  // зелено: гъста гора
+  if (d.kind === 'big') return alt ? <Round c="#3f9a4d" hi="#6cc46f" /> : <Pine c="#2f7d55" />;
+  if (d.kind === 'mid') return <Bush c="#4aa856" dot="#ff7a8a" />;
+  return alt ? <Flowers cs={['#fff', '#ffd84d', '#ff9ecb']} /> : <Tuft c="#2f7d55" />;
+}
+
+function DecoArt({ d, biome, i }: { d: Deco; biome: Biome; i: number }) {
   return (
-    <g transform={t}>
-      <path d="M-9 0l3 -9 8 -3 7 6 1 6z" fill="#c9cdee" stroke={INK} strokeWidth="2.5" strokeLinejoin="round" />
+    <g transform={`translate(${d.x} ${d.y}) scale(${d.s})`}>
+      {/* при смяна на собственика растенията поникват наново, едно след друго */}
+      <g key={biome} className={biome === 'desert' ? undefined : 'bs-grow'} style={{ animationDelay: `${0.25 + i * 0.07}s` }}>
+        {art(biome, d)}
+      </g>
     </g>
   );
 }
@@ -163,14 +262,15 @@ export function BattleStage({ map, state, selectable, onSelect, onBlocked, highl
       const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
       const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
       const list: Deco[] = [];
-      for (let k = 0; k < 60 && list.length < 5; k++) {
+      for (let k = 0; k < 220 && list.length < 11; k++) {
         const x = x0 + rnd(ri + 1, k) * (x1 - x0), y = y0 + rnd(ri + 7, k + 3) * (y1 - y0);
-        if (!inside(x, y, poly) || edgeDist(x, y, poly) < 24) continue;
+        if (!inside(x, y, poly) || edgeDist(x, y, poly) < 17) continue;
         // средата е за името, знамето и замъка
-        if (Math.abs(x - r.center[0]) < 96 && y > r.center[1] - 116 && y < r.center[1] + 78) continue;
-        if (list.some((d) => Math.hypot(d.x - x, d.y - y) < 34)) continue;
+        const dx = Math.abs(x - r.center[0]), dy = y - r.center[1];
+        if ((dx < 92 && dy > -8 && dy < 64) || (dx < 46 && dy > -72 && dy <= -8)) continue;
+        if (list.some((d) => Math.hypot(d.x - x, d.y - y) < 27)) continue;
         const v = rnd(ri + 13, k);
-        list.push({ x, y, kind: v < 0.4 ? 'tree' : v < 0.72 ? 'pine' : v < 0.9 ? 'hill' : 'rock', s: 0.8 + rnd(ri, k + 9) * 0.35 });
+        list.push({ x, y, kind: v < 0.42 ? 'big' : v < 0.7 ? 'mid' : 'tiny', v: Math.floor(rnd(ri + 5, k + 2) * 6), s: 0.8 + rnd(ri, k + 9) * 0.35 });
       }
       out[r.id] = list.sort((a, b) => a.y - b.y);
     });
@@ -281,8 +381,11 @@ export function BattleStage({ map, state, selectable, onSelect, onBlocked, highl
           const ly = reg?.capital ? y + 40 : y + 14;
           return (
             <g key={r.id} className="pointer-events-none">
-              {!owner && deco[r.id].map((d, k) => <DecoArt key={k} d={d} />)}
-              {owner && deco[r.id].slice(0, 2).map((d, k) => <DecoArt key={k} d={d} />)}
+              {deco[r.id]
+                .filter((d) => !reg?.capital || !nearCastle(d, x, y))
+                .map((d, k) => (
+                  <DecoArt key={k} d={d} i={k} biome={owner ? BIOME[owner.color] ?? 'green' : 'desert'} />
+                ))}
               {reg?.capital ? (
                 <g transform={`translate(${x} ${y - 4})`}>
                   <Castle key={`${fx.key}-${fx.hit.includes(r.id)}`} color={owner?.color ?? '#9aa4d0'} hp={reg.hp} hit={fx.hit.includes(r.id)} />
