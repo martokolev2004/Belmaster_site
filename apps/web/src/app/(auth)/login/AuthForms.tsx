@@ -4,7 +4,6 @@ import { useActionState, useState } from 'react';
 import { GRADES } from '@belmaster/shared';
 import { Alert, Button, Field, Input } from '@/components/ui';
 import Link from 'next/link';
-import { cn } from '@/lib/cn';
 import { BirthFields } from '@/components/auth/BirthFields';
 import { guestAction, loginAction, registerAction, type FormState } from '../actions';
 
@@ -33,7 +32,7 @@ export function AuthForms({
 
   return (
     <div className="animate-rise">
-      <h1 className="mb-1 text-center text-3xl font-black">
+      <h1 className="mb-1 text-center">
         {isGuest ? 'Запази прогреса си' : tab === 'login' ? 'Добре дошъл отново!' : 'Създай профил'}
       </h1>
       <p className="mb-6 text-center text-muted">
@@ -41,17 +40,13 @@ export function AuthForms({
       </p>
 
       {!isGuest && (
-        <div className="mb-5 grid grid-cols-2 rounded-2xl bg-surface-2 p-1" role="tablist">
+        <div className="au-tabs" role="tablist">
           {(['login', 'register'] as const).map((t) => (
             <button
               key={t}
               role="tab"
               aria-selected={tab === t}
               onClick={() => setTab(t)}
-              className={cn(
-                'rounded-xl py-2.5 text-sm font-extrabold uppercase tracking-wide',
-                tab === t ? 'bg-surface text-secondary shadow-sm' : 'text-muted',
-              )}
             >
               {t === 'login' ? 'Вход' : 'Регистрация'}
             </button>
@@ -116,17 +111,15 @@ export function AuthForms({
       {!isGuest && (
         <>
           <Divider />
-          <form action={guestAction} className="card3d rounded-2xl bg-surface p-4">
+          <form action={guestAction} className="au-guest">
             <input type="hidden" name="next" value={next} />
-            <p className="mb-3 font-extrabold text-ink-strong">Пробвай като гост</p>
+            <p className="mb-1 font-extrabold text-white">Пробвай като гост</p>
             <p className="mb-3 text-sm text-muted">Без регистрация. Гостите могат да играят, но не влизат в класациите.</p>
-            <div className="mb-3 grid grid-cols-3 gap-2">
+            <div className="au-grades">
               {GRADES.map((g, i) => (
                 <label key={g.code} className="cursor-pointer">
-                  <input type="radio" name="grade" value={g.code} defaultChecked={i === 2} className="peer sr-only" />
-                  <span className="card3d block rounded-xl py-2 text-center text-sm font-extrabold peer-checked:border-secondary peer-checked:bg-secondary/10 peer-checked:text-secondary">
-                    {g.label}
-                  </span>
+                  <input type="radio" name="grade" value={g.code} defaultChecked={i === 2} className="sr-only" />
+                  <span>{g.label}</span>
                 </label>
               ))}
             </div>
