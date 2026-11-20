@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import type { User } from '@belmaster/db';
 import { gradeLabel, levelProgress } from '@belmaster/shared';
-import { BookOpen, ChevronRight, FileText, Languages, Library, ScrollText } from 'lucide-react';
+import { BookOpen, ChevronRight, FileText, Languages, Library, ScrollText, Trophy } from 'lucide-react';
 import '@/components/landing/landing-next.css';
 import { prisma } from '@/lib/db';
 import { UserAvatar } from '@/components/avatar/UserAvatar';
@@ -91,7 +91,10 @@ export async function DashboardNext({ user }: { user: User }) {
       </section>
 
       <section className="nx-tiles" style={{ marginTop: 0, alignItems: 'start' }}>
-        <Tile href="/library" c="#6ea2ff" icon={<Library className="size-6" />} title="Библиотека" text="Произведенията, които учиш" />
+        <div className="grid gap-[0.9rem]">
+          <Tile href="/leaderboard" c="#ff9d3c" icon={<Trophy className="size-6" />} title="Класация" text="Виж кой е най-добър — и приятелите си" />
+          <Tile href="/library" c="#6ea2ff" icon={<Library className="size-6" />} title="Библиотека" text="Произведенията, които учиш" />
+        </div>
         <div className="nx-panel nx-recent">
           <h3 className="ln-display mb-2 text-[0.8rem] text-white">Последни битки</h3>
           {recent.length === 0 ? (

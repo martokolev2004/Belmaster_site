@@ -52,24 +52,27 @@ export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher:
   );
 }
 
-const MOBILE = ITEMS.slice(0, 7);
+const MOBILE = ITEMS.slice(0, 6); // „Класация“ е в „Начало“
 /** цветът на всеки раздел — същият като в плочките на началната страница */
-const TINT: Record<string, string> = { '/play': '#ff6b5e', '/climb': '#5cc8ff', '/tower': '#ffc93c' };
-const GAMES = new Set(Object.keys(TINT));
+/** цвят на гръбчето на всяка „книга“ — игрите в своя цвят */
+const TINT: Record<string, string> = { '/': '#2f4fae', '/tests': '#17806a', '/play': '#c23b30', '/climb': '#1d7fc0', '/tower': '#c99412', '/library': '#6c3fa8' };
+const GAMES = new Set(['/play', '/climb', '/tower']);
 const SHORT: Record<string, string> = { '/library': 'Книги' };
 
 export function BottomNav() {
   const path = usePathname();
   if (/^\/play\/[A-Z0-9]+/i.test(path)) return null; // по време на игра — цял екран
   return (
-    <nav className="bn md:hidden" aria-label="Основно меню">
+    <nav className="bn book md:hidden" aria-label="Основно меню">
       <div className="bn-bar">
         {MOBILE.map(({ href, label, icon: Icon }) => {
           const active = isActive(path, href);
           return (
             <Link key={href} href={href} aria-label={label} data-active={active} data-game={GAMES.has(href) || undefined} className="bn-item" style={{ '--c': TINT[href] ?? '#6ea2ff' } as React.CSSProperties}>
+              <i className="bn-band" />
               <Icon className="bn-ic size-[22px]" strokeWidth={2.3} />
               <span className="bn-t">{SHORT[href] ?? label}</span>
+              <i className="bn-band" />
             </Link>
           );
         })}
