@@ -9,7 +9,7 @@ import { Avatar, Badge, Button, ButtonLink, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
 import { ShareButton } from '@/components/share/ShareCard';
-import { BattleStage as MapBoard } from './BattleStage';
+import { BattleStage as MapBoard, cropBox } from './BattleStage';
 import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
@@ -305,7 +305,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   // телефон настрани: картата на цялата височина, играчите и статусът отстрани, въпросът върху нея
   if (phone)
     return (
-      <div className="bph" data-game>
+      <div className="bph" data-game style={{ '--ar': (() => { const c = cropBox(map); return c.w / c.h; })() } as React.CSSProperties}>
         {/* горе: играчите и бутоните — тънка лента */}
         <div className="bph-top">
           <PhonePlayers state={state} map={map} me={me} />
