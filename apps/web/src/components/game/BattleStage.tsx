@@ -21,6 +21,8 @@ interface Props {
   attackColor?: string;
   bubbles?: MapBubble[];
   className?: string;
+  /** само островът (без празното море около него) — за малки екрани */
+  crop?: boolean;
 }
 
 const INK = '#141a33';
@@ -246,13 +248,22 @@ function DecoArt({ d, biome, i }: { d: Deco; biome: Biome; i: number }) {
   );
 }
 
-export function BattleStage({ map, state, selectable, onSelect, onBlocked, highlight, attackColor, bubbles = [], className }: Props) {
+export function BattleStage({ map, state, selectable, onSelect, onBlocked, highlight, attackColor, bubbles = [], className, crop = false }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (n: string) => `${n}-${uid}`;
   const colors = new Map(state.players.map((p) => [p.uid, p.color]));
   const sel = new Set(selectable);
   const works = state.mode === 'WORKS';
   const W = map.width, H = map.height;
+  // рамка около самия остров: малко море отстрани, повече отгоре — за знамената на замъците
+  const box = useMemo(() => {
+    const nums = map.outline.match(/-?\d+(\.\d+)?/g)!.map(Number);
+    const xs = nums.filter((_, i) => i % 2 === 0), ys = nums.filter((_, i) => i % 2 === 1);
+    // съвсем малко вода — островът е колкото може по-голям; отгоре малко повече за знамената на замъците
+    const x0 = Math.max(0, Math.min(...xs) - 8), x1 = Math.min(W, Math.max(...xs) + 8);
+    const y0 = Math.min(...ys) - 46, y1 = Math.min(H, Math.max(...ys) + 22);
+    return `${x0} ${y0} ${x1 - x0} ${y1 - y0}`;
+  }, [map, W, H]);
 
   // украса: гори, хълмове и камъни в областите — винаги на едни и същи места
   const deco = useMemo(() => {
@@ -315,7 +326,7 @@ export function BattleStage({ map, state, selectable, onSelect, onBlocked, highl
   const order = useMemo(() => [...map.regions].sort((a, b) => a.center[1] - b.center[1]), [map]);
 
   return (
-    <svg viewBox={`0 ${-TOP} ${W} ${H + TOP}`} className={cn('bs block h-auto w-full select-none', className)} role="img" aria-label={map.name}>
+    <svg viewBox={crop ? box : `0 ${-TOP} ${W} ${H + TOP}`} className={cn('bs block h-auto w-full select-none', className)} role="img" aria-label={map.name}>
       <defs>
         <linearGradient id={id('sea')} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={works ? '#3a6f8f' : '#2f8fe0'} />

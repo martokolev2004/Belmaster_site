@@ -306,8 +306,16 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   if (phone)
     return (
       <div className="bph" data-game>
-        <div className="bph-side bph-left">
+        {/* горе: играчите и бутоните — тънка лента */}
+        <div className="bph-top">
           <PhonePlayers state={state} map={map} me={me} />
+          <div className="bph-tools">
+            <SoundToggle />
+            <FullscreenButton />
+            <button onClick={() => setConfirmLeave(true)} className="bph-leave">
+              <LogOut className="size-4" /> Напусни
+            </button>
+          </div>
         </div>
         <div className="bph-map">
           <MapBoard
@@ -320,19 +328,21 @@ function Battle({ state, me }: { state: GameState; me: string }) {
             attackColor={attackColor}
             bubbles={bubbles}
             className="bph-svg"
+            crop
           />
           {hint && <div className="bph-hint">{hint}</div>}
         </div>
         <div className="bph-side bph-right">
-          <div className="bph-tools">
-            <SoundToggle />
-            <FullscreenButton />
-            <button onClick={() => setConfirmLeave(true)} className="bph-leave">
-              <LogOut className="size-4" /> Напусни
-            </button>
-          </div>
           <p className="bph-stage">{stage}</p>
           <PhoneStatus state={state} me={me} meP={meP} />
+          {/* какво се случи досега — запълва мястото вдясно */}
+          {state.log.length > 0 && (
+            <ul className="bph-log">
+              {[...state.log].slice(-6).reverse().map((l, i) => (
+                <li key={`${state.log.length}-${i}`}>{l}</li>
+              ))}
+            </ul>
+          )}
           <div className="bph-chat">
             <ChatBar state={state} />
           </div>

@@ -497,18 +497,22 @@ html:has(.nx) body { background: #090d1e; }
 /* известието за бисквитки не пречи по време на игра */
 body:has(.cph, [data-game]) .ck { display: none; }
 
-/* ── „Битка“ на телефон настрани: картата на цялата височина, играчите вляво, статусът вдясно ── */
-.bph { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(7.5rem, 1fr) auto minmax(8.5rem, 1fr); background: radial-gradient(120% 90% at 50% 50%, #12205c, #05081c 70%); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
-.bph-map { position: relative; display: flex; align-items: center; justify-content: center; height: 100dvh; min-width: 0; }
-.bph-svg { height: 100dvh !important; width: auto !important; max-width: calc(100vw - 15rem); }
+/* ── „Битка“ на телефон настрани: тънка лента горе, островът до левия край, статусът вдясно ── */
+.bph { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: auto minmax(8.5rem, 1fr); grid-template-rows: auto minmax(0, 1fr); background: radial-gradient(120% 90% at 40% 55%, #1b55b0, #0b2a66 55%, #05081c); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.bph-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.4rem; min-width: 0; padding: 0.3rem 0.45rem; background: rgba(5, 8, 28, 0.72); box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); }
+.bph-top .bph-tools { margin-left: auto; flex-shrink: 0; }
+.bph-map { position: relative; display: flex; align-items: center; justify-content: flex-start; min-width: 0; min-height: 0; padding: 0.15rem 0 0.15rem 0.15rem; }
+.bph-svg { height: 100% !important; width: auto !important; max-width: 100%; max-height: 100%; }
+.bph-svg > rect:last-child { display: none; }
 .bph-side { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; padding: 0.45rem; overflow-y: auto; }
-.bph-players { display: grid; gap: 0.35rem; }
-.bph-players li { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.4rem; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 3px 0 0 var(--c); border-radius: 0.7rem; }
-.bph-players li[data-turn='true'] { background: color-mix(in srgb, var(--c) 26%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
+.bph-players { display: flex; gap: 0.3rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.bph-players li { display: flex; flex-shrink: 0; align-items: center; gap: 0.35rem; padding: 0.15rem 0.5rem 0.15rem 0.15rem; background: rgba(255, 255, 255, 0.06); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), inset 3px 0 0 var(--c); border-radius: 999px; }
+.bph-players li > span:first-child { width: 26px !important; height: 26px !important; border-radius: 999px; }
+.bph-players li[data-turn='true'] { background: color-mix(in srgb, var(--c) 30%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
 .bph-players li[data-out='true'] { opacity: 0.4; }
-.bph-players b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; font-weight: 900; color: #fff; }
+.bph-players b { display: block; max-width: 7.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.7rem; font-weight: 900; line-height: 1.15; color: #fff; }
 .bph-players b i { font-style: normal; font-weight: 700; color: var(--muted); }
-.bph-players small { display: block; font-size: 0.64rem; font-weight: 800; color: var(--muted); }
+.bph-players small { display: block; font-size: 0.6rem; font-weight: 800; line-height: 1.15; color: var(--muted); }
 .bph-players em { font-style: normal; color: #ff5d73; }
 .bph-tools { display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem; }
 .bph-tools > button { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.9rem; font-size: 0.68rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); border-radius: 999px; }
@@ -533,3 +537,15 @@ body:has(.cph, [data-game]) .ck { display: none; }
 /* плаващите слоеве покриват целия екран, а не първата колона */
 .bph > .bph-modal, .bph > .bph-reveal { grid-column: 1 / -1; grid-row: 1; }
 .bph-modal > .card3d { width: min(36rem, 100%); }
+.bph-map { max-width: calc(100vw - 9rem - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+.bph-right { padding-left: 0.6rem; }
+.bph-map { overflow: hidden; }
+.bph-svg { overflow: hidden; }
+/* дясната колона взима цялото свободно място до картата */
+.bph-right { padding: 0.5rem 0.6rem 0.5rem 0.7rem; gap: 0.5rem; }
+.bph-stage { font-size: 0.72rem; }
+.bph-status { padding: 0.6rem 0.7rem; }
+.bph-status p { font-size: 0.86rem; }
+.bph-log { display: grid; gap: 0.25rem; min-height: 0; overflow-y: auto; }
+.bph-log li { padding: 0.3rem 0.5rem; font-size: 0.7rem; font-weight: 700; line-height: 1.3; color: rgba(255, 255, 255, 0.78); background: rgba(255, 255, 255, 0.04); border-radius: 0.5rem; animation: rise 0.3s ease-out; }
+.bph-log li:first-child { color: #fff; background: rgba(255, 255, 255, 0.09); }
