@@ -554,3 +554,23 @@ body:has(.cph, [data-game]) .ck { display: none; }
 .bph-top { height: var(--topbar); }
 .bph-map { width: 100%; height: 100%; max-width: none; padding: 0; }
 .bph-svg { display: block; width: 100% !important; height: 100% !important; max-width: none; max-height: none; }
+/* без горна лента: картата е на цялата височина, играчите и бутоните са вдясно */
+.bph { grid-template-columns: min(calc(100dvh * var(--ar, 1.5)), calc(100vw - 11rem - env(safe-area-inset-left) - env(safe-area-inset-right))) minmax(0, 1fr) !important; grid-template-rows: minmax(0, 1fr) !important; }
+.bph-head { display: flex; align-items: center; justify-content: space-between; gap: 0.3rem; }
+.bph-head .bph-stage { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bph-right .bph-players { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.3rem; overflow: visible; }
+.bph-right .bph-players li { padding: 0.25rem 0.5rem 0.25rem 0.3rem; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); border-radius: 0.8rem; }
+.bph-right .bph-players li[data-turn='true'] { background: color-mix(in srgb, var(--c) 20%, rgba(255, 255, 255, 0.04)); box-shadow: inset 0 0 0 1.5px var(--c); }
+.bph-ava { display: flex; flex-shrink: 0; width: 34px; height: 34px; padding: 2px; border-radius: 999px; background: var(--c); }
+.bph-ava > span { width: 30px !important; height: 30px !important; border-radius: 999px !important; }
+.bph-right .bph-players b { max-width: none; }
+.bph-head { flex-direction: column-reverse; align-items: stretch; gap: 0.25rem; }
+.bph-head .bph-tools { justify-content: flex-end; }
+.bph-head .bph-tools > button { white-space: nowrap; }
+.bph-head .bph-stage { white-space: normal; }
+.bph-ava { width: 36px; height: 36px; padding: 2px; overflow: hidden; border-radius: 999px; background: var(--c); }
+.bph-ava > span { width: 32px !important; height: 32px !important; border-radius: 999px !important; }
+.bph-ava { width: 32px; height: 32px; padding: 0; margin: 2px; background: none; box-shadow: 0 0 0 2.5px var(--c); }
+/* аватарът стои точно в своя кръг и не застъпва името */
+.bph-players li > .bph-ava { flex: 0 0 32px; }
+.bph-ava > span, .bph-ava svg { display: block; width: 32px !important; height: 32px !important; }

@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn';
 import { useGame } from './GameSocketProvider';
 import { ShareButton } from '@/components/share/ShareCard';
 import { BattleStage as MapBoard, cropBox } from './BattleStage';
+import { UserAvatar } from '@/components/avatar/UserAvatar';
 import { BattlePanel, BattleSounds, Confetti, SoundToggle, useMapBubbles } from './BattleExtras';
 import { useCountdown } from './useCountdown';
 import { notifyProgress } from '@/components/unlocks/UnlockCelebration';
@@ -306,17 +307,6 @@ function Battle({ state, me }: { state: GameState; me: string }) {
   if (phone)
     return (
       <div className="bph" data-game style={{ '--ar': (() => { const c = cropBox(map); return c.w / c.h; })() } as React.CSSProperties}>
-        {/* горе: играчите и бутоните — тънка лента */}
-        <div className="bph-top">
-          <PhonePlayers state={state} map={map} me={me} />
-          <div className="bph-tools">
-            <SoundToggle />
-            <FullscreenButton />
-            <button onClick={() => setConfirmLeave(true)} className="bph-leave">
-              <LogOut className="size-4" /> Напусни
-            </button>
-          </div>
-        </div>
         <div className="bph-map">
           <MapBoard
             map={map}
@@ -333,7 +323,17 @@ function Battle({ state, me }: { state: GameState; me: string }) {
           {hint && <div className="bph-hint">{hint}</div>}
         </div>
         <div className="bph-side bph-right">
-          <p className="bph-stage">{stage}</p>
+          <div className="bph-head">
+            <p className="bph-stage">{stage}</p>
+            <div className="bph-tools">
+              <SoundToggle />
+              <FullscreenButton />
+              <button onClick={() => setConfirmLeave(true)} className="bph-leave">
+                <LogOut className="size-4" /> Напусни
+              </button>
+            </div>
+          </div>
+          <PhonePlayers state={state} map={map} me={me} />
           <PhoneStatus state={state} me={me} meP={meP} />
           {/* какво се случи досега — запълва мястото вдясно */}
           {state.log.length > 0 && (
@@ -648,7 +648,9 @@ function PhonePlayers({ state, map, me }: { state: GameState; map: (typeof MAPS)
         const isTurn = state.turnUid === p.uid || state.pick?.uid === p.uid;
         return (
           <li key={p.uid} data-turn={isTurn} data-out={p.eliminated || p.left} style={{ '--c': p.color } as React.CSSProperties}>
-            <Avatar name={p.name} color={p.color} avatar={p.avatar} seed={p.uid} size={30} />
+            <span className="bph-ava">
+              <UserAvatar avatar={p.avatar} name={p.uid} size={32} />
+            </span>
             <span className="min-w-0">
               <b>
                 {p.isBot && <Bot className="mr-0.5 inline size-3" />}
