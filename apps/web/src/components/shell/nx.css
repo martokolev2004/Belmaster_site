@@ -496,3 +496,40 @@ html:has(.nx) body { background: #090d1e; }
 .cph-modal { padding-top: 2.9rem; }
 /* известието за бисквитки не пречи по време на игра */
 body:has(.cph, [data-game]) .ck { display: none; }
+
+/* ── „Битка“ на телефон настрани: картата на цялата височина, играчите вляво, статусът вдясно ── */
+.bph { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: minmax(7.5rem, 1fr) auto minmax(8.5rem, 1fr); background: radial-gradient(120% 90% at 50% 50%, #12205c, #05081c 70%); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.bph-map { position: relative; display: flex; align-items: center; justify-content: center; height: 100dvh; min-width: 0; }
+.bph-svg { height: 100dvh !important; width: auto !important; max-width: calc(100vw - 15rem); }
+.bph-side { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; padding: 0.45rem; overflow-y: auto; }
+.bph-players { display: grid; gap: 0.35rem; }
+.bph-players li { display: flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.4rem; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 3px 0 0 var(--c); border-radius: 0.7rem; }
+.bph-players li[data-turn='true'] { background: color-mix(in srgb, var(--c) 26%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
+.bph-players li[data-out='true'] { opacity: 0.4; }
+.bph-players b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; font-weight: 900; color: #fff; }
+.bph-players b i { font-style: normal; font-weight: 700; color: var(--muted); }
+.bph-players small { display: block; font-size: 0.64rem; font-weight: 800; color: var(--muted); }
+.bph-players em { font-style: normal; color: #ff5d73; }
+.bph-tools { display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem; }
+.bph-tools > button { display: inline-flex; align-items: center; justify-content: center; min-width: 1.9rem; height: 1.9rem; font-size: 0.68rem; font-weight: 800; color: rgba(255, 255, 255, 0.85); border-radius: 999px; }
+.bph-tools .bph-leave { gap: 0.25rem; padding: 0 0.6rem; color: #fff; background: rgba(255, 75, 95, 0.85); }
+.bph-stage { font-size: 0.66rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #8fb8ff; }
+.bph-status { padding: 0.45rem 0.55rem; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); border-radius: 0.7rem; }
+.bph-status[data-mine='true'] { background: rgb(var(--acc) / 0.22); box-shadow: inset 0 0 0 1.5px rgb(var(--acc)); animation: bph-glow 1.4s ease-in-out infinite; }
+.bph-status p { margin-bottom: 0.35rem; font-size: 0.74rem; font-weight: 900; line-height: 1.3; color: #fff; }
+.bph-status .h-2\.5 { height: 0.4rem; }
+.bph-chat { margin-top: auto; }
+.bph-chat > div { padding: 0.45rem; border-radius: 0.7rem; box-shadow: none; }
+.bph-chat li { font-size: 0.7rem; }
+.bph-hint { position: absolute; left: 0.5rem; right: 0.5rem; bottom: 0.5rem; padding: 0.4rem 0.6rem; font-size: 0.74rem; font-weight: 800; text-align: center; color: #fff; background: rgba(5, 8, 28, 0.85); border-radius: 0.7rem; pointer-events: none; }
+.bph-modal { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 0.5rem max(0.6rem, env(safe-area-inset-right)) 0.5rem max(0.6rem, env(safe-area-inset-left)); background: rgba(3, 5, 20, 0.6); backdrop-filter: blur(3px); }
+.bph-modal > .card3d { max-height: 100%; }
+.bph-card { display: flex; flex-direction: column; width: 100%; max-width: 48rem; max-height: 100%; min-height: 0; overflow: hidden; background: #0f1634; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 20px 60px rgba(0, 0, 0, 0.6); border-radius: 1rem; }
+.bph-card > .cq > .flex { padding: 0 0.8rem; }
+.bph-card .cq-text { padding-right: 0.8rem; }
+.bph-reveal { position: absolute; left: 50%; top: 0.5rem; z-index: 25; width: min(26rem, 56%); max-height: calc(100% - 1rem); overflow-y: auto; padding: 0.6rem 0.7rem; transform: translateX(-50%); background: rgba(15, 22, 52, 0.95); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 14px 40px rgba(0, 0, 0, 0.5); border-radius: 0.9rem; backdrop-filter: blur(8px); }
+.bph-reveal p, .bph-reveal li { font-size: 0.78rem; }
+@keyframes bph-glow { 50% { box-shadow: inset 0 0 0 1.5px rgb(var(--acc)), 0 0 18px -4px rgb(var(--acc)); } }
+/* плаващите слоеве покриват целия екран, а не първата колона */
+.bph > .bph-modal, .bph > .bph-reveal { grid-column: 1 / -1; grid-row: 1; }
+.bph-modal > .card3d { width: min(36rem, 100%); }

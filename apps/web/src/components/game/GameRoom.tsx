@@ -262,6 +262,7 @@ function Battle({ state, me }: { state: GameState; me: string }) {
 
   const stage = state.phase === 'intro' ? 'Подготовка' : state.phase.startsWith('expansion') ? 'Разпределяне на земите' : `Кръг ${Math.min(state.round, state.maxRounds)} от ${state.maxRounds}`;
   const overlay = useOverlayLayout();
+  const phone = usePhoneLandscape();
 
   const header = (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 phone-landscape:mb-1 phone-landscape:flex-nowrap">
@@ -300,6 +301,46 @@ function Battle({ state, me }: { state: GameState; me: string }) {
       </div>
     </div>
   );
+
+  // телефон настрани: картата на цялата височина, играчите и статусът отстрани, въпросът върху нея
+  if (phone)
+    return (
+      <div className="bph" data-game>
+        <div className="bph-side bph-left">
+          <PhonePlayers state={state} map={map} me={me} />
+        </div>
+        <div className="bph-map">
+          <MapBoard
+            map={map}
+            state={state}
+            selectable={selectable}
+            onSelect={onSelect}
+            onBlocked={onBlocked}
+            highlight={state.battle?.regionId ?? null}
+            attackColor={attackColor}
+            bubbles={bubbles}
+            className="bph-svg"
+          />
+          {hint && <div className="bph-hint">{hint}</div>}
+        </div>
+        <div className="bph-side bph-right">
+          <div className="bph-tools">
+            <SoundToggle />
+            <FullscreenButton />
+            <button onClick={() => setConfirmLeave(true)} className="bph-leave">
+              <LogOut className="size-4" /> Напусни
+            </button>
+          </div>
+          <p className="bph-stage">{stage}</p>
+          <PhoneStatus state={state} me={me} meP={meP} />
+          <div className="bph-chat">
+            <ChatBar state={state} />
+          </div>
+        </div>
+        <PhoneOverlays state={state} me={me} meP={meP} />
+        {leaveDialog}
+      </div>
+    );
 
   // компютър и хоризонтален телефон: голяма карта, въпросът изскача върху нея
   if (overlay) {
@@ -573,6 +614,122 @@ function Reconnect({ until }: { until: number | null }) {
 }
 
 /** Компютър (мишка, широк екран) или хоризонтален телефон → картата е голяма, панелите изскачат върху нея. */
+/** телефон, държан настрани */
+function usePhoneLandscape() {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia('(orientation: landscape) and (pointer: coarse) and (max-height: 540px)');
+    const upd = () => setOn(m.matches);
+    upd();
+    m.addEventListener('change', upd);
+    return () => m.removeEventListener('change', upd);
+  }, []);
+  return on;
+}
+
+/** Играчите — тесни карти една под друга вляво от картата. */
+function PhonePlayers({ state, map, me }: { state: GameState; map: (typeof MAPS)[string]; me: string }) {
+  void map;
+  return (
+    <ul className="bph-players">
+      {state.players.map((p) => {
+        const count = territoryCount(state, p.uid);
+        const hp = p.capital ? state.regions[p.capital]?.hp ?? 0 : 0;
+        const isTurn = state.turnUid === p.uid || state.pick?.uid === p.uid;
+        return (
+          <li key={p.uid} data-turn={isTurn} data-out={p.eliminated || p.left} style={{ '--c': p.color } as React.CSSProperties}>
+            <Avatar name={p.name} color={p.color} avatar={p.avatar} seed={p.uid} size={30} />
+            <span className="min-w-0">
+              <b>
+                {p.isBot && <Bot className="mr-0.5 inline size-3" />}
+                {p.name}
+                {p.uid === me && <i> (ти)</i>}
+              </b>
+              <small>
+                {count} обл.{p.capital && hp > 0 && <em> {'♥'.repeat(hp)}</em>}
+                {p.left ? ' · напусна' : !p.connected && !p.isBot ? ' · връзката прекъсна' : ''}
+              </small>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/** Какво се случва сега — вдясно от картата. */
+function PhoneStatus({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+  const q = state.question;
+  let text: string | null = null;
+  let deadline: number | null = null;
+  let total = 1;
+  let mine = false;
+  if (meP && (meP.eliminated || meP.left) && !q) text = 'Елиминиран си — можеш да гледаш до края.';
+  else if (q && !state.reveal) {
+    const participant = q.participants.includes(me);
+    const answered = state.answeredUids.includes(me);
+    const done = state.answeredUids.filter((u) => q.participants.includes(u)).length;
+    text = !participant ? 'Гледаш този въпрос…' : answered ? `Изпратено — чакаме (${done}/${q.participants.length})` : 'Отговори на въпроса!';
+    deadline = q.deadline;
+    total = q.timeMs;
+  } else if (state.phase === 'expansion_pick' && state.pick) {
+    mine = state.pick.uid === me;
+    text = mine ? 'Избери свободна област на картата!' : `${name(state, state.pick.uid)} избира област…`;
+    deadline = state.deadline;
+    total = RULES.EXPANSION_PICK_MS;
+  } else if (state.phase === 'battle_choose') {
+    mine = state.turnUid === me;
+    text = mine ? `Твой ход! Избери съседна област за атака.${state.attacksLeft > 1 ? ` (★ ${state.attacksLeft})` : ''}` : `${name(state, state.turnUid)} избира атака…`;
+    deadline = state.deadline;
+    total = RULES.ATTACK_CHOOSE_MS;
+  } else if (state.phase === 'intro') text = 'Подготовка…';
+  if (!text) return null;
+  return (
+    <div className="bph-status" data-mine={mine}>
+      <p>{text}</p>
+      {deadline && <TimerBar deadline={deadline} total={total} />}
+    </div>
+  );
+}
+
+/** Въпрос, резултат и подготовка — върху цялата картина. */
+function PhoneOverlays({ state, me, meP }: { state: GameState; me: string; meP?: PublicPlayer }) {
+  const map = MAPS[state.mapId!];
+  const regionName = (id: string) => {
+    const reg = state.regions[id];
+    return state.mode === 'WORKS' && reg?.workTitle ? `„${reg.workTitle}“` : map.regions.find((r) => r.id === id)?.name ?? id;
+  };
+  const q = state.question;
+  const reveal = state.reveal;
+  if (state.phase === 'intro')
+    return (
+      <div className="bph-modal">
+        <IntroCard state={state} me={me} />
+      </div>
+    );
+  if (!q) return null;
+  const header =
+    state.battle && state.phase.startsWith('battle')
+      ? `${name(state, state.battle.attackerUid)} ⚔ ${state.battle.defenderUid ? name(state, state.battle.defenderUid) : 'неутрална'} · ${regionName(state.battle.regionId)}`
+      : 'Всички отговарят — най-бързите верни избират земя';
+  if (reveal)
+    return (
+      <div className="bph-reveal">
+        <p className="text-[0.65rem] font-extrabold uppercase text-muted">{header}</p>
+        <RevealBox state={state} me={me} className="mt-1" />
+      </div>
+    );
+  if (q.participants.includes(me) && !state.answeredUids.includes(me))
+    return (
+      <div className="bph-modal">
+        <div className="bph-card">
+          <QuestionPanel state={state} me={me} meP={meP} regionName={regionName} phone />
+        </div>
+      </div>
+    );
+  return null;
+}
+
 function useOverlayLayout() {
   const [on, setOn] = useState(false);
   useEffect(() => {
@@ -800,7 +957,7 @@ function ActionPanel({ state, me, meP, bare = false }: { state: GameState; me: s
   return null;
 }
 
-function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: string; meP?: PublicPlayer; regionName: (id: string) => string }) {
+function QuestionPanel({ state, me, meP, regionName, phone = false }: { state: GameState; me: string; meP?: PublicPlayer; regionName: (id: string) => string; phone?: boolean }) {
   const { socket, fifty, hint } = useGame();
   const q = state.question!;
   const reveal = state.reveal;
@@ -825,6 +982,60 @@ function QuestionPanel({ state, me, meP, regionName }: { state: GameState; me: s
     state.battle && state.phase.startsWith('battle')
       ? `${name(state, state.battle.attackerUid)} ⚔ ${state.battle.defenderUid ? name(state, state.battle.defenderUid) : 'неутрална'} · ${regionName(state.battle.regionId)}`
       : 'Всички отговарят — най-бързите верни избират земя';
+
+  if (phone)
+    return (
+      <div className="cq">
+        <div className="cq-text">
+          <p className="cq-tags">
+            {header} · {q.topicLabel}
+            {q.workTitle && <> · {q.workTitle}</>}
+          </p>
+          <h2>{q.prompt}</h2>
+          {q.context && <ContextBox text={q.context} compact />}
+        </div>
+        <TimerBar deadline={q.deadline} total={q.timeMs} />
+        <div className="cq-ans">
+          <AnswerInput
+            q={iq}
+            value={answer}
+            compact
+            removed={removed}
+            disabled={!participant || answered}
+            autoFocus={participant && q.type === 'SHORT_ANSWER'}
+            reveal={null}
+            onChange={(a) => {
+              setAnswer(a);
+              if (instant) send(a);
+            }}
+            onSubmit={() => answer && hasAnswer(iq, answer) && send(answer)}
+          />
+        </div>
+        <div className="cq-actions">
+          <button
+            disabled={!meP?.jokers.fifty || q.type !== 'SINGLE_CHOICE' || q.options.length < 3}
+            onClick={() => socket?.emit('game:joker', { kind: 'fifty' })}
+            className="rounded-xl border-2 border-purple px-3 text-sm font-black text-purple-dark disabled:opacity-35"
+          >
+            50/50
+          </button>
+          <button
+            disabled={!meP?.jokers.time}
+            onClick={() => socket?.emit('game:joker', { kind: 'time' })}
+            className="whitespace-nowrap rounded-xl border-2 border-accent-dark px-3 text-sm font-black text-accent-dark disabled:opacity-35"
+          >
+            +5 с
+          </button>
+          {!instant ? (
+            <Button block disabled={!hasAnswer(iq, answer)} onClick={() => answer && send(answer)}>
+              Изпрати
+            </Button>
+          ) : (
+            <span className="flex flex-1 items-center justify-center text-xs font-bold text-muted">Докосни отговор — изпраща се веднага</span>
+          )}
+        </div>
+      </div>
+    );
 
   return (
     <Panel className={cn(reveal && (reveal.winnerUid === me ? 'border-primary!' : myResult && !myResult.correct ? 'border-error!' : ''))}>
