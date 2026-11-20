@@ -114,18 +114,23 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
       stage.current?.hurt();
       say(shown < 0 ? 'Времето изтече! −1 ❤' : 'Грешно! −1 ❤', 'bad');
     }
-    setTimeout(
-      () => {
-        setFeedback(null);
-        if (r.finish) {
-          setSt(r.state);
-          setQuestion(null);
-          end(r.finish, 300);
-        } else applyState(r.state, r.question);
-      },
-      r.ok ? 650 : 1400,
-    );
+    let done = false;
+    const next = () => {
+      if (done) return;
+      done = true;
+      cont.current = null;
+      setFeedback(null);
+      if (r.finish) {
+        setSt(r.state);
+        setQuestion(null);
+        end(r.finish, 300);
+      } else applyState(r.state, r.question);
+    };
+    // грешка: верният отговор остава, докато ученикът натисне „Продължи“ (или до 8 с)
+    cont.current = r.ok ? null : next;
+    setTimeout(next, r.ok ? 650 : 8000);
   };
+  const cont = useRef<(() => void) | null>(null);
 
   const drop = useCallback(() => {
     if (!st || st.phase !== 'drop' || dropping.current) return;
@@ -241,7 +246,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
         {st.phase === 'question' && question && !anim && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 p-6 backdrop-blur-[2px]">
             <div className="w-full max-w-3xl">
-              <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
+              <QuestionSheet docked q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} onNext={() => cont.current?.()} />
             </div>
           </div>
         )}
@@ -277,7 +282,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
         )}
 
         {toast && now - toast.at < 1400 && (
-          <div className="pointer-events-none absolute inset-x-0 top-[47%] flex justify-center">
+          <div className="pointer-events-none absolute inset-x-0 top-[55%] flex justify-center">
             <span className={cn('animate-pop rounded-2xl px-4 py-2 text-lg font-black text-white shadow-lg', toast.tone === 'good' ? 'bg-primary' : toast.tone === 'bad' ? 'bg-error' : 'bg-secondary')}>{toast.text}</span>
           </div>
         )}
@@ -294,7 +299,7 @@ export function TowerGame({ best: bestAll, monthBest, top, meId, isGuest }: { be
 
         {/* въпрос */}
         {st.phase === 'question' && question && !anim && (
-          <QuestionSheet q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} />
+          <QuestionSheet q={question} left={TOWER.QUESTION_MS - (now - qStart)} feedback={feedback} busy={busy} onAnswer={answer} onNext={() => cont.current?.()} />
         )}
         {error && <p className="absolute inset-x-3 bottom-3 rounded-xl bg-error p-2 text-center text-sm font-bold text-white">{error}</p>}
       </div>
@@ -337,12 +342,12 @@ function useDesktop() {
   return d;
 }
 
-function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { q: ClientQuestion; left: number; feedback: { shown: number; correctIndex: number | null; ok: boolean } | null; busy: boolean; onAnswer: (i: number) => void; docked?: boolean }) {
+function QuestionSheet({ q, left, feedback, busy, onAnswer, onNext, docked = false }: { q: ClientQuestion; left: number; feedback: { shown: number; correctIndex: number | null; ok: boolean } | null; busy: boolean; onAnswer: (i: number) => void; onNext?: () => void; docked?: boolean }) {
   const pct = Math.max(0, Math.min(100, (left / TOWER.QUESTION_MS) * 100));
   return (
-    <div className={docked ? '' : 'absolute inset-0 flex flex-col justify-end bg-black/25'}>
-      <div className={docked ? 'card3d max-h-[88dvh] animate-rise overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl' : 'max-h-[66%] animate-rise overflow-y-auto rounded-t-3xl bg-surface p-4 shadow-2xl'}>
-        <div className="mb-2 flex items-center gap-2">
+    <div className={docked ? '' : 'absolute inset-0 z-10 flex flex-col justify-center bg-black/45 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px]'}>
+      <div className={docked ? 'card3d max-h-[88dvh] animate-rise overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl' : 'mx-auto max-h-full w-full max-w-lg animate-rise overflow-y-auto rounded-3xl bg-surface p-4 shadow-[0_0_0_1px_rgba(255,255,255,.12),0_24px_60px_rgba(0,0,0,.6)]'}>
+        <div className={cn('mb-2 flex items-center gap-2', feedback && 'invisible')}>
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2">
             <div className={cn('h-full rounded-full', left < 5000 ? 'bg-error' : 'bg-secondary')} style={{ width: `${pct}%` }} />
           </div>
@@ -364,6 +369,12 @@ function QuestionSheet({ q, left, feedback, busy, onAnswer, docked = false }: { 
             reveal={feedback ? { correctIndex: feedback.correctIndex } : null}
           />
         </div>
+        {feedback && !feedback.ok && (
+          <div className="mt-3 flex items-center gap-3 rounded-2xl bg-error/15 p-3">
+            <p className="flex-1 text-sm font-extrabold text-error">{feedback.shown < 0 ? 'Времето изтече' : 'Грешно'} · −1 ❤<span className="block text-xs font-bold text-ink">Верният отговор е отбелязан в зелено.</span></p>
+            <Button size="sm" onClick={onNext}>Продължи</Button>
+          </div>
+        )}
       </div>
     </div>
   );

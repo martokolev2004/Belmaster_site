@@ -80,7 +80,10 @@ export async function pickTowerQuestion(grade: Grade, seen: string[], floors: nu
   }
   const pick = pool[Math.floor(Math.random() * pool.length)];
   const q = await prisma.question.findUniqueOrThrow({ where: { id: pick.id }, include: { work: true } });
-  const perm = shuffle(q.options.map((_, i) => i));
+  // ако текстът или отговорите сочат буквите (А), (Б)… — не разбъркваме, иначе буквите не съвпадат
+  const letters = /(^|[^а-яА-Я])[АБВГ]\)|(^|[^а-яА-Я])[АБВГ]( и |, | или |$)/;
+  const fixed = [q.prompt, q.context ?? '', ...q.options].some((t) => letters.test(t)) || q.options.some((o) => /всички|нито един|никое/i.test(o));
+  const perm = fixed ? q.options.map((_, i) => i) : shuffle(q.options.map((_, i) => i));
   const view = toClient(q);
   view.options = perm.map((i) => q.options[i]);
   return { question: view, perm, raw: q };
