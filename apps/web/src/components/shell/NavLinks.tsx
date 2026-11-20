@@ -55,7 +55,7 @@ export function NavLinks({ admin, teacher, inClass }: { admin: boolean; teacher:
 const MOBILE = ITEMS.slice(0, 6); // „Класация“ е в „Начало“
 /** цветът на всеки раздел — същият като в плочките на началната страница */
 /** цвят на гръбчето на всяка „книга“ — игрите в своя цвят */
-const TINT: Record<string, string> = { '/': '#2f4fae', '/tests': '#17806a', '/play': '#c23b30', '/climb': '#1d7fc0', '/tower': '#c99412', '/library': '#6c3fa8' };
+const TINT: Record<string, string> = { '/': '#2c3a6b', '/tests': '#25564e', '/play': '#6e2f36', '/climb': '#2a5577', '/tower': '#6e5a2a', '/library': '#4a3768' };
 const GAMES = new Set(['/play', '/climb', '/tower']);
 const SHORT: Record<string, string> = { '/library': 'Книги' };
 

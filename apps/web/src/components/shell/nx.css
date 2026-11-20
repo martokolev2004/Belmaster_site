@@ -650,3 +650,13 @@ body:has(.cph, [data-game]) .ck { display: none; }
 .bn:not(.book) .bn-band { display: none; }
 .bn.book .bn-t { white-space: normal; line-height: 1.05; text-align: center; overflow: visible; }
 .bn.book .bn-item[data-active='true'] { flex-grow: 1.25; }
+/* по-спокойно: приглушени гръбчета, без светене, матов текст */
+.bn.book { background: linear-gradient(180deg, #121733, #0b0f26); }
+.bn.book::after { height: 0.4rem; background: linear-gradient(180deg, #3a2c22, #241a13); }
+.bn.book .bn-item { background: linear-gradient(90deg, color-mix(in srgb, var(--c), #000 30%) 0, var(--c) 22%, color-mix(in srgb, var(--c), #fff 6%) 50%, var(--c) 78%, color-mix(in srgb, var(--c), #000 35%) 100%) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 1px 3px rgba(0, 0, 0, 0.5) !important; }
+.bn.book .bn-item:not([data-active='true']) { filter: none; opacity: 0.82; }
+.bn.book .bn-band { border-color: rgba(214, 200, 160, 0.3); }
+.bn.book .bn-ic, .bn.book .bn-t, .bn.book .bn-item[data-game] .bn-t, .bn.book .bn-item[data-active='true'] .bn-t { color: #d9cfb4; text-shadow: none; filter: none; }
+.bn.book .bn-item[data-active='true'] { filter: brightness(1.18); transform: translateY(-0.5rem) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 14px rgba(0, 0, 0, 0.55) !important; }
+.bn.book .bn-item[data-active='true'] .bn-ic, .bn.book .bn-item[data-active='true'] .bn-t { color: #f1e8cf; }
+.bn.book .bn-item[data-active='true'] .bn-band { border-color: rgba(241, 232, 207, 0.55); }
