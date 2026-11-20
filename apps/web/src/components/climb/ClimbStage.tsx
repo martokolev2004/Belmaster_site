@@ -184,6 +184,19 @@ export function ClimbStage({ state, chat = [], tight = false }: { state: ClimbSt
   const heights = players.map((p) => p.height);
   const me = Math.max(0, players.findIndex((p) => p.uid === state.you));
   const [shown, setShown] = useState<number[]>(heights);
+  // на телефона сцената запълва целия екран (slice) — горе се отрязва малко небе; таблото с точките слиза под отрязаното
+  const [cropTop, setCropTop] = useState(0);
+  const cropRef = useRef(0);
+  cropRef.current = cropTop;
+  useEffect(() => {
+    const el = svg.current;
+    if (!tight || !el) return setCropTop(0);
+    const upd = () => setCropTop(Math.max(0, (H - (W * el.clientHeight) / Math.max(1, el.clientWidth)) / 2));
+    upd();
+    const ro = new ResizeObserver(upd);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [tight]);
   const uris = useMemo(
     () => players.map((p) => `data:image/svg+xml;utf8,${encodeURIComponent(avatarSvg(sanitizeAvatar(p.avatar, null, p.isBot ? 'bot' : p.uid), 'none', { noBg: true }))}`),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -642,7 +655,8 @@ export function ClimbStage({ state, chat = [], tight = false }: { state: ClimbSt
       }
       const zt = fit * (1 + (camS.tz - 1) * (fit > 1.02 ? 0.25 : 1));
       camS.z += (zt - camS.z) * Math.min(1, real * 3);
-      const half = H / 2 / camS.z;
+      // видимата височина (на телефона горе и долу се отрязва cropRef) — камерата пази краката и върха в кадър
+      const half = (H / 2 - cropRef.current) / camS.z;
       const cy = Math.max(half, Math.min(H - half, camS.ty));
       camS.y += (cy - camS.y) * Math.min(1, real * 2.4);
       shake = Math.max(0, shake - real * 1.6);
@@ -694,7 +708,14 @@ export function ClimbStage({ state, chat = [], tight = false }: { state: ClimbSt
     });
 
   return (
-    <svg ref={svg} viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full select-none" role="img" aria-label="Към върха">
+    <svg
+      ref={svg}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio={tight ? 'xMidYMid slice' : undefined}
+      className={tight ? 'block h-full w-full select-none' : 'block h-auto w-full select-none'}
+      role="img"
+      aria-label="Към върха"
+    >
       <defs>
         <linearGradient id={`st-skyg-${gid}`} x1="0" y1="0" x2="0" y2="1">
           {[0, 0.42, 0.72, 0.9, 1].map((o, i) => (
@@ -819,7 +840,7 @@ export function ClimbStage({ state, chat = [], tight = false }: { state: ClimbSt
         </g>
         <rect width={W} height={H} fill={`url(#st-vig-${gid})`} pointerEvents="none" />
         {players.slice(0, 2).map((p, i) => (
-          <g key={p.uid} transform={`translate(${i === 0 ? 66 : W - 66} 40)`}>
+          <g key={p.uid} transform={`translate(${i === 0 ? 66 : W - 66} ${(40 + cropTop).toFixed(0)})`}>
             <rect x="-42" y="-19" width="84" height="38" rx="19" fill="#0b1030" fillOpacity=".72" stroke={p.color} strokeWidth="2.5" />
             <text x="0" y="6" textAnchor="middle" fontSize="19" fontWeight="900" fill="#fff" className="st-font">
               {shown[i] ?? 0}/{N}

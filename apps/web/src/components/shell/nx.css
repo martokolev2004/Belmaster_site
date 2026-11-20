@@ -574,3 +574,16 @@ body:has(.cph, [data-game]) .ck { display: none; }
 /* аватарът стои точно в своя кръг и не застъпва името */
 .bph-players li > .bph-ava { flex: 0 0 32px; }
 .bph-ava > span, .bph-ava svg { display: block; width: 32px !important; height: 32px !important; }
+
+/* Към върха на телефон: сцената запълва целия екран, без черни ленти отстрани */
+.cph-scene { width: 100%; height: 100%; max-width: none; }
+.cph-shield { top: 3.1rem; bottom: auto; left: max(0.4rem, env(safe-area-inset-left)); }
+.cph-timer b { top: 3.1rem; }
+/* резултатът от въпроса — долу между героите, за да не закрива върха и знамето */
+.cph-float-top { top: auto; bottom: 0.5rem; width: min(22rem, 52%); }
+.cph-float-top .card3d { padding: 0.5rem 0.7rem; }
+.cph-float-top .card3d > * + * { margin-top: 0.3rem !important; }
+.cph-float-top .card3d p { font-size: 0.85rem; }
+/* лентата с бутоните — вляво до точките, за да се вижда знамето на върха */
+.cph-top { left: calc(max(0.4rem, env(safe-area-inset-left)) + 5rem); transform: none; }
+.cph-chat { left: 0; transform: none; }
