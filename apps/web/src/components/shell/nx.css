@@ -660,3 +660,31 @@ body:has(.cph, [data-game]) .ck { display: none; }
 .bn.book .bn-item[data-active='true'] { filter: brightness(1.18); transform: translateY(-0.5rem) !important; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 6px 14px rgba(0, 0, 0, 0.55) !important; }
 .bn.book .bn-item[data-active='true'] .bn-ic, .bn.book .bn-item[data-active='true'] .bn-t { color: #f1e8cf; }
 .bn.book .bn-item[data-active='true'] .bn-band { border-color: rgba(241, 232, 207, 0.55); }
+
+/* ── флаш карти в библиотеката ── */
+.fc { display: flex; flex-direction: column; gap: 0.8rem; }
+.fc-top { display: flex; align-items: center; gap: 0.7rem; font-size: 0.8rem; font-weight: 800; color: var(--muted, #9aa6cf); }
+.fc-top button { display: grid; place-items: center; width: 2rem; height: 2rem; color: #c5cfee; background: rgba(255, 255, 255, 0.06); border-radius: 0.6rem; }
+.fc-bar { flex: 1; height: 0.45rem; overflow: hidden; background: rgba(255, 255, 255, 0.08); border-radius: 999px; }
+.fc-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4ccb7e, #9be15d); border-radius: inherit; transition: width 0.35s; }
+.fc-card { position: relative; display: grid; min-height: 15rem; perspective: 1200px; text-align: left; -webkit-tap-highlight-color: transparent; }
+.fc-face { grid-area: 1 / 1; display: flex; flex-direction: column; gap: 0.6rem; padding: 1.4rem 1.3rem; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 1.1rem; transition: transform 0.5s cubic-bezier(0.3, 1.2, 0.5, 1); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.fc-front { justify-content: center; background: linear-gradient(160deg, #1d2a66, #121a44); }
+.fc-back { transform: rotateY(180deg); background: linear-gradient(160deg, #f6eedb, #e9dcbd); color: #2b2214; }
+.fc-card[data-flip='true'] .fc-front { transform: rotateY(-180deg); }
+.fc-card[data-flip='true'] .fc-back { transform: rotateY(0); }
+.fc-face small { font-size: 0.7rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #8fb0ff; }
+.fc-back small { color: #8a6a2a; }
+.fc-front b { font-size: 1.3rem; font-weight: 900; line-height: 1.3; color: #fff; }
+.fc-front em { font-style: normal; font-size: 0.85rem; font-weight: 700; color: #b9c4ea; }
+.fc-tap { margin-top: auto; font-size: 0.72rem; font-weight: 800; color: #7f8bb8; }
+.fc-back p, .fc-back li { font-family: 'Playfair Display Variable', Georgia, serif; font-size: 1.05rem; line-height: 1.5; }
+.fc-back ul { display: flex; flex-direction: column; gap: 0.45rem; padding-left: 1.1rem; list-style: disc; }
+.fc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; transition: opacity 0.2s; }
+.fc-actions[data-show='false'] { opacity: 0.35; }
+.fc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.75rem 1rem; font-weight: 900; color: #fff; background: rgba(255, 255, 255, 0.08); border-radius: 0.9rem; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.fc-btn:active:not(:disabled) { transform: scale(0.97); }
+.fc-no { background: rgba(255, 75, 95, 0.16); color: #ff8a98; box-shadow: inset 0 0 0 1px rgba(255, 75, 95, 0.4); }
+.fc-yes { background: linear-gradient(180deg, #4ccb7e, #2fa864); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.2); }
+.fc-ghost { background: none; color: #9aa6cf; box-shadow: none; }
+.fc-done { padding: 2rem 1rem; text-align: center; background: rgba(255, 255, 255, 0.04); border-radius: 1.1rem; }

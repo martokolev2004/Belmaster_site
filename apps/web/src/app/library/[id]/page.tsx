@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, BookOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, BookOpen, Layers, Pencil } from 'lucide-react';
+import { buildCards } from '@/lib/flashcards';
+import { Flashcards } from '@/components/library/Flashcards';
 import { prisma } from '@/lib/db';
 import type { Metadata } from 'next';
 import { isAdmin, getCurrentUser } from '@/lib/auth';
@@ -65,6 +67,7 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   const work = await findWork(decodeURIComponent(id), admin);
   if (!work) notFound();
   const filled = FIELDS.filter((f) => work[f.key]);
+  const cards = buildCards(work);
 
   const ICON: Record<string, string> = { summary: '📖', themes: '💡', characters: '🎭', authorInfo: '✍️', quotes: '❝', extra: '📝' };
   return (
@@ -84,8 +87,13 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
           ))}
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
+          {cards.length > 2 && (
+            <ButtonLink href="#cards" icon={<Layers className="size-4" />}>
+              Флаш карти
+            </ButtonLink>
+          )}
           {work.text && (
-            <ButtonLink href="#text" icon={<BookOpen className="size-4" />}>
+            <ButtonLink href="#text" variant="outline" icon={<BookOpen className="size-4" />}>
               Прочети произведението
             </ButtonLink>
           )}
@@ -106,6 +114,15 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
           </nav>
         )}
       </header>
+      {cards.length > 2 && (
+        <section id="cards" className="nx-panel wk-sec mt-4">
+          <h2 className="ln-display">
+            <span aria-hidden>🃏</span> Флаш карти
+          </h2>
+          <p className="-mt-1 mb-4 text-sm font-semibold text-muted">Основното за „{work.title.replace(/\.\.\.$/, '…')}“ — прочети въпроса, сети се, обърни картата.</p>
+          <Flashcards workId={work.id} cards={cards} />
+        </section>
+      )}
       {filled.length === 0 && work.text ? null : filled.length === 0 ? (
         <EmptyState title="Информацията за произведението се подготвя" icon={<span className="text-5xl">✍️</span>}>
           Скоро тук ще има резюме, анализ, герои и цитати.
